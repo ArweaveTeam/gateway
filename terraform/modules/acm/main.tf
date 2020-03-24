@@ -26,3 +26,7 @@ module "acm" {
     Name = var.domain
   }
 }
+
+output "arn" {
+  value = module.acm.this_acm_certificate_arn
+}

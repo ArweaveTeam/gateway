@@ -4,9 +4,12 @@
   "description": "gateway-test",
   "main": "index.js",
   "scripts": {
-    "deploy": "tsc && serverless deploy",
     "start": "export IS_LOCAL=1  && ts-node src/api/index.ts",
-    "start:graphql": "export IS_LOCAL=1  && ts-node src/api/graphql.ts"
+    "start-graphql": "export IS_LOCAL=1  && ts-node src/api/graphql.ts",
+    "terraform": "cd terraform/environments/dev && terraform apply",
+    "init-regional-gateway": "serverless create_domain",
+    "deploy": "tsc && serverless deploy",
+    "info": "serverless info"
   },
   "repository": {
     "type": "git",

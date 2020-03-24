@@ -1,12 +1,12 @@
 #https://serverless.com/framework/docs/providers/aws/guide/serverless.yml
 
-service: gateway-test
+service: arweave-gateway
 
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: ${opt:stage}
-  region: ${opt:region}
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'eu-west-2'}
   endpointType: regional
   memorySize: 512
   tracing:
@@ -18,9 +18,9 @@ provider:
     restApi: true
   stackTags:
     Service: ${self:service}
-    Environment: ${opt:stage}
+    Environment: ${opt:stage, 'dev'}
   deploymentBucket:
-    name: ${self:service}-${self:provider.region}-deploys
+    name: ${self:service}-deployments-${self:provider.region}
     maxPreviousDeploymentArtifacts: 10
     blockPublicAccess: true
   environment:
@@ -93,11 +93,11 @@ custom:
       requireAuthorization: true
       handleUnauthorizedRequests: Ignore
   customDomain:
-    domainName: 2.arweave.net
-    stage: ${opt:stage}
-    basePath: ""
-    certificateName: "2.arweave.net"
+    domainName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
+    stage: ${opt:stage, 'dev'}
+    certificateName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
     certificateRegion: ${self:provider.region}
     createRoute53Record: false
     endpointType: regional
     securityPolicy: tls_1_2
+    enabled: true
