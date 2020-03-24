@@ -1,0 +1,102 @@
+#https://serverless.com/framework/docs/providers/aws/guide/serverless.yml
+
+service: gateway-test
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage}
+  region: ${opt:region}
+  endpointType: regional
+  memorySize: 512
+  tracing:
+    apiGateway: true
+    lambda: true
+  apiGateway:
+    minimumCompressionSize: 1024
+  logs:
+    restApi: true
+  stackTags:
+    Service: ${self:service}
+    Environment: ${opt:stage}
+  deploymentBucket:
+    name: ${self:service}-${self:provider.region}-deploys
+    maxPreviousDeploymentArtifacts: 10
+    blockPublicAccess: true
+  environment:
+    GATEWAY_ORIGINS: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+
+plugins:
+  - serverless-api-gateway-caching
+  - serverless-domain-manager
+  - serverless-stage-manager
+  - serverless-deployment-bucket
+
+functions:
+  arql:
+    handler: dist/api/graphql.handler
+    events:
+      - http:
+          path: graphql
+          method: any
+          cors:
+            origin: "*"
+            cacheControl: "public"
+  graphql:
+    handler: dist/api/graphql.handler
+    events:
+      - http:
+          path: graphql
+          method: any
+          cors:
+            origin: "*"
+            cacheControl: "public"
+  api:
+    handler: dist/api/index.handler
+    events:
+      - http:
+          path: "{proxy+}"
+          method: any
+          cors:
+            origin: "*"
+            cacheControl: "public"
+          request:
+            parameters:
+              paths:
+                proxy: true
+          caching:
+            enabled: true
+            cacheKeyParameters:
+              - name: request.path.proxy
+            perKeyInvalidation:
+              requireAuthorization: true
+              handleUnauthorizedRequests: Ignore
+
+package:
+  exclude:
+    - terraform/**
+  include:
+    - dist/**
+
+custom:
+  stages:
+    - dev
+    - test
+    - prod
+  apiGatewayCaching:
+    enabled: true
+    clusterSize: "0.5"
+    ttlInSeconds: 30
+    dataEncrypted: false
+    perKeyInvalidation:
+      requireAuthorization: true
+      handleUnauthorizedRequests: Ignore
+  customDomain:
+    domainName: 2.arweave.net
+    stage: ${opt:stage}
+    basePath: ""
+    certificateName: "2.arweave.net"
+    certificateRegion: ${self:provider.region}
+    createRoute53Record: false
+    endpointType: regional
+    securityPolicy: tls_1_2
