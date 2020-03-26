@@ -22,13 +22,17 @@ variable "environment" {
 }
 
 resource "aws_s3_bucket" "cf_distribution_logs" {
-  bucket_prefix       = var.log_bucket_name
-  block_public_acls   = true
-  block_public_policy = true
-
+  bucket_prefix = var.log_bucket_name
   tags = {
     Environment = var.environment
   }
+}
+
+resource "aws_s3_bucket_public_access_block" "cf_logs_block_public" {
+  bucket = aws_s3_bucket.cf_distribution_logs.id
+
+  block_public_acls   = true
+  block_public_policy = true
 }
 
 
@@ -67,7 +71,6 @@ resource "aws_cloudfront_distribution" "cf_distribution" {
       }
     }
   }
-
 
   origin {
     domain_name = var.domain
