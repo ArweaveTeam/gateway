@@ -28,8 +28,6 @@ export const handler = createQueueHandler<TxEvent>(
       });
 
     console.log(`indexing: ${message.tx.id}`);
-
-    await publish<TxEvent>(message);
   },
   {
     before: async () => {

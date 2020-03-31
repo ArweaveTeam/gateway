@@ -1,8 +1,8 @@
 import fetch, { Response } from "node-fetch";
 
-export async function broadcast(urls: string[], body: any) {
+export async function broadcast(tx: any, hosts: string[]) {
   await Promise.all(
-    urls.map(async url => {
+    hosts.map(async host => {
       await retry(
         {
           retryCount: 5,
@@ -10,20 +10,29 @@ export async function broadcast(urls: string[], body: any) {
           timeout: 30000
         },
         async attempt => {
-          const { ok, status } = await fetch(url, {
+          const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
+
+          console.log(
+            `status attempt: ${attempt}, host: ${host}, status: ${txStatus}`
+          );
+          if ([200, 202, 208].includes(txStatus)) {
+            return true;
+          }
+
+          const { ok, status } = await fetch(`${host}/tx`, {
             method: "POST",
-            body: JSON.stringify(body),
+            body: JSON.stringify(tx),
             headers: { "Content-Type": "application/json" },
             timeout: 30
           });
-          console.log(`attempt: ${attempt}, url: ${url}, status: ${status}`);
+          console.log(`attempt: ${attempt}, host: ${host}, status: ${status}`);
           return ok;
         },
         (error, attempt) => {
-          `attempt: ${attempt}, url: ${url}, error: ${error}`;
+          `attempt: ${attempt}, host: ${host}, error: ${error}`;
         }
       ).catch(error => {
-        console.error(`Failed to send to: ${url}`, error);
+        console.error(`Failed to send to: ${host}`, error);
       });
     })
   );

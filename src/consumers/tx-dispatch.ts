@@ -18,17 +18,14 @@ export const handler = createQueueHandler<TxEvent>(
 
     console.log(`broadcasting: ${tx.id}`);
 
-    await broadcast(
-      [
-        "http://lon-1.eu-west-1.arweave.net:1984/tx",
-        "http://lon-2.eu-west-1.arweave.net:1984/tx",
-        "http://lon-3.eu-west-1.arweave.net:1984/tx",
-        "http://lon-4.eu-west-1.arweave.net:1984/tx",
-        "http://lon-5.eu-west-1.arweave.net:1984/tx",
-        "http://lon-6.eu-west-1.arweave.net:1984/tx"
-      ],
-      fullTx
-    );
+    await broadcast(fullTx, [
+      "http://lon-1.eu-west-1.arweave.net:1984",
+      "http://lon-2.eu-west-1.arweave.net:1984",
+      "http://lon-3.eu-west-1.arweave.net:1984",
+      "http://lon-4.eu-west-1.arweave.net:1984",
+      "http://lon-5.eu-west-1.arweave.net:1984",
+      "http://lon-6.eu-west-1.arweave.net:1984"
+    ]);
 
     console.log(`publishing: ${tx.id}`);
 

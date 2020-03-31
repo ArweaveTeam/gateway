@@ -11,15 +11,17 @@ export const createConnection = (mode: ConnectionMode): knex => {
 
   console.log("Connecting to db", mode, host, process.env.ARWEAVE_DB_SCHEMA);
 
-  return knex({
+  const client = knex({
     client: "pg",
     pool: { min: 0, max: 10, acquireTimeoutMillis: 10000 },
-    connection: async () => {
+    connection: () => {
       return {
         host: host,
         user: mode,
         database: process.env.ARWEAVE_DB_SCHEMA,
-        ssl: true,
+        ssl: {
+          rejectUnauthorized: true
+        },
         password: new RDS.Signer().getAuthToken({
           region: process.env.AWS_REGION,
           hostname: host,
@@ -30,4 +32,6 @@ export const createConnection = (mode: ConnectionMode): knex => {
       };
     }
   });
+
+  return client;
 };
