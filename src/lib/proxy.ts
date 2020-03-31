@@ -1,42 +1,56 @@
-import { firstResponse } from "./arweave";
-import express from "express";
-import { Response } from "node-fetch";
+import fetch, { Response as FetchResponse } from "node-fetch";
 
-export default async function requestHandler(
-  request: express.Request,
-  response: express.Response,
+export type OriginResponse = FetchResponse;
+/**
+ * Query the same endpoint across multiple origins and returns
+ * the first response that satisfies the filter function. E.g.
+ * Origins:
+ * http://fra1.arweave.net:1984
+ * http://lon1.arweave.net:1984
+ * http://sgp1.arweave.net:1984
+ *
+ * Endpoint: block/current
+ *
+ * Gets requests for:
+ * http://fra1.arweave.net:1984/block/current
+ * http://lon1.arweave.net:1984/block/current
+ * http://sgp1.arweave.net:1984/block/current
+ *
+ * And returns the first response that satisfies the filter
+ * function by returning true.
+ *
+ * @param origins
+ * @param path
+ * @param filter
+ */
+export async function firstResponse(
   endpoint: string,
-  origins: string[]
-): Promise<void> {
-  try {
-    const { origin, originResponse, originTime } = await firstResponse(
-      endpoint,
-      origins,
-      (origin: string, url: string, response: Response) => {
-        return response.status == 200 || response.status == 202;
-      }
-    );
-
-    const status = originResponse.status;
-    const contentType = originResponse.headers.get("Content-Type");
-
-    console.info(
-      `origin.response: ${status}, origin.origin: ${origin},  origin.originTime: ${originTime}ms, origin.contentType: ${contentType}, origin.headers ${JSON.stringify(
-        originResponse.headers.raw()
-      )}`
-    );
-
-    response.status(status);
-
-    if (contentType) {
-      response.type(contentType);
-    }
-
-    originResponse.body.pipe(response);
-
-    await new Promise(resolve => originResponse.body.on("finish", resolve));
-  } catch (error) {
-    console.error(`proxy.error: ${error.message}`);
-    response.status(500).send();
-  }
+  origins: string[],
+  filter: (origin: string, url: string, response: OriginResponse) => boolean
+): Promise<{
+  origin: string;
+  originResponse: OriginResponse;
+  originTime: number;
+}> {
+  return new Promise(async (resolve, reject) => {
+    await Promise.all(
+      origins.map(async origin => {
+        const startMs = Date.now();
+        const url = `${origin}/${endpoint}`;
+        try {
+          const originResponse = await fetch(url, {
+            // redirect: "manual",
+            // follow: 0
+          });
+          const endMs = Date.now();
+          if (filter(origin, url, originResponse)) {
+            resolve({ origin, originResponse, originTime: endMs - startMs });
+          }
+        } catch (error) {
+          console.error(`origin.error: ${error}`);
+        }
+      })
+    ).catch(reject);
+    // reject(new Error(`No valid origin response received: ${endpoint}`));
+  });
 }

@@ -8,7 +8,36 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'eu-west-2'}
   endpointType: regional
-  memorySize: 512
+  memorySize: 1536
+  timeout: 30
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - rds-db:connect
+      Resource:
+        - arn:aws:rds-db:${self:provider.region}:384386061638:dbuser:*/readwrite
+    - Effect: "Allow"
+      Action:
+        - s3:GetObject
+        - s3:GetObjectTagging
+        - s3:PutObject
+        - s3:PutObjectTagging
+      Resource:
+        - arn:aws:s3:::${self:service}-${opt:stage, 'dev'}-*/*
+    - Effect: Allow
+      Action:
+        - sqs:GetQueueUrl
+        - sqs:SendMessage
+        - sqs:DeleteMessage
+        - sqs:DeleteMessageBatch
+      Resource:
+        - arn:aws:sqs:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-*
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - arn:aws:sns:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-*
+
   tracing:
     apiGateway: true
     lambda: true
@@ -24,34 +53,24 @@ provider:
     maxPreviousDeploymentArtifacts: 10
     blockPublicAccess: true
   environment:
-    GATEWAY_ORIGINS: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+    ARWEAVE_GATEWAY_ORIGINS: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+    ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
+    ARWEAVE_SQS_TX_DISPATCH_URL: https://sqs.${self:provider.region}.amazonaws.com/384386061638/${self:custom.queues.txDispatch}
+    ARWEAVE_SQS_TX_INDEX_URL: https://sqs.${self:provider.region}.amazonaws.com/384386061638/${self:custom.queues.txIndex}
+    ARWEAVE_S3_TX_DATA_BUCKET: ${self:custom.buckets.txData}
+    ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
+    ARWEAVE_DB_WRITE_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
+    ARWEAVE_DB_SCHEMA: arweave
 
 plugins:
   - serverless-api-gateway-caching
   - serverless-domain-manager
   - serverless-stage-manager
   - serverless-deployment-bucket
+  # - serverless-offline-sqs
   - serverless-offline
 
 functions:
-  arql:
-    handler: dist/api/graphql.handler
-    events:
-      - http:
-          path: graphql
-          method: post
-          cors:
-            origin: "*"
-            cacheControl: "public"
-  graphql:
-    handler: dist/api/graphql.handler
-    events:
-      - http:
-          path: arql
-          method: post
-          cors:
-            origin: "*"
-            cacheControl: "public"
   api:
     handler: dist/api/index.handler
     events:
@@ -72,6 +91,32 @@ functions:
             perKeyInvalidation:
               requireAuthorization: true
               handleUnauthorizedRequests: Ignore
+  graphql:
+    handler: dist/api/graphql.handler
+    events:
+      - http:
+          path: graphql
+          method: post
+          cors:
+            origin: "*"
+            cacheControl: "public"
+
+  tx-dispatch:
+    handler: dist/consumers/tx-dispatch.handler
+    timeout: 60
+    events:
+      - sqs:
+          batchSize: 10
+          arn:
+            Fn::GetAtt: [SQSTxDispatchQueue, Arn]
+
+  tx-index:
+    handler: dist/consumers/tx-index.handler
+    events:
+      - sqs:
+          batchSize: 10
+          arn:
+            Fn::GetAtt: [SQSTxIndexQueue, Arn]
 
 package:
   exclude:
@@ -80,6 +125,23 @@ package:
     - dist/**
 
 custom:
+  events:
+    topic: ${self:service}-${opt:stage, 'dev'}-events
+    topicArn: arn:aws:sns:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-events
+  queues:
+    txDispatch: ${self:service}-${opt:stage, 'dev'}-tx-dispatch
+    txIndex: ${self:service}-${opt:stage, 'dev'}-tx-index
+  buckets:
+    txData: ${self:service}-${opt:stage, 'dev'}-tx-data-${self:provider.region}
+  serverless-offline-sqs:
+    autoCreate: true
+    apiVersion: "2012-11-05"
+    endpoint: http://0.0.0.0:9324
+    region: eu-west-2
+    accessKeyId: root
+    secretAccessKey: root
+    skipCacheInvalidation: false
+
   stages:
     - dev
     - test
@@ -101,3 +163,66 @@ custom:
     endpointType: regional
     securityPolicy: tls_1_2
     enabled: true
+
+resources:
+  Resources:
+    SNSEventsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: "Events topic (${opt:stage, 'dev'}-tx-data-${self:provider.region}) - Managed by Serverless + CloudFormation"
+        TopicName: ${self:custom.events.topic}
+
+    S3TxDataBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.buckets.txData}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          RestrictPublicBuckets: true
+          IgnorePublicAcls: true
+
+    SQSTxDispatchQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.txDispatch}
+        MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
+        ReceiveMessageWaitTimeSeconds: 10
+        VisibilityTimeout: 30
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [SQSTxDispatchDLQ, Arn]
+          maxReceiveCount: 2
+
+    SQSTxDispatchDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.txDispatch}-DLQ
+        MessageRetentionPeriod: 1209600 #14 days, max
+
+    SQSTxIndexQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.txIndex}
+        MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
+        ReceiveMessageWaitTimeSeconds: 10
+        VisibilityTimeout: 30
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [SQSTxDispatchDLQ, Arn]
+          maxReceiveCount: 2
+
+    SQSTxIndexDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.txIndex}-DLQ
+        MessageRetentionPeriod: 1209600 #14 days, max
+
+    SQSTxIndexSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt: [SQSTxIndexQueue, Arn]
+        Region: ${self:provider.region}
+        TopicArn: ${self:custom.events.topicArn}

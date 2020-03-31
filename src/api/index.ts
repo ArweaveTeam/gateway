@@ -1,33 +1,16 @@
-import requestHandler from "../lib/proxy";
-import { app, start } from "../app";
+import API from "lambda-api";
+import { handler as newTxHandler } from "./new-tx";
+import { handler as proxyHandler } from "./proxy";
 
-const origins = JSON.parse(process.env.GATEWAY_ORIGINS || "null") as string[];
+const api = API();
 
-if (!Array.isArray(origins)) {
-  throw new Error(
-    `error.config: Invalid env var, process.env.GATEWAY_ORIGINS: ${process.env.GATEWAY_ORIGINS}`
-  );
-}
+api.post("tx", newTxHandler);
+api.get("health", proxyHandler);
+api.get("*", proxyHandler);
 
-console.log(`app.config.origins: ${origins.join(", ")}`);
+console.log("api.creating");
 
-app.get("/status", (request, response) => {
-  response.status(200).json({
-    region: process.env.AWS_REGION,
-    origins: origins
-  });
-});
-
-app.get("*", async (request, response) => {
-  console.log(`proxy.request.path: ${request.path}`);
-  const endpoint =
-    request.path.startsWith("/") && request.path.length > 1
-      ? request.path.slice(1)
-      : request.path;
-
-  await requestHandler(request, response, endpoint, origins);
-});
-
-console.log(`app.start`);
-
-export const handler = start();
+export const handler = async (event: any, context: any) => {
+  console.log("api.run");
+  return api.run(event, context);
+};
