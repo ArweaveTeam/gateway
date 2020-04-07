@@ -4,7 +4,7 @@
   "description": "gateway-test",
   "main": "index.js",
   "scripts": {
-    "start": "serverless offline",
+    "start": "export IS_LOCAL=1 && export ARWEAVE_GATEWAY_URL=http://arweave.local:3000 && tsc && serverless offline --httpPort 3000 --host arweave.local",
     "terraform": "cd terraform/environments/dev && terraform apply",
     "init-regional-gateway": "serverless create_domain",
     "deploy": "tsc && serverless deploy",

@@ -1,4 +1,5 @@
 - [AWS Authentication](#aws-authentication)
+- [Running](#running)
 - [Deployments](#deployments)
   - [Regions](#regions)
   - [Stages](#stages)
@@ -42,6 +43,14 @@ output=json
 
 5. Start a bash session using the `arweave-gateway-dev` profile with temporary credentials\
    `aws-vault exec arweave-gateway-dev`
+
+## Running
+
+Add to hosts file
+
+`127.0.0.1 arweave.local`
+
+`npm run start`
 
 ## Deployments
 

@@ -15,7 +15,7 @@ provider:
       Action:
         - rds-db:connect
       Resource:
-        - arn:aws:rds-db:${self:provider.region}:384386061638:dbuser:*/readwrite
+        - arn:aws:rds-db:${self:provider.region, 'eu-west-2'}:384386061638:dbuser:*/*
     - Effect: "Allow"
       Action:
         - s3:GetObject
@@ -31,12 +31,12 @@ provider:
         - sqs:DeleteMessage
         - sqs:DeleteMessageBatch
       Resource:
-        - arn:aws:sqs:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-*
+        - arn:aws:sqs:${self:provider.region, 'eu-west-2'}:384386061638:${self:service}-${opt:stage, 'dev'}-*
     - Effect: Allow
       Action:
         - sns:Publish
       Resource:
-        - arn:aws:sns:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-*
+        - arn:aws:sns:${self:provider.region, 'eu-west-2'}:384386061638:${self:service}-${opt:stage, 'dev'}-*
 
   tracing:
     apiGateway: true
@@ -49,14 +49,14 @@ provider:
     Service: ${self:service}
     Environment: ${opt:stage, 'dev'}
   deploymentBucket:
-    name: ${self:service}-deployments-${self:provider.region}
+    name: ${self:service}-deployments-${self:provider.region, 'eu-west-2'}
     maxPreviousDeploymentArtifacts: 10
     blockPublicAccess: true
   environment:
     ARWEAVE_GATEWAY_ORIGINS: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
-    ARWEAVE_SQS_TX_DISPATCH_URL: https://sqs.${self:provider.region}.amazonaws.com/384386061638/${self:custom.queues.txDispatch}
-    ARWEAVE_SQS_TX_INDEX_URL: https://sqs.${self:provider.region}.amazonaws.com/384386061638/${self:custom.queues.txIndex}
+    ARWEAVE_SQS_TX_DISPATCH_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.txDispatch}
+    ARWEAVE_SQS_TX_INDEX_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.txIndex}
     ARWEAVE_S3_TX_DATA_BUCKET: ${self:custom.buckets.txData}
     ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
     ARWEAVE_DB_WRITE_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
@@ -72,7 +72,7 @@ plugins:
 
 functions:
   api:
-    handler: dist/api/index.handler
+    handler: dist/gateway/api/index.handler
     events:
       - http:
           path: "{proxy+}"
@@ -92,7 +92,7 @@ functions:
               requireAuthorization: true
               handleUnauthorizedRequests: Ignore
   graphql:
-    handler: dist/api/graphql.handler
+    handler: dist/gateway/graphql/index.handler
     events:
       - http:
           path: graphql
@@ -127,12 +127,12 @@ package:
 custom:
   events:
     topic: ${self:service}-${opt:stage, 'dev'}-events
-    topicArn: arn:aws:sns:${self:provider.region}:384386061638:${self:service}-${opt:stage, 'dev'}-events
+    topicArn: arn:aws:sns:${self:provider.region, 'eu-west-2'}:384386061638:${self:service}-${opt:stage, 'dev'}-events
   queues:
     txDispatch: ${self:service}-${opt:stage, 'dev'}-tx-dispatch
     txIndex: ${self:service}-${opt:stage, 'dev'}-tx-index
   buckets:
-    txData: ${self:service}-${opt:stage, 'dev'}-tx-data-${self:provider.region}
+    txData: ${self:service}-${opt:stage, 'dev'}-tx-data-${self:provider.region, 'eu-west-2'}
   serverless-offline-sqs:
     autoCreate: true
     apiVersion: "2012-11-05"
@@ -143,8 +143,8 @@ custom:
     skipCacheInvalidation: false
 
   stages:
+    - local
     - dev
-    - test
     - prod
   apiGatewayCaching:
     enabled: true
@@ -158,7 +158,7 @@ custom:
     domainName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
     stage: ${opt:stage, 'dev'}
     certificateName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
-    certificateRegion: ${self:provider.region}
+    certificateRegion: ${self:provider.region, 'eu-west-2'}
     createRoute53Record: false
     endpointType: regional
     securityPolicy: tls_1_2
@@ -169,7 +169,7 @@ resources:
     SNSEventsTopic:
       Type: AWS::SNS::Topic
       Properties:
-        DisplayName: "Events topic (${opt:stage, 'dev'}-tx-data-${self:provider.region}) - Managed by Serverless + CloudFormation"
+        DisplayName: "Events topic (${opt:stage, 'dev'}-tx-data-${self:provider.region, 'eu-west-2'}) - Managed by Serverless + CloudFormation"
         TopicName: ${self:custom.events.topic}
 
     S3TxDataBucket:
@@ -209,7 +209,7 @@ resources:
         VisibilityTimeout: 30
         RedrivePolicy:
           deadLetterTargetArn:
-            Fn::GetAtt: [SQSTxDispatchDLQ, Arn]
+            Fn::GetAtt: [SQSTxIndexDLQ, Arn]
           maxReceiveCount: 2
 
     SQSTxIndexDLQ:
@@ -224,5 +224,5 @@ resources:
         Protocol: sqs
         Endpoint:
           Fn::GetAtt: [SQSTxIndexQueue, Arn]
-        Region: ${self:provider.region}
+        Region: ${self:provider.region, 'eu-west-2'}
         TopicArn: ${self:custom.events.topicArn}
