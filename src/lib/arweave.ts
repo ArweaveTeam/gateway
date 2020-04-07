@@ -5,22 +5,29 @@ export const getTagValue = (
   name: string
 ): string | undefined => {
   const tag = tx.tags.find(
-    item =>
-      fromB64Url(item.name)
-        .toString()
-        .toLowerCase() == name.toLowerCase()
+    (item) =>
+      fromB64Url(item.name).toString().toLowerCase() == name.toLowerCase()
   );
   return tag ? fromB64Url(tag.value).toString() : undefined;
 };
 
+export interface Tag {
+  name: Base64UrlEncodedString;
+  value: Base64UrlEncodedString;
+}
 export interface Transaction {
-  id: Base64UrlEncodedString;
-  signature: Base64UrlEncodedString;
-  owner: Base64UrlEncodedString;
-  target: Base64UrlEncodedString;
+  id: string;
+  signature: string;
+  owner: string;
+  target: string;
   data: Base64UrlEncodedString;
   reward: string;
-  last_tx: Base64UrlEncodedString;
-  tags: { name: Base64UrlEncodedString; value: Base64UrlEncodedString }[];
+  last_tx: string;
+  tags: Tag[];
   quantity: string;
+  data_size: number;
+  data_root: string;
+  data_tree: string[];
 }
+
+export type TransactionHeader = Omit<Transaction, "data">;

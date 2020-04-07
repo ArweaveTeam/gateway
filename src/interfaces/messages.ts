@@ -1,4 +1,4 @@
-import { Base64UrlEncodedString } from "../lib/encoding";
+import { Transaction, TransactionHeader } from "../lib/arweave";
 export interface TxEvent {
   event: "gossip" | "confirmed";
   data_size: number;
@@ -7,14 +7,5 @@ export interface TxEvent {
     height: number;
     timestamp: number;
   };
-  tx: {
-    id: Base64UrlEncodedString;
-    signature: Base64UrlEncodedString;
-    owner: Base64UrlEncodedString;
-    target: Base64UrlEncodedString;
-    reward: string;
-    last_tx: Base64UrlEncodedString;
-    tags: { name: Base64UrlEncodedString; value: Base64UrlEncodedString }[];
-    quantity: string;
-  };
+  tx: TransactionHeader;
 }
