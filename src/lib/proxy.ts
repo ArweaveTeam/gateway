@@ -34,7 +34,7 @@ export async function firstResponse(
 }> {
   return new Promise(async (resolve, reject) => {
     await Promise.all(
-      origins.map(async origin => {
+      origins.map(async (origin) => {
         const startMs = Date.now();
         const url = `${origin}/${endpoint}`;
         try {

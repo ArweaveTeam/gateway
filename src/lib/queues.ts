@@ -69,6 +69,7 @@ export const createQueueHandler = <MessageType>(
 
       await Promise.all(
         event.Records.map(async sqsMessage => {
+          console.log(`Record.map ${sqsMessage}`);
           try {
             await handler(
               JSON.parse(sqsMessage.body) as MessageType,
