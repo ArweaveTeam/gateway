@@ -1,6 +1,6 @@
 import { get } from "../../lib/buckets";
 import { APIRequest, APIResponse, APIError } from "../../lib/api-handler";
-import { isExpectedSandbox, redirectToSandbox } from "./middleware/sandbox";
+import { redirectToSandbox } from "./middleware/sandbox";
 import { PathPatterns } from ".";
 /**
  * Handles requests for data on the magic gateway endpoint.
@@ -16,8 +16,8 @@ export const handler = async (request: APIRequest, response: APIResponse) => {
   try {
     const txid = getTxIdFromPath(request.path);
 
-    if (!isExpectedSandbox(request, { txid })) {
-      return redirectToSandbox(request, response, { txid });
+    if (redirectToSandbox(request, response, { txid })) {
+      return;
     }
 
     const data = await get("tx-data", `tx/${txid}`);

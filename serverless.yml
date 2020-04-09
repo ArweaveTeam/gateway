@@ -143,7 +143,6 @@ custom:
     skipCacheInvalidation: false
 
   stages:
-    - local
     - dev
     - prod
   apiGatewayCaching:

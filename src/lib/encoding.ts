@@ -1,3 +1,5 @@
+import { base32 } from "rfc4648";
+
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
 
@@ -18,4 +20,16 @@ export function fromB64Url(input: Base64UrlEncodedString): Buffer {
     .concat("=".repeat(paddingLength));
 
   return Buffer.from(base64, "base64");
+}
+
+export function fromB32(input: string): Buffer {
+  return Buffer.from(
+    base32.parse(input, {
+      loose: true,
+    })
+  );
+}
+
+export function toB32(input: Buffer): string {
+  return base32.stringify(input, { pad: false }).toLowerCase();
 }
