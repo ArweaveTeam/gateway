@@ -1,6 +1,6 @@
 import { getQueueUrl, createQueueHandler } from "../lib/queues";
 import { publish } from "../lib/pub-sub";
-import { getEncoded, get } from "../lib/buckets";
+import { get } from "../lib/buckets";
 import { broadcast } from "../lib/broadcast";
 import { TxEvent } from "../interfaces/messages";
 import { toB64url } from "../lib/encoding";

@@ -1,5 +1,5 @@
 import { RDS } from "aws-sdk";
-import knex, { Transaction } from "knex";
+import knex from "knex";
 
 type ConnectionMode = "read" | "write";
 

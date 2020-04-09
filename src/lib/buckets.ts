@@ -31,15 +31,6 @@ export const put = async (
     .promise();
 };
 
-export const getEncoded = async (
-  bucketType: BucketType,
-  key: string
-): Promise<Base64UrlEncodedString> => {
-  return get(bucketType, key).then((bucketObject) =>
-    toB64url(bucketObject.Body as Buffer)
-  );
-};
-
 export const get = async (
   bucketType: BucketType,
   key: string
