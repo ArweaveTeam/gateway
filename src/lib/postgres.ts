@@ -3,7 +3,7 @@ import knex from "knex";
 
 type ConnectionMode = "read" | "write";
 
-export const createConnection = (mode: ConnectionMode): knex => {
+export const createConnectionPool = (mode: ConnectionMode): knex => {
   const host = {
     read: process.env.ARWEAVE_DB_READ_HOST,
     write: process.env.ARWEAVE_DB_WRITE_HOST,
@@ -36,10 +36,13 @@ export const createConnection = (mode: ConnectionMode): knex => {
   return client;
 };
 
-interface UpsertOptions {
+interface UpsertRow {
+  [key: string]: string | number | object | boolean | null | undefined;
+}
+interface UpsertOptions<T = UpsertRow[]> {
   table: string;
   conflictKeys: string[];
-  rows: { [key: string]: any }[];
+  rows: T;
 }
 
 /**

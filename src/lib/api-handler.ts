@@ -1,4 +1,4 @@
-import { HandlerFunction, Request, Response } from "lambda-api";
+import API, { HandlerFunction, Request, Response } from "lambda-api";
 
 export type APIHandler = HandlerFunction;
 export type APIRequest = Request;
@@ -33,3 +33,7 @@ export class APIError extends Error {
     this.status = status;
   }
 }
+
+export const router = () => {
+  return API();
+};

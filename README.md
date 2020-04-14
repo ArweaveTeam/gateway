@@ -1,20 +1,23 @@
-- [AWS Authentication](#aws-authentication)
-- [Running](#running)
+- [Setup](#setup)
+  - [AWS Authentication](#aws-authentication)
+  - [Local DNS resolver](#local-dns-resolver)
+  - [Run the gateway locally](#run-the-gateway-locally)
 - [Deployments](#deployments)
   - [Regions](#regions)
   - [Stages](#stages)
   - [Example Deployment](#example-deployment)
   - [Distribution endpoints](#distribution-endpoints)
-- [Setup](#setup)
   - [Terraform ACM + CDN](#terraform-acm--cdn)
 
-## AWS Authentication
+## Setup
+
+### AWS Authentication
 
 **Arweave team account**: 82613677919
 
 **Service sub-account**: 384386061638
 
-1. Setup IAM user and MFA
+1. Setup IAM user with MFA in the AWS console under the main Arweave team account.
 
 2. Configure `~/.aws/config`
 
@@ -35,27 +38,62 @@ role_arn = arn:aws:iam::384386061638:role/arweave-developer
 output=json
 ```
 
-3. Install aws-vault\
+3. Install AWS CLI\
+   `brew install awscli`
+
+4. Install aws-vault\
    `brew install aws-vault`
 
-4. Add main arweave profile, this will prompt for access keys\
+5. Add main arweave profile, this will prompt for access keys associated with the `arweave` profile IAM user\
    `aws-vault add arweave`
 
-5. Start a bash session using the `arweave-gateway-dev` profile with temporary credentials\
+6. Start a bash session using the `arweave-gateway-dev` profile with temporary credentials\
    `aws-vault exec arweave-gateway-dev`
 
-## Running
+   From this `aws-vault` session we can run commands like `npm run start` and `npm run deploy` that interact with AWS resources.
 
-Add to hosts file
+### Local DNS resolver
 
-`127.0.0.1 arweave.local`
+To test teh gateway locally we need to setup a local DNS resolver for `arweave.localhost`
 
-`npm run start`
+`brew install dnsmasq`
+
+`mkdir -pv $(brew —-prefix)/etc/`
+
+`echo 'address=/.localhost/127.0.0.1' >> $(brew --prefix)/etc/dnsmasq.conf`
+`echo 'port=53' >> $(brew --prefix)/etc/dnsmasq.conf`
+
+`sudo mkdir -v /etc/resolver`
+
+`sudo bash -c 'echo "nameserver 127.0.0.1" > /etc/resolver/localhost'`
+
+Sudo is required to start dnsmasq as it needs to bind to a privileged port (53).
+
+`sudo brew services start dnsmasq`
+
+### Run the gateway locally
+
+`aws-vault exec arweave-gateway-dev`
+
+`npm run start`\
+`npm run start -- --region :region --stage :stage`
+
+**Defaults**
+
+`:stage`: `dev`\
+`:region`: `eu-west-2`
+
+`open http://arweave.localhost:3000/dev/info`
 
 ## Deployments
 
-Use the double dash `--` to end NPM params and pass params directly to serverless\
+Use the double dash `--` to pass params directly to serverless\
 `npm run deploy -- --region :region --stage :stage`
+
+**Defaults**
+
+`:stage`: `dev`\
+`:region`: `eu-west-2`
 
 ### Regions
 
@@ -132,8 +170,6 @@ Distribution Domain Name
   Target Domain: d-x5s6ol02v5.execute-api.ap-southeast-1.amazonaws.com
   Hosted Zone Id: ZL327KTPIQFUL
 ```
-
-## Setup
 
 ### Terraform ACM + CDN
 

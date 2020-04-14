@@ -1,11 +1,10 @@
 import { getQueueUrl, createQueueHandler } from "../lib/queues";
-import { publish } from "../lib/pub-sub";
-import { createConnection, upsert } from "../lib/postgres";
+import { createConnectionPool, upsert } from "../lib/postgres";
 import { TxEvent } from "../interfaces/messages";
 import knex from "knex";
-import { pick, defaults, find, filter } from "lodash";
+import { pick, defaults, find } from "lodash";
 import { fromB64Url } from "../lib/encoding";
-import { Transaction, Tag } from "../lib/arweave";
+import { Transaction, Tag, TransactionHeader } from "../lib/arweave";
 
 let pool: knex;
 export const handler = createQueueHandler<TxEvent>(
@@ -15,18 +14,17 @@ export const handler = createQueueHandler<TxEvent>(
     console.log(`indexing: ${tx.id}`);
 
     await pool.transaction(async (knexTransaction) => {
-      const txRow = txToRow(tx);
       try {
         await Promise.all([
           upsert(knexTransaction, {
             table: "transactions",
             conflictKeys: ["id"],
-            rows: [txRow],
+            rows: [txToRow(tx)],
           }),
 
           upsert(knexTransaction, {
             table: "tags",
-            conflictKeys: ["tx", "index"],
+            conflictKeys: ["tx_id", "index"],
             rows: tagsToRows(tx.id, tx.tags),
           }),
         ]);
@@ -38,7 +36,7 @@ export const handler = createQueueHandler<TxEvent>(
   },
   {
     before: async () => {
-      pool = createConnection("write");
+      pool = createConnectionPool("write");
     },
     after: async () => {
       await pool.destroy();
@@ -46,8 +44,9 @@ export const handler = createQueueHandler<TxEvent>(
   }
 );
 
-const txToRow = (tx: Omit<Transaction, "data">) => {
-  const updateFields = [
+const txToRow = (tx: TransactionHeader) => {
+  const fieldKeys = [
+    "id",
     "signature",
     "owner",
     "target",
@@ -60,18 +59,17 @@ const txToRow = (tx: Omit<Transaction, "data">) => {
     "data_root",
     "data_tree",
   ];
-  const fields = defaults(pick(tx, ["id", ...updateFields]), {
-    data_root: "",
-    data_size: 0,
-    data_tree: [],
-    content_type: getContentType(tx),
-  });
-
-  return {
-    ...fields,
-    tags: { tags: fields.tags || [] },
-    data_tree: { data_tree: fields.data_tree || [] },
-  };
+  return pick(
+    {
+      ...tx,
+      tags: { tags: tx.tags || { tags: [] } },
+      data_tree: { data_tree: tx.data_tree || [] },
+      data_root: tx.data_root || "",
+      data_size: tx.data_size || 0,
+      content_type: getContentType(tx),
+    },
+    fieldKeys
+  );
 };
 
 const tagsToRows = (txid: string, tags: Tag[]) => {

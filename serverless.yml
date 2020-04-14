@@ -77,9 +77,7 @@ functions:
       - http:
           path: "{proxy+}"
           method: any
-          cors:
-            origin: "*"
-            cacheControl: "public"
+          cors: true
           request:
             parameters:
               paths:
@@ -91,15 +89,22 @@ functions:
             perKeyInvalidation:
               requireAuthorization: true
               handleUnauthorizedRequests: Ignore
+
+  arql:
+    handler: dist/gateway/arql/index.handler
+    events:
+      - http:
+          path: arql
+          method: post
+          cors: true
+
   graphql:
     handler: dist/gateway/graphql/index.handler
     events:
       - http:
           path: graphql
           method: post
-          cors:
-            origin: "*"
-            cacheControl: "public"
+          cors: true
 
   tx-dispatch:
     handler: dist/consumers/tx-dispatch.handler
@@ -162,6 +167,10 @@ custom:
     endpointType: regional
     securityPolicy: tls_1_2
     enabled: true
+
+  serverless-offline:
+    httpPort: 3000
+    resourceRoutes: true
 
 resources:
   Resources:
