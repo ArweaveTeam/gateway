@@ -1,25 +1,35 @@
-import { parseJsonBody, createApiHandler } from "../../lib/api-handler";
+import { parseJsonBody, createApiHandler, router } from "../../lib/api-handler";
 import { put } from "../../lib/buckets";
 import { fromB64Url } from "../../lib/encoding";
 import { Transaction, getTagValue } from "../../lib/arweave";
 import { enqueue, getQueueUrl } from "../../lib/queues";
-import { pick, defaults } from "lodash";
-import { TxEvent } from "../../interfaces/messages";
+import { pick } from "lodash";
+import { ImportTx } from "../../interfaces/messages";
 
-export const handler = createApiHandler(async (request, response) => {
-  console.log("Creating handler new-tx");
-  const tx = parseJsonBody<Transaction>(request);
-  const dataBuffer = fromB64Url(tx.data);
+const app = router();
 
-  await put("tx-data", `tx/${tx.id}`, dataBuffer, {
-    contentType: getTagValue(tx, "content-type"),
-  });
+app.post(
+  "*",
+  createApiHandler(async (request, response) => {
+    console.log("received new transaction");
 
-  await enqueue<TxEvent>(getQueueUrl("tx-dispatch"), {
-    event: "gossip",
-    data_size: dataBuffer.byteLength,
-    tx: defaults(
-      pick(tx, [
+    const tx = parseJsonBody<Transaction>(request);
+
+    console.log(`id: ${tx.id}`);
+
+    const dataBuffer = fromB64Url(tx.data);
+
+    await put("tx-data", `tx/${tx.id}`, dataBuffer, {
+      contentType: getTagValue(tx, "content-type"),
+    });
+
+    let contentType = getTagValue(tx, "content-type") || null;
+
+    await enqueue<ImportTx>(getQueueUrl("dispatch-txs"), {
+      data_size: tx.data_size,
+      content_type: contentType,
+      tx: pick(tx, [
+        "format",
         "id",
         "signature",
         "owner",
@@ -32,13 +42,31 @@ export const handler = createApiHandler(async (request, response) => {
         "data_tree",
         "data_root",
       ]),
-      {
-        data_root: "",
-        data_size: dataBuffer.byteLength,
-        data_tree: [],
-      }
-    ),
-  });
+    });
 
-  response.sendStatus(200);
-});
+    await enqueue<ImportTx>(getQueueUrl("import-txs"), {
+      data_size: tx.data_size,
+      content_type: contentType,
+      tx: pick(tx, [
+        "format",
+        "id",
+        "signature",
+        "owner",
+        "target",
+        "reward",
+        "last_tx",
+        "tags",
+        "quantity",
+        "data_size",
+        "data_tree",
+        "data_root",
+      ]),
+    });
+
+    response.sendStatus(200);
+  })
+);
+
+export const handler = async (event: any, context: any) => {
+  return app.run(event, context);
+};

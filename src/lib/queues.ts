@@ -1,15 +1,18 @@
 import { SQS } from "aws-sdk";
 import { SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 
-type QueueType = "tx-dispatch" | "tx-index";
+type QueueType = "dispatch-txs" | "import-txs" | "import-blocks";
 type SQSQueueUrl = string;
+type MessageGroup = string;
+type MessageDeduplicationId = string;
 interface HandlerContext {
   sqsMessage?: SQSRecord;
 }
 
 const queues: { [key in QueueType]: SQSQueueUrl } = {
-  "tx-dispatch": process.env.ARWEAVE_SQS_TX_DISPATCH_URL!,
-  "tx-index": process.env.ARWEAVE_SQS_TX_INDEX_URL!
+  "dispatch-txs": process.env.ARWEAVE_SQS_DISPATCH_TXS_URL!,
+  "import-txs": process.env.ARWEAVE_SQS_IMPORT_TXS_URL!,
+  "import-blocks": process.env.ARWEAVE_SQS_IMPORT_BLOCKS_URL!,
 };
 
 const sqs = new SQS();
@@ -20,12 +23,17 @@ export const getQueueUrl = (type: QueueType): SQSQueueUrl => {
 
 export const enqueue = async <MessageType extends object>(
   queueUrl: SQSQueueUrl,
-  message: MessageType
+  message: MessageType,
+  options?:
+    | { messagegroup?: MessageGroup; deduplicationId?: MessageDeduplicationId }
+    | undefined
 ) => {
   await sqs
     .sendMessage({
       QueueUrl: queueUrl,
-      MessageBody: JSON.stringify(message)
+      MessageBody: JSON.stringify(message),
+      MessageGroupId: options && options.messagegroup,
+      MessageDeduplicationId: options && options.deduplicationId,
     })
     .promise();
 };
@@ -40,7 +48,7 @@ const deleteMessages = async (
   await sqs
     .deleteMessageBatch({
       QueueUrl: queueUrl,
-      Entries: receipts
+      Entries: receipts,
     })
     .promise();
 };
@@ -68,7 +76,7 @@ export const createQueueHandler = <MessageType>(
       );
 
       await Promise.all(
-        event.Records.map(async sqsMessage => {
+        event.Records.map(async (sqsMessage) => {
           console.log(`Record.map ${sqsMessage}`);
           try {
             await handler(
@@ -77,7 +85,7 @@ export const createQueueHandler = <MessageType>(
             );
             receipts.push({
               Id: sqsMessage.messageId,
-              ReceiptHandle: sqsMessage.receiptHandle
+              ReceiptHandle: sqsMessage.receiptHandle,
             });
           } catch (error) {
             console.error(error);

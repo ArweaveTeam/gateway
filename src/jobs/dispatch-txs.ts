@@ -2,11 +2,11 @@ import { getQueueUrl, createQueueHandler } from "../lib/queues";
 import { publish } from "../lib/pub-sub";
 import { get } from "../lib/buckets";
 import { broadcast } from "../lib/broadcast";
-import { TxEvent } from "../interfaces/messages";
+import { ImportTx } from "../interfaces/messages";
 import { toB64url } from "../lib/encoding";
 
-export const handler = createQueueHandler<TxEvent>(
-  getQueueUrl("tx-dispatch"),
+export const handler = createQueueHandler<ImportTx>(
+  getQueueUrl("dispatch-txs"),
   async (message) => {
     console.log(message);
     const { data_size, tx } = message;
@@ -15,7 +15,7 @@ export const handler = createQueueHandler<TxEvent>(
     const fullTx = {
       ...tx,
       data: data_size
-        ? toB64url((await get("tx-data", tx.id)).Body as Buffer)
+        ? toB64url((await get("tx-data", `tx/${tx.id}`)).Body as Buffer)
         : "",
     };
 
@@ -32,6 +32,6 @@ export const handler = createQueueHandler<TxEvent>(
 
     console.log(`publishing: ${tx.id}`);
 
-    await publish<TxEvent>(message);
+    await publish<ImportTx>(message);
   }
 );

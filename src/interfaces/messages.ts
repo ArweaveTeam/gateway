@@ -1,11 +1,11 @@
-import { Transaction, TransactionHeader } from "../lib/arweave";
-export interface TxEvent {
-  event: "gossip" | "confirmed";
+import { TransactionHeader, Block } from "../lib/arweave";
+export interface ImportTx {
+  content_type: string | null;
   data_size: number;
-  block?: {
-    id: string;
-    height: number;
-    timestamp: number;
-  };
   tx: TransactionHeader;
+}
+
+export interface ImportBlock {
+  source: string;
+  block: Block;
 }
