@@ -28,7 +28,7 @@ export interface Block {
   height: number;
   hash: string;
   indep_hash: string;
-  txs: string;
+  txs: string[];
   tx_root: string;
   wallet_list: string;
   reward_addr: string;

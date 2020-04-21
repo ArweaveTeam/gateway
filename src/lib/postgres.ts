@@ -3,6 +3,8 @@ import knex from "knex";
 
 type ConnectionMode = "read" | "write";
 
+export type DBConnection = knex | knex.Transaction;
+
 export const createConnectionPool = (mode: ConnectionMode): knex => {
   const host = {
     read: process.env.ARWEAVE_DB_READ_HOST,
@@ -36,10 +38,7 @@ export const createConnectionPool = (mode: ConnectionMode): knex => {
   return client;
 };
 
-interface UpsertRow {
-  [key: string]: string | number | object | boolean | null | undefined;
-}
-interface UpsertOptions<T = UpsertRow[]> {
+interface UpsertOptions<T = object[]> {
   table: string;
   conflictKeys: string[];
   rows: T;
@@ -51,7 +50,7 @@ interface UpsertOptions<T = UpsertRow[]> {
  * INSERT (col, col, col) VALUES (val, val, val) ON CONFLICT (id,index) SO UPDATE SET x = excluded.x...
  */
 export const upsert = (
-  knexTransaction: knex.Transaction,
+  connection: DBConnection,
   { table, conflictKeys, rows }: UpsertOptions
 ) => {
   const updateFields = Object.keys(rows[0])
@@ -59,7 +58,7 @@ export const upsert = (
     .map((field) => `${field} = excluded.${field}`)
     .join(",");
 
-  const { sql, bindings } = knexTransaction.into(table).insert(rows).toSQL();
+  const { sql, bindings } = connection.insert(rows).into(table).toSQL();
 
   const upsertSql = sql.concat(
     ` ON CONFLICT (${conflictKeys.join(",")}) DO UPDATE SET ${updateFields};`
@@ -67,5 +66,5 @@ export const upsert = (
 
   console.log("Query", upsertSql, bindings);
 
-  return knexTransaction.raw(upsertSql, bindings);
+  return connection.raw(upsertSql, bindings);
 };

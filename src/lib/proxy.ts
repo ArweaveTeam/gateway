@@ -38,34 +38,55 @@ console.log(`app.config.origins: ${origins.join(", ")}`);
  */
 export async function firstResponse(
   endpoint: string,
-  filter: (origin: string, url: string, response: OriginResponse) => boolean
+  filter?: (origin: string, url: string, response: OriginResponse) => boolean
 ): Promise<{
   origin: string;
   originResponse: OriginResponse;
   originTime: number;
 }> {
-  const controller = new AbortController();
-  const signal = controller.signal;
+  const controllers: [string, AbortController][] = [];
 
   return new Promise(async (resolve, reject) => {
     await Promise.all(
       origins.map(async (origin) => {
+        const controller = new AbortController();
+        const signal = controller.signal;
+
+        controllers.push([origin, controller]);
+
         const startMs = Date.now();
         const url = `${origin}/${endpoint}`;
+
+        console.log(url);
         try {
           const originResponse = await fetch(url, {
             signal,
-            // redirect: "manual",
-            // follow: 0
           });
+
           const endMs = Date.now();
-          if (filter(origin, url, originResponse)) {
-            controller.abort();
+
+          if (filter && filter(origin, url, originResponse)) {
+            controllers.forEach(
+              ([host, controller]) => host != origin && controller.abort()
+            );
+            resolve({ origin, originResponse, originTime: endMs - startMs });
+          }
+
+          if (
+            !filter &&
+            originResponse.status >= 200 &&
+            originResponse.status <= 300
+          ) {
+            controllers.forEach(
+              ([host, controller]) => host != origin && controller.abort()
+            );
+
             resolve({ origin, originResponse, originTime: endMs - startMs });
           }
         } catch (error) {
           if (error.name != "AbortError") {
             console.error(`origin.error: ${error}`);
+            console.error(error);
           }
         }
       })
