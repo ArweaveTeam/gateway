@@ -1,26 +1,46 @@
 import knex from "knex";
-import { Block } from "./arweave";
+import { Block } from "../lib/arweave";
 import { upsert, DBConnection } from "./postgres";
 import moment from "moment";
-import { pick } from "lodash";
-import { transform } from "lodash";
+import { pick, transform } from "lodash";
+import { sequentialBatch } from "../lib/helpers";
 
 export interface DatabaseBlock {
   id: string;
   previous_block: string;
-  timestamp: string;
+  mined_at: string;
   height: number;
   txs: string[];
   extended: object;
 }
 
+export interface DatabaseBlockTxMap {
+  block_id: string;
+  tx_id: string;
+}
+
 const blockFields = [
   "id",
   "height",
-  "timestamp",
+  "mined_at",
   "previous_block",
   "txs",
   "extended",
+];
+
+const extendedFields = [
+  "diff",
+  "hash",
+  "reward_addr",
+  "last_retarget",
+  "tx_root",
+  "tx_tree",
+  "reward_pool",
+  "weave_size",
+  "block_size",
+  "cumulative_diff",
+  "hash_list_merkle",
+  "tags",
 ];
 
 export const getLatestBlock = async (
@@ -56,14 +76,39 @@ export const getRecentBlocks = async (
     .limit(200);
 };
 
-export const insertBlocks = async (
+export const saveBlocks = async (
   connection: DBConnection,
   blocks: DatabaseBlock[]
 ) => {
-  return upsert(connection, {
-    table: "blocks",
-    conflictKeys: ["height"],
-    rows: blocks.map(serialize),
+  await connection.transaction(async (knexTransaction) => {
+    await upsert(knexTransaction, {
+      table: "blocks",
+      conflictKeys: ["height"],
+      rows: blocks.map(serialize),
+    });
+
+    const blockTxMappings = blocks.reduce(
+      (map: DatabaseBlockTxMap[], block) => {
+        return map.concat(
+          block.txs.map((tx_id: string) => {
+            return { block_id: block.id, tx_id };
+          })
+        );
+      },
+      []
+    );
+
+    await sequentialBatch(
+      blockTxMappings,
+      5000,
+      async (batch: DatabaseBlockTxMap[]) => {
+        await upsert(connection, {
+          table: "blocks_tx_map",
+          conflictKeys: ["tx_id"],
+          rows: batch,
+        });
+      }
+    );
   });
 };
 
@@ -74,28 +119,14 @@ export const fullBlocksToDbBlocks = (blocks: Block[]): DatabaseBlock[] => {
  * Format a full block into a stripped down version for storage in the postgres DB.
  */
 export const fullBlockToDbBlock = (block: Block): DatabaseBlock => {
-  return pick(
-    {
-      ...block,
-      id: block.indep_hash,
-      txs: block.txs,
-      // moment expects millisecond precision timestamps, so we need to
-      // upscale our plain old second precision timestamp.
-      timestamp: moment(block.timestamp * 1000).format(),
-      extended: pick(block, [
-        "diff",
-        "hash",
-        "reward_addr",
-        "reward_pool",
-        "weave_size",
-        "block_size",
-        "cumulative_diff",
-        "hash_list_merkle",
-        "tags",
-      ]),
-    },
-    ["id", "previous_block", "timestamp", "height", "txs", "extended"]
-  );
+  return {
+    id: block.indep_hash,
+    height: block.height,
+    previous_block: block.previous_block,
+    txs: block.txs,
+    mined_at: moment(block.timestamp * 1000).format(),
+    extended: pick(block, extendedFields),
+  };
 };
 
 // The pg driver and knex don't know the destination column types,

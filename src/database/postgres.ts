@@ -1,9 +1,41 @@
 import { RDS } from "aws-sdk";
 import knex from "knex";
 
-type ConnectionMode = "read" | "write";
+export type ConnectionMode = "read" | "write";
 
 export type DBConnection = knex | knex.Transaction;
+
+let poolCache: {
+  read: null | knex;
+  write: null | knex;
+} = {
+  read: null,
+  write: null,
+};
+
+export const getConnectionPool = (mode: ConnectionMode): knex => {
+  if (poolCache[mode]) {
+    return (poolCache[mode] = createConnectionPool(mode));
+  }
+
+  return (poolCache[mode] = createConnectionPool(mode));
+};
+
+export const releaseConnectionPool = async (
+  mode?: ConnectionMode
+): Promise<void> => {
+  if (mode) {
+    if (poolCache[mode]) {
+      await poolCache[mode]!.destroy();
+    }
+    poolCache[mode] = null;
+  } else {
+    await Promise.all([
+      releaseConnectionPool("read"),
+      releaseConnectionPool("write"),
+    ]);
+  }
+};
 
 export const createConnectionPool = (mode: ConnectionMode): knex => {
   const host = {
@@ -15,7 +47,13 @@ export const createConnectionPool = (mode: ConnectionMode): knex => {
 
   const client = knex({
     client: "pg",
-    pool: { min: 0, max: 10, acquireTimeoutMillis: 10000 },
+    pool: {
+      min: 0,
+      max: 3,
+      acquireTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      reapIntervalMillis: 30000,
+    },
     connection: () => {
       return {
         host: host,

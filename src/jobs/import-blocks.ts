@@ -1,24 +1,24 @@
-import knex from "knex";
-import { ImportBlock } from "../interfaces/messages";
-import { Block } from "../lib/arweave";
+import retry from "async-retry";
 import {
   fullBlocksToDbBlocks,
   fullBlockToDbBlock,
   getLatestBlock,
   getRecentBlocks,
-  insertBlocks,
-} from "../lib/block-db";
-import { createConnectionPool } from "../lib/postgres";
-import { firstResponse } from "../lib/proxy";
-import { createQueueHandler, getQueueUrl } from "../lib/queues";
-
-let pool: knex;
+  saveBlocks,
+} from "../database/block-db";
+import { getConnectionPool, releaseConnectionPool } from "../database/postgres";
+import { ImportBlock, ImportTx } from "../interfaces/messages";
+import { Block, fetchBlock } from "../lib/arweave";
+import { sequentialBatch } from "../lib/helpers";
+import { createQueueHandler, enqueueBatch, getQueueUrl } from "../lib/queues";
 
 export const handler = createQueueHandler<ImportBlock>(
   getQueueUrl("import-blocks"),
   async ({ block, source }) => {
-    console.log(`message:`, block);
-    console.log(`source:`, source);
+    console.log(`Importing block:`, block);
+    console.log(`Block source:`, source);
+    const txImportQueueUrl = await getQueueUrl("import-txs");
+    const pool = getConnectionPool("write");
 
     await pool.transaction(async (knexTransaction) => {
       try {
@@ -28,24 +28,36 @@ export const handler = createQueueHandler<ImportBlock>(
 
         // If these two values match up then everything is worked as expected.
         if (block.previous_block == latestBlock.id) {
-          await insertBlocks(knexTransaction, [fullBlockToDbBlock(block)]);
+          await saveBlocks(knexTransaction, [fullBlockToDbBlock(block)]);
+
           console.log(`Block accepted: ${block.indep_hash}`);
         } else {
           // If they don't match up, then we need to start fork recovering.
           // We'll fetch the previous blocks in this fork from arweave nodes
           // and try to splice them with the chain in our database.
-          console.log(`Resolving fork: ${block.indep_hash}`);
+          console.warn(`Resolving fork: ${block.indep_hash}`);
+
           const forkDiff = await resolveFork(
             (await getRecentBlocks(knexTransaction)).map((block) => block.id),
             [block],
             {
-              maxDepth: 200,
+              maxDepth: 3000,
             }
           ).then(fullBlocksToDbBlocks);
 
           console.log(`Resolved fork: ${block.indep_hash}`, forkDiff);
 
-          await insertBlocks(knexTransaction, forkDiff);
+          await saveBlocks(knexTransaction, forkDiff);
+
+          const txIds = forkDiff.reduce(
+            (ids: string[], block) => ids.concat(block.txs),
+            []
+          );
+
+          // requeue *all* transactions involved in blocks that have forked.
+          // Some of them may have been imported already and purged, so we
+          // reimport everything to make sure there are no gaps.
+          await enqueueTxImports(txImportQueueUrl, txIds);
         }
       } catch (error) {
         console.error(block.indep_hash, error);
@@ -54,14 +66,26 @@ export const handler = createQueueHandler<ImportBlock>(
     });
   },
   {
-    before: async () => {
-      pool = createConnectionPool("write");
-    },
     after: async () => {
-      await pool.destroy();
+      await releaseConnectionPool("write");
     },
   }
 );
+const enqueueTxImports = async (queueUrl: string, txIds: string[]) => {
+  await sequentialBatch(txIds, 10, async (ids: string[]) => {
+    await enqueueBatch<ImportTx>(
+      queueUrl,
+      ids.map((id) => {
+        return {
+          id: id,
+          message: {
+            id,
+          },
+        };
+      })
+    );
+  });
+};
 
 /**
  * Try and find the branch point between the chain in our database and the chain
@@ -96,16 +120,14 @@ export const resolveFork = async (
     throw new Error(`Couldn't resolve fork within maxDepth of ${maxDepth}`);
   }
 
-  const { originResponse } = await firstResponse(
-    `block/hash/${block.previous_block}`
+  const previousBlock = await retry(
+    async () => {
+      return fetchBlock(block.previous_block);
+    },
+    {
+      retries: 5,
+    }
   );
-
-  const previousBlock = (await originResponse.json()) as Block;
-
-  //For now we don't care about the poa and it's takes up too much
-  // space when logged, so just remove it for now.
-  //@ts-ignore
-  delete previousBlock.poa;
 
   // If we didn't intersect the mainChainIds array then we're still working backwards
   // through the forked chain and haven't found the branch point yet.

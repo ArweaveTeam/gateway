@@ -1,8 +1,18 @@
-import { createApiHandler, router, parseJsonBody } from "../../lib/api-handler";
-import { createConnectionPool } from "../../lib/postgres";
-import Knex from "knex";
+import {
+  createRouter,
+  createApiHandler,
+  bindApiHandler,
+  parseJsonBody,
+  APIError,
+} from "../../lib/api-handler";
+import {
+  createConnectionPool,
+  getConnectionPool,
+  releaseConnectionPool,
+} from "../../database/postgres";
+import knex from "knex";
 
-const app = router();
+const router = createRouter();
 
 type ArqlQuery = ArqlBooleanQuery | ArqlTagMatch;
 
@@ -20,54 +30,89 @@ interface ArqlBooleanQuery {
 
 type ArqlResultSet = string[];
 
-app.post(
-  "arql",
+bindApiHandler(
+  router,
   createApiHandler(async (request, response) => {
     const query = parseJsonBody<ArqlQuery>(request);
 
-    response.sendStatus(200);
-    console.log(await getQueryResults(query, {}));
-    response.send(await getQueryResults(query, {}));
+    if (!validateQuery(query)) {
+      throw new APIError(400, "invalid query");
+    }
+
+    try {
+      const pool = getConnectionPool("read");
+
+      const results = await executeQuery(pool, query, {
+        limit: Math.min(
+          Number.isInteger(parseInt(request.query.limit!))
+            ? parseInt(request.query.limit!)
+            : 100,
+          100000
+        ),
+      });
+
+      response.sendStatus(200);
+      response.send(results);
+    } catch (error) {
+      console.error(error);
+      await releaseConnectionPool("read");
+    }
   })
 );
 
 export const handler = async (event: any, context: any) => {
-  return app.run(event, context);
+  return router.run(event, context);
 };
 
-const getQueryResults = async (
+const executeQuery = async (
+  connection: knex,
   arqlQuery: ArqlQuery,
   { limit = 100, offset = 0 }: { limit?: number; offset?: number }
 ): Promise<ArqlResultSet> => {
-  const pool = createConnectionPool("write");
-  const sqlBuilder = pool.queryBuilder().from("tags");
-  const sqlQuery = arqlToSqlQuery(arqlQuery, sqlBuilder);
+  const sqlQuery = arqlToSqlQuery(
+    connection.queryBuilder().from("tags"),
+    arqlQuery
+  );
 
-  return sqlQuery.pluck("tx_id").limit(limit).offset(offset);
+  return await sqlQuery.pluck("tx_id").limit(limit).offset(offset);
+};
+
+const validateQuery = (arqlQuery: ArqlQuery): boolean => {
+  if (arqlQuery.op == "equals") {
+    return (
+      typeof arqlQuery.expr1 == "string" && typeof arqlQuery.expr1 == "string"
+    );
+  }
+  if (["and", "or"].includes(arqlQuery.op)) {
+    return validateQuery(arqlQuery.expr1) && validateQuery(arqlQuery.expr2);
+  }
+  return false;
 };
 
 const arqlToSqlQuery = (
-  arqlQuery: ArqlQuery,
-  sqlBuilder: Knex.QueryBuilder
-): Knex.QueryBuilder => {
-  if (arqlQuery.op == "equals") {
-    return sqlBuilder.where((sqlBuilder) => {
-      sqlBuilder
-        .where("tags.name", arqlQuery.expr1)
-        .where("tags.value", arqlQuery.expr2);
-    });
+  sqlBuilder: knex.QueryBuilder,
+  arqlQuery: ArqlQuery
+): knex.QueryBuilder => {
+  switch (arqlQuery.op) {
+    case "equals":
+      return sqlBuilder.where((sqlBuilder) => {
+        sqlBuilder
+          .where("tags.name", arqlQuery.expr1)
+          .where("tags.value", arqlQuery.expr2);
+      });
+    case "and":
+      return arqlToSqlQuery(sqlBuilder, arqlQuery.expr1).andWhere(
+        (sqlBuilder) => {
+          arqlToSqlQuery(sqlBuilder, arqlQuery.expr2);
+        }
+      );
+    case "or":
+      return arqlToSqlQuery(sqlBuilder, arqlQuery.expr1).orWhere(
+        (sqlBuilder) => {
+          arqlToSqlQuery(sqlBuilder, arqlQuery.expr2);
+        }
+      );
+    default:
+      throw new Error("Invalid query");
   }
-  if (arqlQuery.op == "and") {
-    return arqlToSqlQuery(arqlQuery.expr1, sqlBuilder).andWhere(
-      (sqlBuilder) => {
-        arqlToSqlQuery(arqlQuery.expr2, sqlBuilder);
-      }
-    );
-  }
-  if (arqlQuery.op == "or") {
-    return arqlToSqlQuery(arqlQuery.expr1, sqlBuilder).orWhere((sqlBuilder) => {
-      arqlToSqlQuery(arqlQuery.expr2, sqlBuilder);
-    });
-  }
-  throw new Error("Invalid query");
 };
