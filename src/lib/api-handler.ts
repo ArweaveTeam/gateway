@@ -1,4 +1,9 @@
-import API, { HandlerFunction, Request, Response } from "lambda-api";
+import API, {
+  HandlerFunction,
+  Request,
+  Response,
+  API as APIInstance,
+} from "lambda-api";
 
 export type APIHandler = HandlerFunction;
 export type APIRequest = Request;
@@ -10,6 +15,14 @@ export const parseJsonBody = <BodyType>(request: Request): BodyType => {
   }
 
   return JSON.parse(request.body);
+};
+
+export const createRouter = () => {
+  return API();
+};
+
+export const bindApiHandler = (api: APIInstance, handler: HandlerFunction) => {
+  api.any("*", handler);
 };
 
 export const createApiHandler = (

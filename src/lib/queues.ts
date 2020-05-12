@@ -38,6 +38,30 @@ export const enqueue = async <MessageType extends object>(
     .promise();
 };
 
+export const enqueueBatch = async <MessageType extends object>(
+  queueUrl: SQSQueueUrl,
+  messages: {
+    id: string;
+    message: MessageType;
+    messagegroup?: MessageGroup;
+    deduplicationId?: MessageDeduplicationId;
+  }[]
+) => {
+  await sqs
+    .sendMessageBatch({
+      QueueUrl: queueUrl,
+      Entries: messages.map((message) => {
+        return {
+          Id: message.id,
+          MessageBody: JSON.stringify(message),
+          MessageGroupId: message.messagegroup,
+          MessageDeduplicationId: message.deduplicationId,
+        };
+      }),
+    })
+    .promise();
+};
+
 const deleteMessages = async (
   queueUrl: SQSQueueUrl,
   receipts: { Id: string; ReceiptHandle: string }[]
@@ -75,6 +99,8 @@ export const createQueueHandler = <MessageType>(
         `Received messages, source: ${event.Records[0].eventSourceARN}, count: ${event.Records.length}`
       );
 
+      const errors: Error[] = [];
+
       await Promise.all(
         event.Records.map(async (sqsMessage) => {
           console.log(`Record.map ${sqsMessage}`);
@@ -89,6 +115,7 @@ export const createQueueHandler = <MessageType>(
             });
           } catch (error) {
             console.error(error);
+            errors.push(error);
           }
         })
       );
@@ -98,9 +125,18 @@ export const createQueueHandler = <MessageType>(
       await deleteMessages(queueUrl, receipts);
 
       if (receipts.length !== event.Records.length) {
-        throw new Error(
+        console.error(
           `Failed to process ${event.Records.length - receipts.length} messages`
         );
+
+        // If all the errors are the same then fail the whole queue with a more specific error mesage
+        if (errors.every((error) => error.message == errors[0].message)) {
+          throw new Error(
+            `Failed to process SQS messages: ${errors[0].message}`
+          );
+        }
+
+        throw new Error(`Failed to process SQS messages`);
       }
     } finally {
       if (hooks && hooks.after) {

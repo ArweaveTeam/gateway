@@ -1,8 +1,12 @@
 import { TransactionHeader, Block } from "../lib/arweave";
-export interface ImportTx {
-  content_type: string | null;
-  data_size: number;
+
+export interface DispatchTx {
   tx: TransactionHeader;
+}
+
+export interface ImportTx {
+  id?: string;
+  tx?: TransactionHeader;
 }
 
 export interface ImportBlock {

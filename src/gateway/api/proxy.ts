@@ -1,25 +1,23 @@
-import { firstResponse, OriginResponse } from "../../lib/proxy";
-import { APIRequest, APIResponse } from "../../lib/api-handler";
+import { fetchRequest } from "../../lib/arweave";
+import { APIRequest, APIResponse, APIError } from "../../lib/api-handler";
 
 export const handler = async (request: APIRequest, response: APIResponse) => {
-  const { origin, originResponse, originTime } = await firstResponse(
+  const { status, headers, body } = await fetchRequest(
     request.path,
-    (origin: string, url: string, response: OriginResponse) => {
-      return response.status == 200 || response.status == 202;
+    ({ status }) => [200, 202, 410].includes(status)
+  );
+
+  if (status && body && headers) {
+    response.status(status);
+
+    const contentType = headers.get("content-type");
+
+    if (contentType) {
+      response.type(contentType);
     }
-  );
 
-  const status = originResponse.status;
-  const contentType = originResponse.headers.get("Content-Type");
-
-  console.info(
-    `origin.response: ${status}, origin.origin: ${origin},  origin.originTime: ${originTime}ms, origin.contentType: ${contentType}, origin.headers ${JSON.stringify(
-      originResponse.headers.raw()
-    )}`
-  );
-
-  if (contentType) {
-    response.type(contentType);
+    return response.sendFile(body);
   }
-  response.sendFile(await originResponse.buffer());
+
+  throw new APIError(502, "no_response");
 };

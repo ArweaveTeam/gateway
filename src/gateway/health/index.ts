@@ -1,13 +1,11 @@
 import { APIHandler } from "../../lib/api-handler";
 import fetch from "node-fetch";
 
-const origins = JSON.parse(
-  process.env.ARWEAVE_GATEWAY_ORIGINS || "null"
-) as string[];
+const origins = JSON.parse(process.env.ARWEAVE_NODES || "null") as string[];
 
 if (!Array.isArray(origins)) {
   throw new Error(
-    `error.config: Invalid env var, process.env.ARWEAVE_GATEWAY_ORIGINS: ${process.env.ARWEAVE_GATEWAY_ORIGINS}`
+    `error.config: Invalid env var, process.env.ARWEAVE_NODES: ${process.env.ARWEAVE_NODES}`
   );
 }
 

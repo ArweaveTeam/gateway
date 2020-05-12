@@ -1,15 +1,20 @@
-import { parseJsonBody, createApiHandler, router } from "../../lib/api-handler";
+import {
+  parseJsonBody,
+  createRouter,
+  createApiHandler,
+  bindApiHandler,
+} from "../../lib/api-handler";
 import { put } from "../../lib/buckets";
 import { fromB64Url } from "../../lib/encoding";
 import { Transaction, getTagValue } from "../../lib/arweave";
 import { enqueue, getQueueUrl } from "../../lib/queues";
 import { pick } from "lodash";
-import { ImportTx } from "../../interfaces/messages";
+import { ImportTx, DispatchTx } from "../../interfaces/messages";
 
-const app = router();
+const router = createRouter();
 
-app.post(
-  "*",
+bindApiHandler(
+  router,
   createApiHandler(async (request, response) => {
     console.log("received new transaction");
 
@@ -23,11 +28,7 @@ app.post(
       contentType: getTagValue(tx, "content-type"),
     });
 
-    let contentType = getTagValue(tx, "content-type") || null;
-
-    await enqueue<ImportTx>(getQueueUrl("dispatch-txs"), {
-      data_size: tx.data_size,
-      content_type: contentType,
+    await enqueue<DispatchTx>(getQueueUrl("dispatch-txs"), {
       tx: pick(tx, [
         "format",
         "id",
@@ -45,8 +46,6 @@ app.post(
     });
 
     await enqueue<ImportTx>(getQueueUrl("import-txs"), {
-      data_size: tx.data_size,
-      content_type: contentType,
       tx: pick(tx, [
         "format",
         "id",
@@ -68,5 +67,5 @@ app.post(
 );
 
 export const handler = async (event: any, context: any) => {
-  return app.run(event, context);
+  return router.run(event, context);
 };

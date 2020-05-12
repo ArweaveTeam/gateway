@@ -7,24 +7,13 @@ export const redirectToSandbox = (
   { txid }: { txid: string }
 ): boolean => {
   const currentSandbox = getRequestSandbox(request);
+
   const expectedSandbox = expectedTxSandbox(txid);
 
   if (currentSandbox == expectedSandbox) {
     // No redirect is required, so do nothing.
     return false;
   }
-
-  /**
-   * In a local dev environment we don't have an API gateway
-   * mapping the requests to a service stage, so we need to
-   * manually add the stage back into the request path.
-   * In production we don't want this though.
-   * Prod > arweave.dev/info
-   * Dev > arweave.local/dev/info
-   */
-  const redirectPath = process.env.IS_LOCAL
-    ? `/${request.requestContext.stage}${request.path}`
-    : request.path;
 
   // Default to http as this works in dev environments and any/all
   // load balancers/gateways in deployed settings should pass the
@@ -35,7 +24,7 @@ export const redirectToSandbox = (
   const [host, tld] = request.headers.host!.split(".").slice(-2);
   response.redirect(
     302,
-    `${protocol}://${expectedSandbox}.${host}.${tld}${redirectPath}`
+    `${protocol}://${expectedSandbox}.${host}.${tld}${request.path}`
   );
 
   // We redirected the request, so return true.

@@ -1,20 +1,23 @@
-import API from "lambda-api";
-import { createApiHandler } from "../../lib/api-handler";
+import {
+  createRouter,
+  createApiHandler,
+  bindApiHandler,
+} from "../../lib/api-handler";
 import { handler as proxyHandler } from "./proxy";
 import { handler as dataHandler } from "./data";
 
-const api = API();
-
 export const PathPatterns = {
-  isDataPath: /^\/?([a-z0-9-_]{43})\/?$|^\/?([a-z0-9-_]{43})\/(.*)$/i,
+  extractManifestSubpath: /^\/?[a-zA-Z0-9-_]{43}\/(.*)$/i,
+  isDataPath: /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i,
   extractTransactionId: /^\/?([a-z0-9-_]{43})/i,
 };
 
-api.get(
-  "*",
+const router = createRouter();
+
+bindApiHandler(
+  router,
   createApiHandler(async (request, response) => {
     if (request.path.match(PathPatterns.isDataPath)) {
-      console.log("view..");
       return dataHandler(request, response);
     }
 
@@ -23,5 +26,5 @@ api.get(
 );
 
 export const handler = async (event: any, context: any) => {
-  return api.run(event, context);
+  return router.run(event, context);
 };

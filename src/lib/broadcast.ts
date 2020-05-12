@@ -1,15 +1,15 @@
 import fetch, { Response } from "node-fetch";
 
-export async function broadcast(tx: any, hosts: string[]) {
+export async function broadcastTx(tx: any, hosts: string[]) {
   await Promise.all(
-    hosts.map(async host => {
+    hosts.map(async (host) => {
       await retry(
         {
           retryCount: 5,
           retryDelay: 500,
-          timeout: 30000
+          timeout: 30000,
         },
-        async attempt => {
+        async (attempt) => {
           const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
 
           console.log(
@@ -23,7 +23,7 @@ export async function broadcast(tx: any, hosts: string[]) {
             method: "POST",
             body: JSON.stringify(tx),
             headers: { "Content-Type": "application/json" },
-            timeout: 30
+            timeout: 30,
           });
           console.log(`attempt: ${attempt}, host: ${host}, status: ${status}`);
           return ok;
@@ -31,7 +31,7 @@ export async function broadcast(tx: any, hosts: string[]) {
         (error, attempt) => {
           `attempt: ${attempt}, host: ${host}, error: ${error}`;
         }
-      ).catch(error => {
+      ).catch((error) => {
         console.error(`Failed to send to: ${host}`, error);
       });
     })
@@ -39,13 +39,13 @@ export async function broadcast(tx: any, hosts: string[]) {
 }
 
 const wait = async (timeout: number) =>
-  new Promise(resolve => setTimeout(resolve, timeout));
+  new Promise((resolve) => setTimeout(resolve, timeout));
 
 const retry = async <T>(
   {
     retryCount,
     retryDelay,
-    timeout
+    timeout,
   }: {
     retryCount: number;
     retryDelay: number;

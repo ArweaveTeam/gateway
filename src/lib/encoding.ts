@@ -2,6 +2,7 @@ import { base32 } from "rfc4648";
 
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
+export type WinstonString = string;
 
 export function toB64url(buffer: Buffer): Base64UrlEncodedString {
   return buffer

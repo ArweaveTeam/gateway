@@ -1,7 +1,6 @@
 import { parseJsonBody, createApiHandler, router } from "../../lib/api-handler";
 import { put } from "../../lib/buckets";
-import { fromB64Url } from "../../lib/encoding";
-import { getTagValue, TransactionHeader, Block } from "../../lib/arweave";
+import { TransactionHeader } from "../../lib/arweave";
 import { enqueue, getQueueUrl } from "../../lib/queues";
 import { pick } from "lodash";
 import { ImportTx, ImportBlock } from "../../interfaces/messages";
@@ -13,11 +12,12 @@ app.post(
   createApiHandler(async (request, response) => {
     console.log("Creating handler new-tx");
 
-    const { event, tx, block, blocks } = parseJsonBody<any>(request);
+    const { transaction, block } = parseJsonBody<any>(request);
+    console.log("Parsed", transaction, block);
 
-    if (tx) {
+    if (transaction) {
       console.log("Payload contains tx, importing...");
-      await importTx(tx);
+      await importTx(transaction);
       return response.sendStatus(200);
     }
 
@@ -34,11 +34,8 @@ app.post(
 
 const importTx = async (tx: TransactionHeader): Promise<void> => {
   let dataSize = tx.data_size || 0;
-  let contentType = getTagValue(tx, "content-type") || null;
 
   return enqueue<ImportTx>(getQueueUrl("import-txs"), {
-    data_size: dataSize,
-    content_type: contentType,
     tx: pick(
       {
         ...tx,
