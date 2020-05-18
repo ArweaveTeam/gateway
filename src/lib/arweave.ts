@@ -140,15 +140,30 @@ export const getTagValue = (
   }
 };
 
+export const utf8DecodeTag = (
+  tag: Tag
+): { name: string | null; value: string | null } => {
+  let name = null;
+  let value = null;
+  try {
+    name = fromB64Url(tag.name).toString("utf8");
+    value = fromB64Url(tag.value).toString("utf8");
+  } catch (error) {}
+  return {
+    name,
+    value,
+  };
+};
+
 export const origins = JSON.parse(
   process.env.ARWEAVE_NODES || "null"
 ) as string[];
 
-if (!Array.isArray(origins)) {
-  throw new Error(
-    `error.config: Invalid env var, process.env.ARWEAVE_NODES: ${process.env.ARWEAVE_NODES}`
-  );
-}
+// if (!Array.isArray(origins)) {
+//   throw new Error(
+//     `error.config: Invalid env var, process.env.ARWEAVE_NODES: ${process.env.ARWEAVE_NODES}`
+//   );
+// }
 
 interface RequestResponse {
   status?: number;

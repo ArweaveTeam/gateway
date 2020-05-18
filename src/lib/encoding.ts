@@ -1,4 +1,5 @@
 import { base32 } from "rfc4648";
+import { createHash } from "crypto";
 
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
@@ -33,4 +34,8 @@ export function fromB32(input: string): Buffer {
 
 export function toB32(input: Buffer): string {
   return base32.stringify(input, { pad: false }).toLowerCase();
+}
+
+export function sha256B64Url(input: Buffer): string {
+  return toB64url(createHash("sha256").update(input).digest());
 }

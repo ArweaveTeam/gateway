@@ -6,11 +6,12 @@ import {
   APIError,
 } from "../../lib/api-handler";
 import {
-  createConnectionPool,
   getConnectionPool,
   releaseConnectionPool,
 } from "../../database/postgres";
 import knex from "knex";
+import { query as txQuery } from "../../database/transaction-db";
+import { graphqlHandler } from "../graphql";
 
 const router = createRouter();
 
@@ -22,6 +23,33 @@ interface ArqlTagMatch {
   expr2: string;
 }
 
+interface ArqlTagCompare {
+  op: "compare";
+  expr1: string;
+  expr2: {
+    type: ArqlTagMatchQueryType;
+    op: ArqlTagMatchQueryOp;
+    value: number | string;
+  };
+}
+
+let q: ArqlTagCompare = {
+  op: "compare",
+  expr1: "votes",
+  expr2: {
+    type: "numeric",
+    op: "lte",
+    value: 78,
+  },
+};
+
+type ArqlTagMatchQueryType = "string" | "numeric";
+type ArqlTagMatchQueryOp = "eq" | "gt" | "lt" | "gte" | "lte";
+
+interface ArqlTagMatchQuery {
+  type: ArqlTagMatchQueryType;
+  op: ArqlTagMatchQueryOp;
+}
 interface ArqlBooleanQuery {
   op: "and" | "or";
   expr1: ArqlQuery;
@@ -35,28 +63,27 @@ bindApiHandler(
   createApiHandler(async (request, response) => {
     const query = parseJsonBody<ArqlQuery>(request);
 
+    if (request.body.query) {
+      return await graphqlHandler(request, response);
+    }
+
     if (!validateQuery(query)) {
       throw new APIError(400, "invalid query");
     }
 
-    try {
-      const pool = getConnectionPool("read");
+    const pool = getConnectionPool("read");
 
-      const results = await executeQuery(pool, query, {
-        limit: Math.min(
-          Number.isInteger(parseInt(request.query.limit!))
-            ? parseInt(request.query.limit!)
-            : 100,
-          100000
-        ),
-      });
+    const results = await executeQuery(pool, query, {
+      limit: Math.min(
+        Number.isInteger(parseInt(request.query.limit!))
+          ? parseInt(request.query.limit!)
+          : 100,
+        100000
+      ),
+    });
 
-      response.sendStatus(200);
-      response.send(results);
-    } catch (error) {
-      console.error(error);
-      await releaseConnectionPool("read");
-    }
+    response.sendStatus(200);
+    response.send(results);
   })
 );
 
@@ -67,14 +94,15 @@ export const handler = async (event: any, context: any) => {
 const executeQuery = async (
   connection: knex,
   arqlQuery: ArqlQuery,
-  { limit = 100, offset = 0 }: { limit?: number; offset?: number }
+  { limit = 100000, offset = 0 }: { limit?: number; offset?: number }
 ): Promise<ArqlResultSet> => {
-  const sqlQuery = arqlToSqlQuery(
-    connection.queryBuilder().from("tags"),
-    arqlQuery
-  );
+  const sqlQuery = arqlToSqlQuery(txQuery(connection, {}), arqlQuery)
+    .limit(limit)
+    .offset(offset);
 
-  return await sqlQuery.pluck("tx_id").limit(limit).offset(offset);
+  console.log(sqlQuery.toSQL());
+
+  return await sqlQuery.pluck("transactions.id");
 };
 
 const validateQuery = (arqlQuery: ArqlQuery): boolean => {
@@ -90,28 +118,35 @@ const validateQuery = (arqlQuery: ArqlQuery): boolean => {
 };
 
 const arqlToSqlQuery = (
-  sqlBuilder: knex.QueryBuilder,
+  sqlQuery: knex.QueryBuilder,
   arqlQuery: ArqlQuery
 ): knex.QueryBuilder => {
   switch (arqlQuery.op) {
     case "equals":
-      return sqlBuilder.where((sqlBuilder) => {
-        sqlBuilder
-          .where("tags.name", arqlQuery.expr1)
-          .where("tags.value", arqlQuery.expr2);
+      return sqlQuery.where((sqlQuery) => {
+        switch (arqlQuery.expr1) {
+          case "to":
+            sqlQuery.where("transactions.target", arqlQuery.expr2);
+            break;
+          case "from":
+            sqlQuery.whereIn("transactions.owner_address", [arqlQuery.expr2]);
+            break;
+          default:
+            sqlQuery
+              .where("tags.name", arqlQuery.expr1)
+              .where("tags.value", arqlQuery.expr2);
+            break;
+        }
       });
+
     case "and":
-      return arqlToSqlQuery(sqlBuilder, arqlQuery.expr1).andWhere(
-        (sqlBuilder) => {
-          arqlToSqlQuery(sqlBuilder, arqlQuery.expr2);
-        }
-      );
+      return arqlToSqlQuery(sqlQuery, arqlQuery.expr1).andWhere((sqlQuery) => {
+        arqlToSqlQuery(sqlQuery, arqlQuery.expr2);
+      });
     case "or":
-      return arqlToSqlQuery(sqlBuilder, arqlQuery.expr1).orWhere(
-        (sqlBuilder) => {
-          arqlToSqlQuery(sqlBuilder, arqlQuery.expr2);
-        }
-      );
+      return arqlToSqlQuery(sqlQuery, arqlQuery.expr1).orWhere((sqlQuery) => {
+        arqlToSqlQuery(sqlQuery, arqlQuery.expr2);
+      });
     default:
       throw new Error("Invalid query");
   }

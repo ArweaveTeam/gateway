@@ -1,60 +1,68 @@
-import { get, put } from "../../lib/buckets";
-import { APIRequest, APIResponse, APIError } from "../../lib/api-handler";
-import { redirectToSandbox } from "./middleware/sandbox";
-import { PathPatterns } from ".";
+import { getTxIdFromPath } from ".";
+import {
+  APIError,
+  APIHandler,
+  APIRequest,
+  APIResponse,
+} from "../../lib/api-handler";
 import { fetchTransactionData } from "../../lib/arweave";
-import { resolveTx } from "../../lib/path-manifest";
+import {
+  resolveManifestPath,
+  PathManifest,
+} from "../../lib/arweave-path-manifest";
+import { get, put } from "../../lib/buckets";
 
-/**
- * Handles requests for data on the magic gateway endpoint.
- *
- * Responsible for ensuring the correct sandboxed origins are used,
- * and redirects requests that aren't.
- *
- *
- * TODO:
- * Responsible for resolving path manifest URLs.
- */
-export const handler = async (request: APIRequest, response: APIResponse) => {
-  console.log(request.path);
+export const handler: APIHandler = async (request, response) => {
   const txid = getTxIdFromPath(request.path);
 
-  if (redirectToSandbox(request, response, { txid })) {
-    return;
-  }
+  if (txid) {
+    const { data, contentType } = await fetchAndCache(txid);
 
-  const { data, contentType } = await fetchAndCache(txid);
-
-  console.log(contentType);
-
-  if (
-    contentType &&
-    contentType.toLowerCase() == "application/x.arweave-manifest+json"
-  ) {
-    const subpath = getManifestSubpath(request.path);
-
-    const resolvedTx = resolveTx(JSON.parse(data.toString()), subpath);
-
-    if (resolvedTx) {
-      const { data, contentType } = await fetchAndCache(resolvedTx);
-
-      return sendData({
-        txid: resolvedTx,
-        contentType,
-        data,
+    if (contentType == "application/x.arweave-manifest+json") {
+      return handleManifest(
+        request,
         response,
-        status: 200,
-      });
+        JSON.parse(data.toString("utf8"))
+      );
     }
+
+    return sendData({
+      txid,
+      contentType,
+      data,
+      response,
+      status: 200,
+    });
   }
 
-  return sendData({
-    txid,
-    contentType,
-    data,
-    response,
-    status: 200,
-  });
+  throw new APIError(404, "not_found");
+};
+
+const handleManifest = async (
+  request: APIRequest,
+  response: APIResponse,
+  manifest: PathManifest
+) => {
+  const subpath = getManifestSubpath(request.path);
+
+  console.log("subpath", request.path, subpath);
+
+  const resolvedTx = resolveManifestPath(manifest, subpath);
+
+  console.log("resolvedTx", subpath, resolvedTx);
+
+  if (resolvedTx) {
+    const { data, contentType } = await fetchAndCache(resolvedTx);
+    return sendData({
+      txid: resolvedTx,
+      contentType,
+      data,
+      response,
+      status: 200,
+    });
+  }
+
+  throw new APIError(404, "not_found");
 };
 
 const sendData = async ({
@@ -142,21 +150,7 @@ const fetchAndCache = async (
   }
 };
 
-// If the request path starts with 43 characters that look
-// like a valid arweave txid, then extract and return that,
-// otherwise, return null.
-const getTxIdFromPath = (path: string): string => {
-  const id = path.match(PathPatterns.extractTransactionId);
-  if (id) {
-    return id[1];
-  }
-
-  throw new APIError(404, "not found");
-};
-
-const getManifestSubpath = (path: string): string | undefined => {
-  const subpath = path.match(PathPatterns.extractManifestSubpath);
-  if (subpath) {
-    return subpath[1];
-  }
+const getManifestSubpath = (requestPath: string): string | undefined => {
+  const subpath = requestPath.match(/^\/?[a-zA-Z0-9-_]{43}\/(.*)$/i);
+  return (subpath && subpath[1]) || undefined;
 };

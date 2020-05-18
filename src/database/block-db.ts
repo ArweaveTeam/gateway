@@ -87,30 +87,32 @@ export const saveBlocks = async (
       rows: blocks.map(serialize),
     });
 
-    const blockTxMappings = blocks.reduce(
-      (map: DatabaseBlockTxMap[], block) => {
-        return map.concat(
-          block.txs.map((tx_id: string) => {
-            return { block_id: block.id, tx_id };
-          })
-        );
-      },
-      []
-    );
+    const blockTxMappings: TxBlockHeight[] = blocks.reduce((map, block) => {
+      return map.concat(
+        block.txs.map((tx_id: string) => {
+          return { height: block.height, id: tx_id };
+        })
+      );
+    }, [] as TxBlockHeight[]);
 
     await sequentialBatch(
       blockTxMappings,
       5000,
-      async (batch: DatabaseBlockTxMap[]) => {
+      async (batch: TxBlockHeight[]) => {
         await upsert(connection, {
-          table: "blocks_tx_map",
-          conflictKeys: ["tx_id"],
+          table: "transactions",
+          conflictKeys: ["id"],
           rows: batch,
         });
       }
     );
   });
 };
+
+interface TxBlockHeight {
+  id: string;
+  height: number;
+}
 
 export const fullBlocksToDbBlocks = (blocks: Block[]): DatabaseBlock[] => {
   return blocks.map(fullBlockToDbBlock);

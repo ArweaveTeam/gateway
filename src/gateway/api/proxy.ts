@@ -1,7 +1,7 @@
 import { fetchRequest } from "../../lib/arweave";
-import { APIRequest, APIResponse, APIError } from "../../lib/api-handler";
+import { APIError, APIHandler } from "../../lib/api-handler";
 
-export const handler = async (request: APIRequest, response: APIResponse) => {
+export const handler: APIHandler = async (request, response) => {
   const { status, headers, body } = await fetchRequest(
     request.path,
     ({ status }) => [200, 202, 410].includes(status)
@@ -19,5 +19,5 @@ export const handler = async (request: APIRequest, response: APIResponse) => {
     return response.sendFile(body);
   }
 
-  throw new APIError(502, "no_response");
+  throw new APIError(404, "no_response");
 };

@@ -15,9 +15,10 @@ let poolCache: {
 
 export const getConnectionPool = (mode: ConnectionMode): knex => {
   if (poolCache[mode]) {
+    console.log(`Reusing connection: ${mode}`);
     return (poolCache[mode] = createConnectionPool(mode));
   }
-
+  console.log(`Creating connection: ${mode}`);
   return (poolCache[mode] = createConnectionPool(mode));
 };
 
@@ -26,9 +27,10 @@ export const releaseConnectionPool = async (
 ): Promise<void> => {
   if (mode) {
     if (poolCache[mode]) {
+      console.log(`Destroying connection: ${mode}`);
       await poolCache[mode]!.destroy();
+      poolCache[mode] = null;
     }
-    poolCache[mode] = null;
   } else {
     await Promise.all([
       releaseConnectionPool("read"),
