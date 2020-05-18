@@ -55,17 +55,17 @@ const resolvers: IResolvers | Array<IResolvers> = {
       context: any,
       info: any
     ) => {
-      const pool = getConnectionPool("read");
-      return query(pool, {
+      return query(context.connection, {
         id,
       });
     },
     transactions: async (root, { to, from, tags }, context, info) => {
-      const pool = getConnectionPool("read");
-
       const fields = graphqlFields(info as any);
 
-      const sqlQuery = query(pool, {
+      console.log("root", root);
+
+      const sqlQuery = query(context.connection, {
+        limit: 10,
         to,
         from,
         tags,
@@ -74,7 +74,7 @@ const resolvers: IResolvers | Array<IResolvers> = {
           : ["transactions.id"],
       });
 
-      console.log(sqlQuery.toSQL());
+      // console.log(sqlQuery.toSQL());
 
       const results = (await sqlQuery) as TransactionHeader[];
 
@@ -86,11 +86,65 @@ const resolvers: IResolvers | Array<IResolvers> = {
       });
     },
   },
+  Transaction: {
+    linkedFromTransactions: async (
+      root,
+      { byForeignTag, to, from, tags },
+      context,
+      info
+    ) => {
+      const sqlQuery = query(context.connection, {
+        limit: 1000,
+        to,
+        from,
+        tags: ((tags as any[]) || []).concat({
+          name: byForeignTag,
+          value: root.id,
+        }),
+      });
+
+      // console.log(sqlQuery.toSQL());
+
+      const results = (await sqlQuery) as TransactionHeader[];
+
+      return results.map(({ id, tags = [] }: Partial<TransactionHeader>) => {
+        return {
+          id,
+          tags: tags.map(utf8DecodeTag),
+        };
+      });
+    },
+    countLinkedFromTransactions: async (
+      root,
+      { byForeignTag, to, from, tags },
+      context,
+      info
+    ) => {
+      const sqlQuery = query(context.connection, {
+        limit: 1000,
+        to,
+        from,
+        tags: ((tags as any[]) || []).concat({
+          name: byForeignTag,
+          value: root.id,
+        }),
+        select: [],
+        sort: false,
+      }).count();
+
+      // console.log(sqlQuery.toSQL());
+
+      return (await sqlQuery.first()).count;
+    },
+  },
 };
 
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  context: {
+    connection: getConnectionPool("read"),
+  },
 });
 
 const apolloHandler = server.createHandler({});

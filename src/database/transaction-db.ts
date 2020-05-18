@@ -41,11 +41,21 @@ interface TxQuery {
   limit?: number;
   offset?: number;
   select?: string[];
+  sort?: boolean;
 }
 
 export const query = (
   connection: knex,
-  { to, from, tags, limit = 100000, offset = 0, id, select }: TxQuery
+  {
+    to,
+    from,
+    tags,
+    limit = 100000,
+    offset = 0,
+    id,
+    select,
+    sort = true,
+  }: TxQuery
 ): knex.QueryBuilder => {
   const query = connection
     .queryBuilder()
@@ -74,7 +84,11 @@ export const query = (
     });
   }
 
-  query.limit(limit).offset(offset).orderByRaw("height desc NULLS first");
+  query.limit(limit).offset(offset);
+
+  if (sort) {
+    query.orderByRaw("height desc NULLS first");
+  }
 
   return query;
 };
