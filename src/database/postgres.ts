@@ -52,9 +52,9 @@ export const createConnectionPool = (mode: ConnectionMode): knex => {
     pool: {
       min: 0,
       max: 3,
-      acquireTimeoutMillis: 10000,
+      acquireTimeoutMillis: 20000,
       idleTimeoutMillis: 30000,
-      reapIntervalMillis: 30000,
+      reapIntervalMillis: 40000,
     },
     connection: () => {
       return {

@@ -140,14 +140,24 @@ export const getTagValue = (
   }
 };
 
+function isValidUTF8(buffer: Buffer) {
+  return Buffer.compare(Buffer.from(buffer.toString(), "utf8"), buffer) === 0;
+}
+
 export const utf8DecodeTag = (
   tag: Tag
-): { name: string | null; value: string | null } => {
-  let name = null;
-  let value = null;
+): { name: string | undefined; value: string | undefined } => {
+  let name = undefined;
+  let value = undefined;
   try {
-    name = fromB64Url(tag.name).toString("utf8");
-    value = fromB64Url(tag.value).toString("utf8");
+    const nameBuffer = fromB64Url(tag.name);
+    if (isValidUTF8(nameBuffer)) {
+      name = nameBuffer.toString("utf8");
+    }
+    const valueBuffer = fromB64Url(tag.value);
+    if (isValidUTF8(valueBuffer)) {
+      value = valueBuffer.toString("utf8");
+    }
   } catch (error) {}
   return {
     name,

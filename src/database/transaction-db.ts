@@ -33,6 +33,13 @@ export const getTxIds = async (
   return await connection.pluck("id").from("transactions").where(predicates);
 };
 
+export const getTx = async (
+  connection: knex,
+  predicates: object
+): Promise<any | undefined> => {
+  return connection.select().from("transactions").where(predicates).first();
+};
+
 interface TxQuery {
   to?: string[];
   from?: string[];
@@ -97,7 +104,8 @@ export const hasTx = async (connection: knex, id: string): Promise<boolean> => {
   const result = await connection
     .first("id")
     .from("transactions")
-    .where({ id });
+    .where({ id })
+    .whereNotNull("owner");
 
   return !!(result && result.id);
 };
@@ -147,7 +155,12 @@ const txToRow = ({
     {
       ...tx,
       content_type,
-      data_size,
+      format: tx.format || 1,
+      data_size:
+        tx.data_size ||
+        ((tx as any).data
+          ? fromB64Url((tx as any).data).byteLength
+          : undefined),
       tags: JSON.stringify(tx.tags),
       owner_address: sha256B64Url(fromB64Url(tx.owner)),
     },
