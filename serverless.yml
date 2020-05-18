@@ -22,6 +22,7 @@ provider:
         - s3:GetObjectTagging
         - s3:PutObject
         - s3:PutObjectTagging
+        - s3:ListBucket
       Resource:
         - arn:aws:s3:::${self:service}-${opt:stage, 'dev'}-*/*
     - Effect: Allow
@@ -53,13 +54,13 @@ provider:
     maxPreviousDeploymentArtifacts: 10
     blockPublicAccess: true
   environment:
-    ARWEAVE_GATEWAY_ORIGINS: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+    ARWEAVE_NODES: '["http://1.nodes.arweave.dev:1984","http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
     ARWEAVE_SQS_DISPATCH_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.dispatchTxs}
     ARWEAVE_SQS_IMPORT_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importTxs}
     ARWEAVE_SQS_IMPORT_BLOCKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importBlocks}.fifo
     ARWEAVE_S3_TX_DATA_BUCKET: ${self:custom.buckets.txData}
-    ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
+    ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-ro-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
     ARWEAVE_DB_WRITE_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
     ARWEAVE_DB_SCHEMA: arweave
 
@@ -70,10 +71,12 @@ plugins:
   - serverless-deployment-bucket
   # - serverless-offline-sqs
   - serverless-offline
+  - serverless-export-env
 
 functions:
   api:
     handler: dist/gateway/api/index.handler
+    timeout: 25
     events:
       - http:
           path: "{proxy+}"
@@ -93,6 +96,7 @@ functions:
 
   api-new-tx:
     handler: dist/gateway/new-tx/index.handler
+    timeout: 25
     events:
       - http:
           path: tx
@@ -101,6 +105,7 @@ functions:
 
   api-webhooks:
     handler: dist/gateway/webhooks/index.handler
+    timeout: 25
     events:
       - http:
           path: webhook
@@ -109,6 +114,7 @@ functions:
 
   api-arql:
     handler: dist/gateway/arql/index.handler
+    timeout: 25
     events:
       - http:
           path: arql
@@ -117,15 +123,16 @@ functions:
 
   api-graphql:
     handler: dist/gateway/graphql/index.handler
+    timeout: 25
     events:
       - http:
           path: graphql
-          method: post
+          method: any
           cors: true
 
   dispatch-txs:
     handler: dist/jobs/dispatch-txs.handler
-    timeout: 60
+    timeout: 25
     events:
       - sqs:
           batchSize: 10
@@ -134,6 +141,7 @@ functions:
 
   import-txs:
     handler: dist/jobs/import-txs.handler
+    timeout: 120
     events:
       - sqs:
           batchSize: 10
@@ -142,11 +150,19 @@ functions:
 
   import-blocks:
     handler: dist/jobs/import-blocks.handler
+    timeout: 300
     events:
       - sqs:
-          batchSize: 10
+          batchSize: 1
           arn:
             Fn::GetAtt: [SQSImportBlocksQueue, Arn]
+
+  purge-orphans:
+    handler: dist/jobs/purge-orphans.handler
+    events:
+      - schedule:
+          rate: cron(* * * * ? *)
+          enabled: true
 
 package:
   exclude:

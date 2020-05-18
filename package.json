@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "install-dnsmasq": "bash scripts/install-dnsmasq.sh",
-    "start": "export IS_LOCAL=1 && tsc && serverless offline --httpPort 3000 --host arweave.localhost",
+    "start": "export IS_LOCAL=1 && tsc && serverless offline --httpPort 3000 --host arweave.localhost --noPrependStageInUrl --httpsProtocol tls/arweave.localhost",
     "terraform": "cd terraform/environments/dev && terraform apply",
     "init-regional-gateway": "serverless create_domain",
     "deploy": "tsc && serverless deploy",
-    "info": "serverless info"
+    "info": "serverless info",
+    "local-cert": "openssl req -config tls/arweave.localhost/request.cnf -new -nodes -x509 -newkey rsa:2048 -sha256 -keyout tls/arweave.localhost/key.pem -out tls/arweave.localhost/cert.pem -days 365"
   },
   "repository": {
     "type": "git",
