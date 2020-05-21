@@ -126,7 +126,7 @@ const arqlToSqlQuery = (
       return sqlQuery.where((sqlQuery) => {
         switch (arqlQuery.expr1) {
           case "to":
-            sqlQuery.where("transactions.target", arqlQuery.expr2);
+            sqlQuery.whereIn("transactions.target", [arqlQuery.expr2]);
             break;
           case "from":
             sqlQuery.whereIn("transactions.owner_address", [arqlQuery.expr2]);

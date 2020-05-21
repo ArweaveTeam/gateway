@@ -1,5 +1,5 @@
 import { upsert } from "./postgres";
-import knex from "knex";
+import knex, { QueryBuilder } from "knex";
 import {
   TransactionHeader,
   getTagValue,
@@ -82,11 +82,19 @@ export const query = (
   }
 
   if (tags) {
-    query.leftJoin("tags", "tags.tx_id", "=", "transactions.id");
     tags.forEach((tag) => {
-      query.where({
-        "tags.name": tag.name,
-        "tags.value": tag.value,
+      query.whereIn("transactions.id", (query) => {
+        query.select("tx_id").from("tags");
+        if (tag.value.includes("%")) {
+          query
+            .where("tags.name", "=", tag.name)
+            .where("tags.value", "LIKE", tag.value);
+        } else {
+          query.where({
+            "tags.name": tag.name,
+            "tags.value": tag.value,
+          });
+        }
       });
     });
   }
