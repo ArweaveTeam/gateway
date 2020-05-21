@@ -1,51 +1,42 @@
-import { getTxIdFromPath } from ".";
-import {
-  APIError,
-  APIHandler,
-  APIRequest,
-  APIResponse,
-} from "../../lib/api-handler";
-import { fetchTransactionData } from "../../lib/arweave";
+import { fetchTransactionData } from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
-} from "../../lib/arweave-path-manifest";
-import { get, put } from "../../lib/buckets";
+} from "../../../lib/arweave-path-manifest";
+import { get, put } from "../../../lib/buckets";
+import { RequestHandler, Request, Response } from "express";
+import createError from "http-errors";
 
-export const handler: APIHandler = async (request, response) => {
-  const txid = getTxIdFromPath(request.path);
+const getTxIdFromPath = (path: string): string | undefined => {
+  const matches = path.match(/^\/?([a-z0-9-_]{43})/i) || [];
+  return matches[1];
+};
+
+export const handler: RequestHandler = async (req, res, next) => {
+  const txid = getTxIdFromPath(req.path);
 
   if (txid) {
     const { data, contentType } = await fetchAndCache(txid);
 
     if (contentType == "application/x.arweave-manifest+json") {
-      return handleManifest(
-        request,
-        response,
-        JSON.parse(data.toString("utf8"))
-      );
+      return handleManifest(req, res, JSON.parse(data.toString("utf8")));
     }
 
-    return sendData({
-      txid,
-      contentType,
-      data,
-      response,
-      status: 200,
-    });
+    return res
+      .header("etag", txid)
+      .type(contentType || "text/plain")
+      .send(data);
   }
-
-  throw new APIError(404, "not_found");
 };
 
 const handleManifest = async (
-  request: APIRequest,
-  response: APIResponse,
+  req: Request,
+  res: Response,
   manifest: PathManifest
 ) => {
-  const subpath = getManifestSubpath(request.path);
+  const subpath = getManifestSubpath(req.path);
 
-  console.log("subpath", request.path, subpath);
+  console.log("subpath", req.path, subpath);
 
   const resolvedTx = resolveManifestPath(manifest, subpath);
 
@@ -53,44 +44,12 @@ const handleManifest = async (
 
   if (resolvedTx) {
     const { data, contentType } = await fetchAndCache(resolvedTx);
-    return sendData({
-      txid: resolvedTx,
-      contentType,
-      data,
-      response,
-      status: 200,
-    });
+
+    res.header("etag", resolvedTx);
+    // res.header('cache-control')
+    // response.cache("public, immutable, max-age=31536000");
+    res.type(contentType || "tetx/plain").send(data);
   }
-
-  throw new APIError(404, "not_found");
-};
-
-const sendData = async ({
-  response,
-  txid,
-  data,
-  contentType,
-  status,
-}: {
-  response: APIResponse;
-  txid: string;
-  data: Buffer;
-  contentType: string | undefined;
-  status: number;
-}) => {
-  response.sendStatus(status);
-
-  if (contentType) {
-    response.type(contentType);
-  }
-
-  response.header("etag", txid);
-
-  response.cache("public, immutable, max-age=31536000");
-
-  return response.sendFile(data, {
-    cacheControl: false,
-  });
 };
 
 const cachePut = async (
@@ -146,7 +105,7 @@ const fetchAndCache = async (
       contentType,
     };
   } catch (error) {
-    throw new APIError(404, "not found");
+    throw new createError.NotFound();
   }
 };
 

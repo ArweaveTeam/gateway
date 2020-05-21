@@ -1,27 +1,26 @@
-import { TransactionHeader, utf8DecodeTag } from "../../lib/arweave";
-import { IResolvers } from "apollo-server-lambda";
-import graphqlFields from "graphql-fields";
-import { query } from "../../database/transaction-db";
+import { TransactionHeader, utf8DecodeTag } from "../../../lib/arweave";
+import { query } from "../../../database/transaction-db";
+import { IResolvers } from "apollo-server-express";
 
-export const resolvers: IResolvers | Array<IResolvers> = {
+type Resolvers = IResolvers;
+
+type ResolverFn = (parent: any, args: any, ctx: any) => Promise<any>;
+interface ResolverMap {
+  [field: string]: ResolverFn;
+}
+
+export const resolvers: Resolvers = {
   Query: {
-    transaction: (
-      root: any,
-      { id, to, from, tags }: any,
-      context: any,
-      info: any
-    ) => {
+    transaction: async (parent, { id }, context) => {
       return query(context.connection, {
         id,
       });
     },
-    transactions: async (root, { to, from, tags }, context, info) => {
-      const fields = graphqlFields(info as any);
-
-      console.log("root", root);
+    transactions: async (parent, { to, from, tags }, context) => {
+      console.log("parent", parent);
 
       const sqlQuery = query(context.connection, {
-        limit: 10,
+        limit: 100,
         to,
         from,
         tags,
@@ -41,10 +40,9 @@ export const resolvers: IResolvers | Array<IResolvers> = {
   },
   Transaction: {
     linkedFromTransactions: async (
-      root,
+      parent,
       { byForeignTag, to, from, tags },
-      context,
-      info
+      context
     ) => {
       const sqlQuery = query(context.connection, {
         limit: 1000,
@@ -52,7 +50,7 @@ export const resolvers: IResolvers | Array<IResolvers> = {
         from,
         tags: ((tags as any[]) || []).concat({
           name: byForeignTag,
-          value: root.id,
+          value: parent.id,
         }),
       });
 
@@ -68,10 +66,9 @@ export const resolvers: IResolvers | Array<IResolvers> = {
       });
     },
     countLinkedFromTransactions: async (
-      root,
+      parent,
       { byForeignTag, to, from, tags },
-      context,
-      info
+      context
     ) => {
       const sqlQuery = query(context.connection, {
         limit: 1000,
@@ -79,7 +76,7 @@ export const resolvers: IResolvers | Array<IResolvers> = {
         from,
         tags: ((tags as any[]) || []).concat({
           name: byForeignTag,
-          value: root.id,
+          value: parent.id,
         }),
         select: [],
         sort: false,

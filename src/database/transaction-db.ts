@@ -66,7 +66,7 @@ export const query = (
 ): knex.QueryBuilder => {
   const query = connection
     .queryBuilder()
-    .select(select || ["id", "height", "tags"])
+    .select(select || ["id", "height", "transactions.tags"])
     .from("transactions");
 
   if (to) {

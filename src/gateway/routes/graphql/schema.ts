@@ -1,4 +1,4 @@
-import { gql } from "apollo-server-lambda";
+import { gql } from "apollo-server-express";
 
 export const typeDefs = gql`
   type Query {

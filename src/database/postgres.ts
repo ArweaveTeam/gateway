@@ -39,7 +39,15 @@ export const releaseConnectionPool = async (
   }
 };
 
-export const createConnectionPool = (mode: ConnectionMode): knex => {
+interface PoolConfig {
+  min: number;
+  max: number;
+}
+
+export const createConnectionPool = (
+  mode: ConnectionMode,
+  { min, max }: PoolConfig = { min: 0, max: 10 }
+): knex => {
   const host = {
     read: process.env.ARWEAVE_DB_READ_HOST,
     write: process.env.ARWEAVE_DB_WRITE_HOST,
@@ -50,13 +58,14 @@ export const createConnectionPool = (mode: ConnectionMode): knex => {
   const client = knex({
     client: "pg",
     pool: {
-      min: 0,
-      max: 3,
+      min,
+      max,
       acquireTimeoutMillis: 20000,
       idleTimeoutMillis: 30000,
       reapIntervalMillis: 40000,
     },
     connection: () => {
+      console.log("Authenticating new connection");
       return {
         host: host,
         user: mode,

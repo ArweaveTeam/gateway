@@ -1,36 +1,33 @@
-import { parseJsonBody, createApiHandler, router } from "../../lib/api-handler";
-import { put } from "../../lib/buckets";
-import { TransactionHeader } from "../../lib/arweave";
-import { enqueue, getQueueUrl } from "../../lib/queues";
+import { TransactionHeader, Block } from "../../../lib/arweave";
+import { enqueue, getQueueUrl } from "../../../lib/queues";
 import { pick } from "lodash";
-import { ImportTx, ImportBlock } from "../../interfaces/messages";
+import { ImportTx, ImportBlock } from "../../../interfaces/messages";
+import { RequestHandler } from "express";
 
-const app = router();
+export const handler: RequestHandler = async (req, res, next) => {
+  console.log("Creating handler new-tx");
 
-app.post(
-  "*",
-  createApiHandler(async (request, response) => {
-    console.log("Creating handler new-tx");
+  const { tx, block }: { tx: TransactionHeader; block: Block } = req.body;
 
-    const { transaction, block } = parseJsonBody<any>(request);
-    console.log("Parsed", transaction, block);
+  console.log("Parsed", tx, block);
 
-    if (transaction) {
-      console.log("Payload contains tx, importing...");
-      await importTx(transaction);
-      return response.sendStatus(200);
-    }
+  if (tx) {
+    console.log("Payload contains tx, importing...");
+    await importTx(tx);
+    return res.sendStatus(200);
+  }
 
-    if (block) {
-      console.log("Payload contains block, importing...");
-      await importBlock({
-        block,
-        source: request.headers["x-forwarded-for"] || "0.0.0.0",
-      });
-      return response.sendStatus(200);
-    }
-  })
-);
+  if (block) {
+    console.log("Payload contains block, importing...");
+    await importBlock({
+      block,
+      source: req.headers["x-forwarded-for"]
+        ? req.headers["x-forwarded-for"][0]
+        : "0.0.0.0",
+    });
+    return res.sendStatus(200);
+  }
+};
 
 const importTx = async (tx: TransactionHeader): Promise<void> => {
   let dataSize = tx.data_size || 0;
@@ -92,8 +89,4 @@ const importBlock = async ({ source, block }: ImportBlock): Promise<void> => {
       deduplicationId: `source:${source}/${Date.now()}`,
     }
   );
-};
-
-export const handler = async (event: any, context: any) => {
-  return app.run(event, context);
 };
