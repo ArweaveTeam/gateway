@@ -43,7 +43,7 @@ export const handler = createQueueHandler<ImportTx>(
   },
   {
     after: async () => {
-      // await releaseConnectionPool("write");
+      await releaseConnectionPool("write");
     },
   }
 );

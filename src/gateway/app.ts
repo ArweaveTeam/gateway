@@ -8,6 +8,7 @@ import { handler as dataHandler } from "./routes/data";
 import { handler as proxyHandler } from "./routes/api/proxy";
 import { handler as arqlHandler } from "./routes/arql";
 import { handler as healthHandler } from "./routes/health";
+import { handler as webhookHandler } from "./routes/webhooks";
 import createError from "http-errors";
 import { redirectToSandbox } from "./middleware/sandbox";
 import { fetchRequest } from "../lib/arweave";
@@ -45,6 +46,8 @@ const errorhandler: ErrorRequestHandler = (
 app.use(helmet());
 
 app.use(redirectToSandbox);
+
+app.post("/webhook", express.json(), webhookHandler);
 
 app.post("/arql", express.json(), arqlHandler);
 

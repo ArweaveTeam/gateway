@@ -71,6 +71,7 @@ export const handler = createQueueHandler<ImportBlock>(
     },
   }
 );
+
 const enqueueTxImports = async (queueUrl: string, txIds: string[]) => {
   await sequentialBatch(txIds, 10, async (ids: string[]) => {
     await enqueueBatch<ImportTx>(

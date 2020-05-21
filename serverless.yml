@@ -40,10 +40,8 @@ provider:
         - arn:aws:sns:${self:provider.region, 'eu-west-2'}:384386061638:${self:service}-${opt:stage, 'dev'}-*
 
   tracing:
-    apiGateway: true
     lambda: true
-  apiGateway:
-    minimumCompressionSize: 1024
+
   logs:
     restApi: true
   stackTags:
@@ -60,13 +58,12 @@ provider:
     ARWEAVE_SQS_IMPORT_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importTxs}
     ARWEAVE_SQS_IMPORT_BLOCKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importBlocks}.fifo
     ARWEAVE_S3_TX_DATA_BUCKET: ${self:custom.buckets.txData}
-    ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-ro-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
-    ARWEAVE_DB_WRITE_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
-    ARWEAVE_DB_SCHEMA: arweave
+    ARWEAVE_DB_READ_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_READ_HOST}
+    ARWEAVE_DB_WRITE_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_WRITE_HOST}
+    ARWEAVE_DB_SCHEMA: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_SCHEMA}
+    ARWEAVE_GATEWAY_DOMAIN: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
 
 plugins:
-  - serverless-api-gateway-caching
-  - serverless-domain-manager
   - serverless-stage-manager
   - serverless-deployment-bucket
   # - serverless-offline-sqs
@@ -74,62 +71,6 @@ plugins:
   - serverless-export-env
 
 functions:
-  api:
-    handler: dist/gateway/api/index.handler
-    timeout: 25
-    events:
-      - http:
-          path: "{proxy+}"
-          method: any
-          cors: true
-          request:
-            parameters:
-              paths:
-                proxy: true
-          caching:
-            enabled: true
-            cacheKeyParameters:
-              - name: request.path.proxy
-            perKeyInvalidation:
-              requireAuthorization: true
-              handleUnauthorizedRequests: Ignore
-
-  api-new-tx:
-    handler: dist/gateway/new-tx/index.handler
-    timeout: 25
-    events:
-      - http:
-          path: tx
-          method: post
-          cors: true
-
-  api-webhooks:
-    handler: dist/gateway/webhooks/index.handler
-    timeout: 25
-    events:
-      - http:
-          path: webhook
-          method: post
-          cors: true
-
-  api-arql:
-    handler: dist/gateway/arql/index.handler
-    timeout: 25
-    events:
-      - http:
-          path: arql
-          method: post
-          cors: true
-
-  api-graphql:
-    handler: dist/gateway/graphql/index.handler
-    timeout: 25
-    events:
-      - http:
-          path: graphql
-          method: any
-          cors: true
-
   dispatch-txs:
     handler: dist/jobs/dispatch-txs.handler
     timeout: 25
@@ -141,7 +82,7 @@ functions:
 
   import-txs:
     handler: dist/jobs/import-txs.handler
-    timeout: 120
+    timeout: 60
     events:
       - sqs:
           batchSize: 10
@@ -150,7 +91,7 @@ functions:
 
   import-blocks:
     handler: dist/jobs/import-blocks.handler
-    timeout: 300
+    timeout: 120
     events:
       - sqs:
           batchSize: 1
@@ -167,6 +108,7 @@ functions:
 package:
   exclude:
     - terraform/**
+    - /*
   include:
     - dist/**
 
@@ -200,16 +142,6 @@ custom:
     perKeyInvalidation:
       requireAuthorization: true
       handleUnauthorizedRequests: Ignore
-  customDomain:
-    domainName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
-    stage: ${opt:stage, 'dev'}
-    certificateName: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
-    certificateRegion: ${self:provider.region, 'eu-west-2'}
-    createRoute53Record: false
-    endpointType: regional
-    securityPolicy: tls_1_2
-    enabled: true
-
   serverless-offline:
     httpPort: 3000
     resourceRoutes: true
@@ -256,7 +188,7 @@ resources:
         QueueName: ${self:custom.queues.importTxs}
         MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
         ReceiveMessageWaitTimeSeconds: 10
-        VisibilityTimeout: 30
+        VisibilityTimeout: 120
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportTxsDLQ, Arn]
@@ -275,7 +207,7 @@ resources:
         FifoQueue: true
         MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
         ReceiveMessageWaitTimeSeconds: 10
-        VisibilityTimeout: 30
+        VisibilityTimeout: 120
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportBlocksDLQ, Arn]
@@ -287,3 +219,4 @@ resources:
         FifoQueue: true
         QueueName: ${self:custom.queues.importBlocks}-DLQ.fifo
         MessageRetentionPeriod: 1209600 #14 days, max
+

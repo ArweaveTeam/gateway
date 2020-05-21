@@ -5,15 +5,16 @@ import { ImportTx, ImportBlock } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 
 export const handler: RequestHandler = async (req, res, next) => {
-  console.log("Creating handler new-tx");
+  console.log("Creating handler new-tx", req.body);
 
-  const { tx, block }: { tx: TransactionHeader; block: Block } = req.body;
+  const {
+    transaction,
+    block,
+  }: { transaction: TransactionHeader; block: Block } = req.body;
 
-  console.log("Parsed", tx, block);
-
-  if (tx) {
+  if (transaction) {
     console.log("Payload contains tx, importing...");
-    await importTx(tx);
+    await importTx(transaction);
     return res.sendStatus(200);
   }
 

@@ -197,11 +197,16 @@ const getFirstResponse = async <T = any>(
     [200, 201, 202, 208].includes(status);
 
   return new Promise(async (resolve, reject) => {
-    let e: any = null;
+    let isResolved = false;
     await Promise.all(
-      urls.map(async (url) => {
-        const controller = new AbortController();
+      urls.map(async (url, index) => {
+        await new Promise((resolve) => setTimeout(resolve, index * 500));
 
+        if (isResolved) {
+          return;
+        }
+
+        const controller = new AbortController();
         controllers.push(controller);
 
         try {
@@ -218,6 +223,7 @@ const getFirstResponse = async <T = any>(
                   headers: response.headers,
                 })
           ) {
+            isResolved = true;
             controllers.forEach((requestController) => {
               if (requestController != controller) {
                 requestController.abort();
