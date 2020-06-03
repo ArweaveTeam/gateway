@@ -1,4 +1,4 @@
-import { fetchTransactionData } from "../../../lib/arweave";
+import { fetchTransactionData, DataResponse } from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
@@ -16,7 +16,7 @@ export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    const { data, contentType } = await fetchAndCache(txid);
+    const { data, contentType } = await fetchAndCache(req, txid);
 
     if (contentType == "application/x.arweave-manifest+json") {
       req.log.info("[get-data] manifest content-type detected", { txid });
@@ -50,7 +50,7 @@ const handleManifest = async (
   });
 
   if (resolvedTx) {
-    const { data, contentType } = await fetchAndCache(resolvedTx);
+    const { data, contentType } = await fetchAndCache(req, resolvedTx);
 
     res.header("etag", resolvedTx);
     res.type(contentType || "text/plain");
@@ -58,6 +58,49 @@ const handleManifest = async (
   }
 };
 
+const fetchAndCache = async (
+  request: Request,
+  txid: string
+): Promise<DataResponse> => {
+  try {
+    const cached = await cacheGet(txid);
+    if (cached) {
+      request.log.error(`[get-data] cache hit`, {
+        txid,
+        type: cached.contentType,
+        bytes: cached.data.byteLength,
+      });
+      return cached;
+    }
+  } catch (error) {
+    request.log.warn(`[get-data] cache warning`, {
+      txid,
+      error: error.message,
+    });
+  }
+
+  const { data, contentType } = await fetchTransactionData(txid);
+
+  if (data.byteLength > 1) {
+    request.log.info(`[get-data] loading data into cache`, { txid });
+    await cachePut(txid, data, contentType);
+  }
+
+  return {
+    data,
+    contentType,
+  };
+};
+
+const cacheGet = async (txid: string): Promise<DataResponse | undefined> => {
+  const { Body, ContentType } = await get("tx-data", `tx/${txid}`);
+  if (Body) {
+    return {
+      data: Buffer.from(Body),
+      contentType: ContentType,
+    };
+  }
+};
 const cachePut = async (
   txid: string,
   data: Buffer,
@@ -66,53 +109,6 @@ const cachePut = async (
   return put("tx-data", `tx/${txid}`, data, {
     contentType,
   });
-};
-
-const cacheGet = async (
-  txid: string
-): Promise<
-  | {
-      data: Buffer;
-      contentType: string | undefined;
-    }
-  | undefined
-> => {
-  try {
-    const { Body, ContentType } = await get("tx-data", `tx/${txid}`);
-
-    if (Body) {
-      return {
-        data: Buffer.from(Body),
-        contentType: ContentType,
-      };
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const fetchAndCache = async (
-  txid: string
-): Promise<{ data: Buffer; contentType: string | undefined }> => {
-  const cached = await cacheGet(txid);
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const { data, contentType } = await fetchTransactionData(txid);
-
-    if (data.byteLength > 1) {
-      await cachePut(txid, data, contentType);
-    }
-
-    return {
-      data,
-      contentType,
-    };
-  } catch (error) {
-    throw new createError.NotFound();
-  }
 };
 
 const getManifestSubpath = (requestPath: string): string | undefined => {

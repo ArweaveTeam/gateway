@@ -12,7 +12,7 @@ export const handler: RequestHandler = async (req, res, next) => {
 
   if (!tx.id) {
     req.log.warn(`[new-tx] invalid request, missing id`);
-    throw new BadRequest("midding param: id");
+    throw new BadRequest("missing param: id");
   }
 
   req.log.info(`[new-tx]`, {

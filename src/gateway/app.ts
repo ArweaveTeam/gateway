@@ -2,34 +2,33 @@
 // before importing any other modules.
 import { config } from "dotenv";
 config();
-
 import express from "express";
-import log from "../lib/log";
 import helmet from "helmet";
 import {
-  releaseConnectionPool,
   initConnectionPool,
+  releaseConnectionPool,
 } from "../database/postgres";
+import log from "../lib/log";
 import { handler as corsMiddleware } from "./middleware/cors";
-import { handler as sandboxMiddleware } from "./middleware/sandbox";
+import {
+  errorResponseHandler,
+  notFoundHandler,
+  sentryCaptureRequestHandler,
+  sentryReportErrorHandler,
+} from "./middleware/error";
 import { handler as jsonBodyMiddleware } from "./middleware/json-body";
 import {
   configureRequestLogging,
   handler as requestLoggingMiddleware,
 } from "./middleware/request-log";
-import { handler as proxyHandler } from "./routes/proxy";
+import { handler as sandboxMiddleware } from "./middleware/sandbox";
 import { handler as arqlHandler } from "./routes/arql";
 import { handler as dataHandler } from "./routes/data";
 import { apolloServer } from "./routes/graphql";
 import { handler as healthHandler } from "./routes/health";
-import { handler as webhookHandler } from "./routes/webhooks";
 import { handler as newTxHandler } from "./routes/new-tx";
-import {
-  sentryCaptureRequestHandler,
-  sentryReportErrorHandler,
-  errorResponseHandler,
-  notFoundHandler,
-} from "./middleware/error";
+import { handler as proxyHandler } from "./routes/proxy";
+import { handler as webhookHandler } from "./routes/webhooks";
 
 require("express-async-errors");
 

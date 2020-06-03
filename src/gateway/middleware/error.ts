@@ -3,8 +3,7 @@ import { HttpError, NotFound } from "http-errors";
 import * as Sentry from "@sentry/node";
 
 Sentry.init({
-  dsn:
-    "https://71363925305549cb89631a5e1a63150b@o148971.ingest.sentry.io/5249502",
+  dsn: process.env.SENTRY_DSN,
   normalizeDepth: 5,
   environment: process.env.NODE_ENV,
 });

@@ -5,7 +5,8 @@ import fetch, {
   RequestInit as FetchRequestInit,
 } from "node-fetch";
 import { shuffle } from "lodash";
-
+import log from "../lib/log";
+import { NotFound } from "http-errors";
 export type TransactionHeader = Omit<Transaction, "data">;
 
 export interface Transaction {
@@ -49,6 +50,11 @@ export interface Block {
   hash_list_merkle: string;
 }
 
+export interface DataResponse {
+  data: Buffer;
+  contentType: string | undefined;
+}
+
 export const origins = JSON.parse(
   process.env.ARWEAVE_NODES || "null"
 ) as string[];
@@ -76,6 +82,8 @@ export const fetchBlock = async (id: string): Promise<Block> => {
 };
 
 export const fetchBlockByHeight = async (height: string): Promise<Block> => {
+  log.info(`[arweave] fetching block by height`, { height });
+
   const endpoints = origins.map((host) => `${host}/block/height/${height}`);
 
   const { body } = await getFirstResponse(
@@ -100,6 +108,7 @@ export const fetchBlockByHeight = async (height: string): Promise<Block> => {
 export const fetchTransactionHeader = async (
   txid: string
 ): Promise<TransactionHeader> => {
+  log.info(`[arweave] fetching transaction header`, { txid });
   const endpoints = origins.map((host) => `${host}/tx/${txid}`);
 
   const { body } = await getFirstResponse(
@@ -111,41 +120,47 @@ export const fetchTransactionHeader = async (
     return JSON.parse(body.toString()) as TransactionHeader;
   }
 
-  throw new Error(`Failed to fetch transaction header: ${txid}`);
+  throw new NotFound();
 };
 
 export const fetchTransactionData = async (
   txid: string
-): Promise<{
-  data: Buffer;
-  contentType: string | undefined;
-}> => {
-  console.log("Geting data and tags");
+): Promise<DataResponse> => {
+  log.info(`[arweave] fetching data and tags`, { txid });
 
   try {
     const [data, contentType] = await Promise.all([
-      fetchRequest(
-        `/tx/${txid}/data`,
-        ({ status }) => status == 200
-      ).then((response) => fromB64Url(response.body!.toString("utf8"))),
+      fetchRequest(`/tx/${txid}/data`, ({ status }) => status == 200).then(
+        (response) => {
+          return response && response.body
+            ? fromB64Url(response.body!.toString("utf8"))
+            : undefined;
+        }
+      ),
       fetchRequest(`/tx/${txid}/tags`, ({ status }) => status == 200).then(
         (response) => {
-          const tags = JSON.parse(response.body!.toString("utf8")) as Tag[];
+          const tags =
+            response && response.body
+              ? (JSON.parse(response.body!.toString("utf8")) as Tag[])
+              : [];
           return getTagValue(tags, "content-type");
         }
       ),
     ]);
     if (data) {
+      log.info(`[arweave] found tx`, { txid, type: contentType });
       return {
         contentType,
         data,
       };
+    } else {
+      log.info(`[arweave] failed to find tx`, { txid });
     }
   } catch (error) {
-    console.error(error);
+    log.error(`[arweave] error finding tx`, { txid, error: error.message });
   }
 
-  throw new Error(`Failed to fetch transaction data: ${txid}`);
+  throw new NotFound();
 };
 
 export const fetchRequest = async (
@@ -263,7 +278,10 @@ const getFirstResponse = async <T = any>(
           }
         } catch (error) {
           if (error.type != "aborted") {
-            console.error(`Request error ${url}`, error);
+            log.warn(`[arweave] request error`, {
+              message: error.message,
+              url,
+            });
           }
         }
       })
