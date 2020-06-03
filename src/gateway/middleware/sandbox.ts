@@ -6,22 +6,17 @@ const getTxIdFromPath = (path: string): string | undefined => {
   return matches[1];
 };
 
-export const redirectToSandbox: RequestHandler = (
-  request,
-  response,
-  next: Function
-) => {
-  const txid = getTxIdFromPath(request.path);
+export const handler: RequestHandler = (req, res, next) => {
+  const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    console.log(`sandbox for ${txid}`);
-    const currentSandbox = getRequestSandbox(request);
+    const currentSandbox = getRequestSandbox(req);
     const expectedSandbox = expectedTxSandbox(txid);
 
     if (currentSandbox != expectedSandbox) {
-      return response.redirect(
+      return res.redirect(
         302,
-        `${process.env.SANDBOX_PROTOCOL}://${expectedSandbox}.${process.env.SANDBOX_HOST}${request.path}`
+        `${process.env.SANDBOX_PROTOCOL}://${expectedSandbox}.${process.env.SANDBOX_HOST}${req.path}`
       );
     }
   }
@@ -33,6 +28,6 @@ const expectedTxSandbox = (id: string): string => {
   return toB32(fromB64Url(id));
 };
 
-const getRequestSandbox = (request: Request) => {
-  return request.headers.host!.split(".")[0].toLowerCase();
+const getRequestSandbox = (req: Request) => {
+  return req.headers.host!.split(".")[0].toLowerCase();
 };

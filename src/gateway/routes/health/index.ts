@@ -17,9 +17,6 @@ export const handler: RequestHandler = async (req, res, next) => {
     origins: await originHealth(),
     database: await databaseHealth(),
   };
-
-  console.log("Health check", healthStatus);
-
   res.send(healthStatus);
 };
 
@@ -51,6 +48,7 @@ const databaseHealth = async () => {
     const pool = getConnectionPool("read");
     return { block: await getLatestBlock(pool) };
   } catch (error) {
+    console.error(error);
     return false;
   }
 };

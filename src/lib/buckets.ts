@@ -1,5 +1,5 @@
 import { S3 } from "aws-sdk";
-import { toB64url, Base64UrlEncodedString } from "./encoding";
+import log from "../lib/log";
 
 const buckets: { [key in BucketType]: string } = {
   "tx-data": process.env.ARWEAVE_S3_TX_DATA_BUCKET!,
@@ -18,9 +18,9 @@ export const put = async (
   { contentType }: { contentType?: string }
 ) => {
   const bucket = buckets[bucketType];
-  console.log(
-    `Uploading to bucket:${bucket}, key: ${key}, contentType: ${contentType}`
-  );
+
+  log.info(`[s3] uploading to bucket`, { bucket, key, type: contentType });
+
   await s3
     .upload({
       Key: key,
@@ -36,7 +36,7 @@ export const get = async (
   key: string
 ): Promise<BucketObject> => {
   const bucket = buckets[bucketType];
-  console.log(`Getting from bucket:${bucket}, key: ${key}`);
+  log.info(`[s3] getting data from bucket`, { bucket, key });
   return s3
     .getObject({
       Key: key,

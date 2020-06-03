@@ -4,6 +4,7 @@ import { upsert, DBConnection } from "./postgres";
 import moment from "moment";
 import { pick, transform } from "lodash";
 import { sequentialBatch } from "../lib/helpers";
+import log from "../lib/log";
 
 export interface DatabaseBlock {
   id: string;
@@ -80,12 +81,21 @@ export const saveBlocks = async (
   connection: DBConnection,
   blocks: DatabaseBlock[]
 ) => {
-  await connection.transaction(async (knexTransaction) => {
-    await upsert(knexTransaction, {
-      table: "blocks",
-      conflictKeys: ["height"],
-      rows: blocks.map(serialize),
+  return connection.transaction(async (knexTransaction) => {
+    log.info(`[block-db] saving blocks`, {
+      blocks: blocks.map((block) => {
+        return { height: block.height, id: block.id };
+      }),
     });
+
+    const queries = [
+      upsert(knexTransaction, {
+        table: "blocks",
+        conflictKeys: ["height"],
+        rows: blocks.map(serialize),
+        transaction: knexTransaction,
+      }),
+    ];
 
     const blockTxMappings: TxBlockHeight[] = blocks.reduce((map, block) => {
       return map.concat(
@@ -99,13 +109,23 @@ export const saveBlocks = async (
       blockTxMappings,
       5000,
       async (batch: TxBlockHeight[]) => {
-        await upsert(connection, {
-          table: "transactions",
-          conflictKeys: ["id"],
-          rows: batch,
+        log.info(`[block-db] setting tx block heights`, {
+          txs: batch.map((item) => {
+            return { id: item.id, height: item.height };
+          }),
         });
+        queries.push(
+          upsert(knexTransaction, {
+            table: "transactions",
+            conflictKeys: ["id"],
+            rows: batch,
+            transaction: knexTransaction,
+          })
+        );
       }
     );
+
+    await Promise.all(queries);
   });
 };
 

@@ -2,6 +2,7 @@ import { TransactionHeader, Block } from "../lib/arweave";
 
 export interface DispatchTx {
   tx: TransactionHeader;
+  data_size: number;
 }
 
 export interface ImportTx {

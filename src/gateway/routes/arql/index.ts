@@ -3,6 +3,7 @@ import knex from "knex";
 import { query as txQuery } from "../../../database/transaction-db";
 import { RequestHandler } from "express";
 import createError from "http-errors";
+import { Logger } from "winston";
 
 type ArqlQuery = ArqlBooleanQuery | ArqlTagMatch;
 
@@ -37,25 +38,35 @@ interface ArqlBooleanQuery {
 
 type ArqlResultSet = string[];
 
-const pool = getConnectionPool("read");
+export const defaultMaxResults = 500;
 
 export const handler: RequestHandler = async (req, res, next: Function) => {
-  console.log("arqlHandler");
   if (req.body && req.body.query) {
-    console.log("forwarding to graphql");
+    req.log.info(`[graphql] resolving arql using graphql`);
     return next();
   }
 
-  validateQuery(req.body);
+  const pool = getConnectionPool("read");
 
-  const results = await executeQuery(pool, req.body, {
-    limit: Math.min(
-      Number.isInteger(parseInt(req.query.limit! as string))
-        ? parseInt(req.query.limit! as string)
-        : 100,
-      100000
-    ),
-  });
+  try {
+    validateQuery(req.body);
+  } catch (error) {
+    req.log.info(`[arql] invalid query`, { query: req.body });
+    throw error;
+  }
+
+  const limit = Math.min(
+    Number.isInteger(parseInt(req.query.limit! as string))
+      ? parseInt(req.query.limit! as string)
+      : defaultMaxResults,
+    defaultMaxResults
+  );
+
+  req.log.info(`[arql] valid query`, { query: req.body, limit });
+
+  const results = await executeQuery(pool, req.body, { limit });
+
+  req.log.info(`[arql] results: ${results.length}`);
 
   res.send(results);
 };
@@ -63,19 +74,26 @@ export const handler: RequestHandler = async (req, res, next: Function) => {
 const executeQuery = async (
   connection: knex,
   arqlQuery: ArqlQuery,
-  { limit = 100000, offset = 0 }: { limit?: number; offset?: number }
+  {
+    limit = defaultMaxResults,
+    offset = 0,
+    log = undefined,
+  }: { limit?: number; offset?: number; log?: Logger }
 ): Promise<ArqlResultSet> => {
   const sqlQuery = arqlToSqlQuery(txQuery(connection, {}), arqlQuery)
     .limit(limit)
     .offset(offset);
 
-  console.log(sqlQuery.toSQL());
+  if (log) {
+    log.info(`[arql] execute sql`, {
+      sql: sqlQuery.toSQL(),
+    });
+  }
 
   return await sqlQuery.pluck("transactions.id");
 };
 
 const validateQuery = (arqlQuery: ArqlQuery): boolean => {
-  console.log("validating", arqlQuery);
   try {
     if (arqlQuery.op == "equals") {
       if (typeof arqlQuery.expr1 != "string") {

@@ -19,3 +19,9 @@ export const sequentialBatch = async (
     await func(batch);
   }
 };
+
+export const wait = async (ms: number) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
