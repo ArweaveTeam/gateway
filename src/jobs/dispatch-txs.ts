@@ -9,12 +9,13 @@ export const handler = createQueueHandler<DispatchTx>(
   getQueueUrl("dispatch-txs"),
   async (message) => {
     console.log(message);
-    const { tx } = message;
-    console.log(`tx: ${tx.id}`);
+    const { tx, data_size: dataSize } = message;
+
+    console.log(`data_size: ${dataSize}, tx: ${tx.id}`);
 
     const fullTx = {
       ...tx,
-      data: tx.data_size
+      data: dataSize
         ? toB64url((await get("tx-data", `tx/${tx.id}`)).Body as Buffer)
         : "",
     };

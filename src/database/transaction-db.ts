@@ -1,5 +1,5 @@
 import { upsert } from "./postgres";
-import knex, { QueryBuilder } from "knex";
+import knex from "knex";
 import {
   TransactionHeader,
   getTagValue,
@@ -8,7 +8,6 @@ import {
 } from "../lib/arweave";
 import { fromB64Url, sha256B64Url } from "../lib/encoding";
 import { pick } from "lodash";
-import { sequentialBatch } from "../lib/helpers";
 
 const txFields = [
   "format",
@@ -69,6 +68,8 @@ export const query = (
     .select(select || ["id", "height", "transactions.tags"])
     .from("transactions");
 
+  query.whereNotNull("transactions.deleted_at");
+
   if (to) {
     query.whereIn("transactions.target", to);
   }
@@ -127,7 +128,7 @@ export const hasTxs = async (
 
 export const saveTx = async (connection: knex, tx: TransactionHeader) => {
   return await connection.transaction(async (knexTransaction) => {
-    const contentType = getTagValue(tx, "content-type");
+    const contentType = getTagValue(tx.tags, "content-type");
     await upsert(knexTransaction, {
       table: "transactions",
       conflictKeys: ["id"],

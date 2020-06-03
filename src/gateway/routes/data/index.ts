@@ -4,7 +4,7 @@ import {
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
 import { get, put } from "../../../lib/buckets";
-import { RequestHandler, Request, Response } from "express";
+import { RequestHandler, Request, Response, response } from "express";
 import createError from "http-errors";
 
 const getTxIdFromPath = (path: string): string | undefined => {
@@ -12,43 +12,49 @@ const getTxIdFromPath = (path: string): string | undefined => {
   return matches[1];
 };
 
-export const handler: RequestHandler = async (req, res, next) => {
+export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
     const { data, contentType } = await fetchAndCache(txid);
 
     if (contentType == "application/x.arweave-manifest+json") {
-      return handleManifest(req, res, JSON.parse(data.toString("utf8")));
+      req.log.info("[get-data] manifest content-type detected", { txid });
+      return handleManifest(req, res, JSON.parse(data.toString("utf8")), txid);
     }
 
-    return res
-      .header("etag", txid)
-      .type(contentType || "text/plain")
-      .send(data);
+    res.header("etag", txid);
+    res.type(contentType || "text/plain");
+    res.send(data);
   }
 };
 
 const handleManifest = async (
   req: Request,
   res: Response,
-  manifest: PathManifest
+  manifest: PathManifest,
+  txid: string
 ) => {
   const subpath = getManifestSubpath(req.path);
 
-  console.log("subpath", req.path, subpath);
+  if (req.path == `/${txid}`) {
+    res.redirect(301, `${req.path}/`);
+    return;
+  }
 
   const resolvedTx = resolveManifestPath(manifest, subpath);
 
-  console.log("resolvedTx", subpath, resolvedTx);
+  req.log.info("[get-data] resolved manifest path content", {
+    subpath,
+    resolvedTx,
+  });
 
   if (resolvedTx) {
     const { data, contentType } = await fetchAndCache(resolvedTx);
 
     res.header("etag", resolvedTx);
-    // res.header('cache-control')
-    // response.cache("public, immutable, max-age=31536000");
-    res.type(contentType || "tetx/plain").send(data);
+    res.type(contentType || "text/plain");
+    res.send(data);
   }
 };
 

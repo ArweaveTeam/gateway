@@ -4,6 +4,7 @@ import fetch, {
   Headers as FetchHeaders,
   RequestInit as FetchRequestInit,
 } from "node-fetch";
+import { shuffle } from "lodash";
 
 export type TransactionHeader = Omit<Transaction, "data">;
 
@@ -48,6 +49,10 @@ export interface Block {
   hash_list_merkle: string;
 }
 
+export const origins = JSON.parse(
+  process.env.ARWEAVE_NODES || "null"
+) as string[];
+
 export const fetchBlock = async (id: string): Promise<Block> => {
   const endpoints = origins.map((host) => `${host}/block/hash/${id}`);
 
@@ -68,6 +73,28 @@ export const fetchBlock = async (id: string): Promise<Block> => {
   }
 
   throw new Error(`Failed to fetch block: ${id}`);
+};
+
+export const fetchBlockByHeight = async (height: string): Promise<Block> => {
+  const endpoints = origins.map((host) => `${host}/block/height/${height}`);
+
+  const { body } = await getFirstResponse(
+    endpoints,
+    ({ status }) => status == 200
+  );
+
+  if (body) {
+    const block = JSON.parse(body.toString());
+
+    //For now we don't care about the poa and it's takes up too much
+    // space when logged, so just remove it for now.
+    //@ts-ignore
+    delete block.poa;
+
+    return block as Block;
+  }
+
+  throw new Error(`Failed to fetch block: ${height}`);
 };
 
 export const fetchTransactionHeader = async (
@@ -93,19 +120,31 @@ export const fetchTransactionData = async (
   data: Buffer;
   contentType: string | undefined;
 }> => {
-  const endpoints = origins.map((host) => `${host}/${txid}`);
+  console.log("Geting data and tags");
 
-  const { headers, body } = await getFirstResponse(
-    endpoints,
-    ({ status }) => status == 200
-  );
-
-  if (headers && body) {
-    return {
-      data: body,
-      contentType: headers.get("content-type") || undefined,
-    };
+  try {
+    const [data, contentType] = await Promise.all([
+      fetchRequest(
+        `/tx/${txid}/data`,
+        ({ status }) => status == 200
+      ).then((response) => fromB64Url(response.body!.toString("utf8"))),
+      fetchRequest(`/tx/${txid}/tags`, ({ status }) => status == 200).then(
+        (response) => {
+          const tags = JSON.parse(response.body!.toString("utf8")) as Tag[];
+          return getTagValue(tags, "content-type");
+        }
+      ),
+    ]);
+    if (data) {
+      return {
+        contentType,
+        data,
+      };
+    }
+  } catch (error) {
+    console.error(error);
   }
+
   throw new Error(`Failed to fetch transaction data: ${txid}`);
 };
 
@@ -118,17 +157,14 @@ export const fetchRequest = async (
   return await getFirstResponse(endpoints, filter);
 };
 
-export const getTagValue = (
-  tx: TransactionHeader | Transaction,
-  name: string
-): string | undefined => {
-  const contentTypeTag = tx.tags.find((tag) => {
+export const getTagValue = (tags: Tag[], name: string): string | undefined => {
+  const contentTypeTag = tags.find((tag) => {
     try {
       return (
         fromB64Url(tag.name).toString().toLowerCase() == name.toLowerCase()
       );
     } catch (error) {
-      return false;
+      return undefined;
     }
   });
   try {
@@ -165,16 +201,6 @@ export const utf8DecodeTag = (
   };
 };
 
-export const origins = JSON.parse(
-  process.env.ARWEAVE_NODES || "null"
-) as string[];
-
-// if (!Array.isArray(origins)) {
-//   throw new Error(
-//     `error.config: Invalid env var, process.env.ARWEAVE_NODES: ${process.env.ARWEAVE_NODES}`
-//   );
-// }
-
 interface RequestResponse {
   status?: number;
   headers?: FetchHeaders;
@@ -199,7 +225,7 @@ const getFirstResponse = async <T = any>(
   return new Promise(async (resolve, reject) => {
     let isResolved = false;
     await Promise.all(
-      urls.map(async (url, index) => {
+      shuffle(urls).map(async (url, index) => {
         await new Promise((resolve) => setTimeout(resolve, index * 500));
 
         if (isResolved) {

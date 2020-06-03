@@ -51,6 +51,7 @@ provider:
     name: ${self:service}-deployments-${self:provider.region, 'eu-west-2'}
     maxPreviousDeploymentArtifacts: 10
     blockPublicAccess: true
+    useAccelerateEndpoint: true
   environment:
     ARWEAVE_NODES: '["http://1.nodes.arweave.dev:1984","http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
@@ -107,7 +108,12 @@ functions:
 
 package:
   exclude:
+    - .*/*
+    - node_modules/aws-sdk/**
+    - migrations/**
+    - scripts/**
     - terraform/**
+    - tls/**
     - /*
   include:
     - dist/**

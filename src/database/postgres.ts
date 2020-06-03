@@ -1,6 +1,6 @@
-import { RDS } from "aws-sdk";
-import knex from "knex";
-
+import AWS from "aws-sdk";
+import knex, { StaticConnectionConfig } from "knex";
+import log from "../lib/log";
 export type ConnectionMode = "read" | "write";
 
 export type DBConnection = knex | knex.Transaction;
@@ -13,13 +13,17 @@ let poolCache: {
   write: null,
 };
 
+export const initConnectionPool = (
+  mode: ConnectionMode,
+  config?: PoolConfig
+) => {
+  log.info(`[Postgres] creating connection: ${mode}`);
+  poolCache[mode] = createConnectionPool(mode, config);
+};
+
 export const getConnectionPool = (mode: ConnectionMode): knex => {
-  if (poolCache[mode]) {
-    console.log(`Reusing connection: ${mode}`);
-    return (poolCache[mode] = createConnectionPool(mode));
-  }
-  console.log(`Creating connection: ${mode}`);
-  return (poolCache[mode] = createConnectionPool(mode));
+  log.info(`[Postgres] reusing connection: ${mode}`);
+  return poolCache[mode]!;
 };
 
 export const releaseConnectionPool = async (
@@ -27,7 +31,7 @@ export const releaseConnectionPool = async (
 ): Promise<void> => {
   if (mode) {
     if (poolCache[mode]) {
-      console.log(`Destroying connection: ${mode}`);
+      log.info(`[Postgres] destroying connection: ${mode}`);
       await poolCache[mode]!.destroy();
       poolCache[mode] = null;
     }
@@ -44,16 +48,20 @@ interface PoolConfig {
   max: number;
 }
 
+const rds = new AWS.RDS();
+
 export const createConnectionPool = (
   mode: ConnectionMode,
-  { min, max }: PoolConfig = { min: 0, max: 10 }
+  { min, max }: PoolConfig = { min: 1, max: 10 }
 ): knex => {
   const host = {
     read: process.env.ARWEAVE_DB_READ_HOST,
     write: process.env.ARWEAVE_DB_WRITE_HOST,
   }[mode];
 
-  console.log("Connecting to db", mode, host, process.env.ARWEAVE_DB_SCHEMA);
+  const hostDisplayName = `${process.env.AWS_REGION} ${mode}@${host}:${5432}`;
+
+  log.info(`[postgres] connecting to db: ${hostDisplayName}`);
 
   const client = knex({
     client: "pg",
@@ -64,23 +72,40 @@ export const createConnectionPool = (
       idleTimeoutMillis: 30000,
       reapIntervalMillis: 40000,
     },
-    connection: () => {
-      console.log("Authenticating new connection");
-      return {
-        host: host,
-        user: mode,
-        database: process.env.ARWEAVE_DB_SCHEMA,
-        ssl: {
-          rejectUnauthorized: false,
-        },
-        password: new RDS.Signer().getAuthToken({
-          region: process.env.AWS_REGION,
-          hostname: host,
-          port: 5432,
-          username: mode,
-        }),
-        expirationChecker: () => true,
-      };
+    connection: async (): Promise<StaticConnectionConfig> => {
+      return new Promise((resolve, reject) => {
+        log.info("[postgres] authenticating new db connection");
+        new AWS.RDS.Signer().getAuthToken(
+          {
+            region: process.env.AWS_REGION,
+            hostname: host,
+            port: 5432,
+            username: mode,
+          },
+          (error, token) => {
+            if (error) {
+              log.error(
+                `[postgres] failed to authenticate  ${hostDisplayName}`,
+                error
+              );
+              reject(error);
+            }
+            log.info(
+              `[postgres] successfully authenticated  ${hostDisplayName}`
+            );
+            resolve({
+              host: host!,
+              user: mode,
+              database: process.env.ARWEAVE_DB_SCHEMA!,
+              ssl: {
+                rejectUnauthorized: false,
+              },
+              password: token,
+              expirationChecker: () => true,
+            });
+          }
+        );
+      });
     },
   });
 
@@ -91,6 +116,7 @@ interface UpsertOptions<T = object[]> {
   table: string;
   conflictKeys: string[];
   rows: T;
+  transaction?: knex.Transaction;
 }
 
 /**
@@ -100,20 +126,24 @@ interface UpsertOptions<T = object[]> {
  */
 export const upsert = (
   connection: DBConnection,
-  { table, conflictKeys, rows }: UpsertOptions
+  { table, conflictKeys, rows, transaction }: UpsertOptions
 ) => {
   const updateFields = Object.keys(rows[0])
     .filter((field) => !conflictKeys.includes(field))
     .map((field) => `${field} = excluded.${field}`)
     .join(",");
 
-  const { sql, bindings } = connection.insert(rows).into(table).toSQL();
+  const query = connection.insert(rows).into(table);
+
+  if (transaction) {
+    query.transacting(transaction);
+  }
+
+  const { sql, bindings } = query.toSQL();
 
   const upsertSql = sql.concat(
     ` ON CONFLICT (${conflictKeys.join(",")}) DO UPDATE SET ${updateFields};`
   );
-
-  console.log("Query", upsertSql, bindings);
 
   return connection.raw(upsertSql, bindings);
 };

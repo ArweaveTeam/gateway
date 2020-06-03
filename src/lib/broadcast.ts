@@ -1,21 +1,28 @@
-import fetch, { Response } from "node-fetch";
+import fetch from "node-fetch";
+import log from "../lib/log";
 
 export async function broadcastTx(tx: any, hosts: string[]) {
+  log.info(`[broadcast-tx] broadcasting new tx`, { id: tx.id });
   await Promise.all(
     hosts.map(async (host) => {
       await retry(
         {
           retryCount: 5,
-          retryDelay: 500,
-          timeout: 30000,
+          retryDelay: 1000,
+          timeout: 10000,
         },
         async (attempt) => {
+          log.info(`[broadcast-tx] sending`, { attempt, host, id: tx.id });
+
           const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
 
-          console.log(
-            `status attempt: ${attempt}, host: ${host}, status: ${txStatus}`
-          );
           if ([200, 202, 208].includes(txStatus)) {
+            log.info(`[broadcast-tx] confirmed`, {
+              attempt,
+              host,
+              id: tx.id,
+              txStatus,
+            });
             return true;
           }
 
@@ -23,16 +30,32 @@ export async function broadcastTx(tx: any, hosts: string[]) {
             method: "POST",
             body: JSON.stringify(tx),
             headers: { "Content-Type": "application/json" },
-            timeout: 30,
+            timeout: 10000,
           });
-          console.log(`attempt: ${attempt}, host: ${host}, status: ${status}`);
+
+          log.info(`[broadcast-tx] sent`, {
+            attempt,
+            host,
+            id: tx.id,
+            status,
+          });
+
           return ok;
         },
         (error, attempt) => {
-          `attempt: ${attempt}, host: ${host}, error: ${error}`;
+          log.warn(`[broadcast-tx] warning`, {
+            error: error.message,
+            attempt,
+            host,
+            id: tx.id,
+          });
         }
       ).catch((error) => {
-        console.error(`Failed to send to: ${host}`, error);
+        log.error(`[broadcast-tx] failed`, {
+          id: tx.id,
+          host,
+          error: error.message,
+        });
       });
     })
   );

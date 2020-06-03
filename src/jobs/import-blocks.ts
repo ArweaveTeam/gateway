@@ -6,17 +6,22 @@ import {
   getRecentBlocks,
   saveBlocks,
 } from "../database/block-db";
-import { getConnectionPool, releaseConnectionPool } from "../database/postgres";
+import {
+  getConnectionPool,
+  releaseConnectionPool,
+  initConnectionPool,
+} from "../database/postgres";
 import { ImportBlock, ImportTx } from "../interfaces/messages";
 import { Block, fetchBlock } from "../lib/arweave";
-import { sequentialBatch } from "../lib/helpers";
+import { sequentialBatch, wait } from "../lib/helpers";
 import { createQueueHandler, enqueueBatch, getQueueUrl } from "../lib/queues";
+import log from "../lib/log";
 
 export const handler = createQueueHandler<ImportBlock>(
   getQueueUrl("import-blocks"),
   async ({ block, source }) => {
-    console.log(`Importing block:`, block);
-    console.log(`Block source:`, source);
+    log.info(`[import-txs] importing block`, { id: block.indep_hash, source });
+
     const txImportQueueUrl = await getQueueUrl("import-txs");
     const pool = getConnectionPool("write");
 
@@ -24,18 +29,18 @@ export const handler = createQueueHandler<ImportBlock>(
       try {
         const latestBlock = await getLatestBlock(knexTransaction);
 
-        console.log(`Proposed block: ${block.indep_hash}`);
-
         // If these two values match up then everything is worked as expected.
         if (block.previous_block == latestBlock.id) {
+          log.info(`[import-blocks] block accepted`, { id: block.indep_hash });
           await saveBlocks(knexTransaction, [fullBlockToDbBlock(block)]);
-
-          console.log(`Block accepted: ${block.indep_hash}`);
         } else {
           // If they don't match up, then we need to start fork recovering.
           // We'll fetch the previous blocks in this fork from arweave nodes
           // and try to splice them with the chain in our database.
-          console.warn(`Resolving fork: ${block.indep_hash}`);
+          log.info(`[import-blocks] fork detected`, {
+            id: block.indep_hash,
+            height: block.height,
+          });
 
           const forkDiff = await resolveFork(
             (await getRecentBlocks(knexTransaction)).map((block) => block.id),
@@ -45,7 +50,9 @@ export const handler = createQueueHandler<ImportBlock>(
             }
           ).then(fullBlocksToDbBlocks);
 
-          console.log(`Resolved fork: ${block.indep_hash}`, forkDiff);
+          log.info(`[import-blocks] resolved fork`, {
+            length: forkDiff.length,
+          });
 
           await saveBlocks(knexTransaction, forkDiff);
 
@@ -66,14 +73,24 @@ export const handler = createQueueHandler<ImportBlock>(
     });
   },
   {
+    before: async () => {
+      log.info(`[import-blocks] handler:before database connection init`);
+      initConnectionPool("write");
+      await wait(500);
+    },
     after: async () => {
+      log.info(`[import-blocks] handler:after database connection cleanup`);
       await releaseConnectionPool("write");
+      await wait(500);
     },
   }
 );
 
 const enqueueTxImports = async (queueUrl: string, txIds: string[]) => {
   await sequentialBatch(txIds, 10, async (ids: string[]) => {
+    log.info(`[import-blocks] queuing block txs`, {
+      ids,
+    });
     await enqueueBatch<ImportTx>(
       queueUrl,
       ids.map((id) => {
@@ -104,15 +121,19 @@ export const resolveFork = async (
   // Grab the last known block from the forked chain (blocks are appended, newest -> oldest).
   const block = fork[fork.length - 1];
 
-  console.log(`Resolving from height: ${block.height}, id ${block.indep_hash}`);
+  log.info(`[import-blocks] resolving fork`, {
+    id: block.indep_hash,
+    height: block.height,
+  });
 
   // If this block has a previous_block value that intersects with the the main chain ids,
   // then it means we've resolved the fork. The fork array now contains the block
   // diff between the two chains, sorted by height descending.
   if (mainChainIds.includes(block.previous_block)) {
-    console.log(
-      `Chains intersect found at height: ${block.height}, id: ${block.previous_block}`
-    );
+    log.info(`[import-blocks] resolved fork`, {
+      id: block.indep_hash,
+      height: block.height,
+    });
 
     return fork;
   }

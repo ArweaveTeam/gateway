@@ -1,24 +1,28 @@
 import { getQueueUrl, createQueueHandler } from "../lib/queues";
-import { getConnectionPool, releaseConnectionPool } from "../database/postgres";
+import {
+  getConnectionPool,
+  releaseConnectionPool,
+  initConnectionPool,
+} from "../database/postgres";
 import { ImportTx } from "../interfaces/messages";
 import { fetchTransactionHeader } from "../lib/arweave";
-import { hasTx, saveTx, getTx } from "../database/transaction-db";
-
-const pool = getConnectionPool("write");
+import { saveTx, getTx } from "../database/transaction-db";
+import { wait } from "../lib/helpers";
+import log from "../lib/log";
 
 export const handler = createQueueHandler<ImportTx>(
   getQueueUrl("import-txs"),
   async ({ id, tx }) => {
-    console.log(`Importing tx: ${id || (tx && tx.id)}`);
+    const pool = getConnectionPool("write");
 
     if (tx) {
-      console.log("Tx header: saving");
-      return await saveTx(pool, tx);
-      console.log("Saved");
+      log.info(`[import-txs] importing tx header`, { id });
+      await saveTx(pool, tx);
+      log.info(`[import-txs] successfully saved`, { id });
+      return;
     }
 
     if (id) {
-      console.log("Only tx id received");
       const result = await getTx(pool, { id });
       if (result) {
         if (
@@ -31,19 +35,25 @@ export const handler = createQueueHandler<ImportTx>(
           result.data_size &&
           result.content_type
         ) {
-          console.log("Already has this id");
+          log.info(`[import-txs] transaction already exists`, { id });
         } else {
-          console.log("Fetching id");
+          log.info(`[import-txs] fetching tx header`, { id });
           await saveTx(pool, await fetchTransactionHeader(id));
-          console.log("Saved");
-          return;
+          log.info(`[import-txs] successfully saved`, { id });
         }
       }
     }
   },
   {
+    before: async () => {
+      log.info(`[import-txs] handler:before database connection init`);
+      initConnectionPool("write");
+      await wait(500);
+    },
     after: async () => {
+      log.info(`[import-txs] handler:after database connection cleanup`);
       await releaseConnectionPool("write");
+      await wait(500);
     },
   }
 );
