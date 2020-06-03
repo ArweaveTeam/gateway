@@ -11,8 +11,10 @@ export const handler: RequestHandler = async (req, res, next) => {
   const tx: Transaction = req.body;
 
   if (!tx.id) {
-    req.log.warn(`[new-tx] invalid request, missing id`);
-    throw new BadRequest("missing param: id");
+    req.log.warn(`[new-tx] invalid request, missing id`, {
+      body: req.body,
+    });
+    throw new BadRequest("missing tx field: id");
   }
 
   req.log.info(`[new-tx]`, {
