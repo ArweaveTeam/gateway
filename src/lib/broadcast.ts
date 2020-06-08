@@ -17,7 +17,7 @@ export async function broadcastTx(tx: any, hosts: string[]) {
           const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
 
           if ([200, 202, 208].includes(txStatus)) {
-            log.info(`[broadcast-tx] confirmed`, {
+            log.info(`[broadcast-tx] already received`, {
               attempt,
               host,
               id: tx.id,
@@ -39,6 +39,29 @@ export async function broadcastTx(tx: any, hosts: string[]) {
             id: tx.id,
             status,
           });
+
+          await wait(200);
+
+          const { status: confirmationStatus } = await fetch(
+            `${host}/tx/${tx.id}/id`
+          );
+
+          if ([200, 202, 208].includes(confirmationStatus)) {
+            log.info(`[broadcast-tx] delivered`, {
+              attempt,
+              host,
+              id: tx.id,
+              txStatus,
+            });
+            return true;
+          } else {
+            log.warn(`[broadcast-tx] not delivered`, {
+              attempt,
+              host,
+              id: tx.id,
+              txStatus,
+            });
+          }
 
           return ok;
         },
