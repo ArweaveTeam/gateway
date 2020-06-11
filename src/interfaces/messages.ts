@@ -1,8 +1,18 @@
-import { TransactionHeader, Block } from "../lib/arweave";
+import { TransactionHeader, Block, ChunkHeader } from "../lib/arweave";
 
 export interface DispatchTx {
   tx: TransactionHeader;
   data_size: number;
+}
+
+export interface ImportChunk {
+  header: ChunkHeader;
+  size: number;
+}
+
+export interface DispatchChunk {
+  header: ChunkHeader;
+  size: number;
 }
 
 export interface ImportTx {
