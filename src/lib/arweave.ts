@@ -7,7 +7,13 @@ import fetch, {
 import { shuffle } from "lodash";
 import log from "../lib/log";
 import { NotFound } from "http-errors";
+
 export type TransactionHeader = Omit<Transaction, "data">;
+
+export type TransactionData = {
+  data: Buffer;
+  contentType: string | undefined;
+};
 
 export interface Transaction {
   format: number;
@@ -24,6 +30,16 @@ export interface Transaction {
   data_root: string;
   data_tree: string[];
 }
+
+export interface Chunk {
+  data_root: string;
+  data_size: number;
+  data_path: string;
+  chunk: string;
+  offset: number;
+}
+
+export type ChunkHeader = Omit<Chunk, "chunk">;
 
 export interface Tag {
   name: Base64UrlEncodedString;

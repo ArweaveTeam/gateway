@@ -22,13 +22,7 @@ export const handler: RequestHandler = async (req, res, next) => {
 
   await enqueue<ImportChunk>(getQueueUrl("import-chunks"), {
     size: chunkData.byteLength,
-    header: pick(chunk, [
-      "data_root",
-      "data_size",
-      "data_path",
-      "chunk",
-      "offset",
-    ]),
+    header: pick(chunk, ["data_root", "data_size", "data_path", "offset"]),
   });
 
   res.sendStatus(200);

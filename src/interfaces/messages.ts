@@ -10,7 +10,7 @@ export interface ImportChunk {
   size: number;
 }
 
-export interface DispatchChunk {
+export interface ExportChunk {
   header: ChunkHeader;
   size: number;
 }

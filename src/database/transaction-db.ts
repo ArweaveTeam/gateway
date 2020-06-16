@@ -23,6 +23,7 @@ const txFields = [
   "quantity",
   "content_type",
   "data_size",
+  "data_root",
 ];
 
 export const getTxIds = async (
@@ -68,7 +69,7 @@ export const query = (
     .select(select || ["id", "height", "transactions.tags"])
     .from("transactions");
 
-  query.whereNotNull("transactions.deleted_at");
+  query.whereNull("transactions.deleted_at");
 
   if (to) {
     query.whereIn("transactions.target", to);

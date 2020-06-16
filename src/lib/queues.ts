@@ -1,7 +1,13 @@
 import { SQS } from "aws-sdk";
 import { SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
+import log from "../lib/log";
 
-type QueueType = "dispatch-txs" | "import-txs" | "import-blocks";
+type QueueType =
+  | "dispatch-txs"
+  | "import-txs"
+  | "import-blocks"
+  | "import-chunks"
+  | "export-chunks";
 type SQSQueueUrl = string;
 type MessageGroup = string;
 type MessageDeduplicationId = string;
@@ -11,6 +17,8 @@ interface HandlerContext {
 
 const queues: { [key in QueueType]: SQSQueueUrl } = {
   "dispatch-txs": process.env.ARWEAVE_SQS_DISPATCH_TXS_URL!,
+  "import-chunks": process.env.ARWEAVE_SQS_IMPORT_CHUNKS_URL!,
+  "export-chunks": process.env.ARWEAVE_SQS_EXPORT_CHUNKS_URL!,
   "import-txs": process.env.ARWEAVE_SQS_IMPORT_TXS_URL!,
   "import-blocks": process.env.ARWEAVE_SQS_IMPORT_BLOCKS_URL!,
 };
@@ -91,19 +99,22 @@ export const createQueueHandler = <MessageType>(
     }
     try {
       if (!event) {
+        log.info(`[sqs-handler] invalid SQS messages received`, { event });
         throw new Error("Queue handler: invalid SQS messages received");
       }
-      const receipts: { Id: string; ReceiptHandle: string }[] = [];
 
-      console.log(
-        `Received messages, source: ${event.Records[0].eventSourceARN}, count: ${event.Records.length}`
-      );
+      log.info(`[sqs-handler] received messages`, {
+        count: event.Records.length,
+        source: event.Records[0].eventSourceARN,
+      });
+
+      const receipts: { Id: string; ReceiptHandle: string }[] = [];
 
       const errors: Error[] = [];
 
       await Promise.all(
         event.Records.map(async (sqsMessage) => {
-          console.log(`Record.map ${sqsMessage}`);
+          log.info(`[sqs-handler] processing message`, { sqsMessage });
           try {
             await handler(
               JSON.parse(sqsMessage.body) as MessageType,
@@ -114,18 +125,21 @@ export const createQueueHandler = <MessageType>(
               ReceiptHandle: sqsMessage.receiptHandle,
             });
           } catch (error) {
-            console.error(error);
+            log.error(`[sqs-handler] error processing message`, { event });
             errors.push(error);
           }
         })
       );
 
-      console.log("receipts", receipts);
+      log.info(`[sqs-handler] queue handler complete`, {
+        successful: receipts.length,
+        failed: event.Records.length - receipts.length,
+      });
 
       await deleteMessages(queueUrl, receipts);
 
       if (receipts.length !== event.Records.length) {
-        console.error(
+        log.warn(
           `Failed to process ${event.Records.length - receipts.length} messages`
         );
 

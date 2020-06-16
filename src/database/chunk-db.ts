@@ -1,8 +1,6 @@
 import { upsert } from "./postgres";
 import knex from "knex";
-import { Chunk, ChunkHeader } from "../lib/arweave";
-import { pick } from "lodash";
-
+import moment from "moment";
 export interface DatabaseChunk {
   data_root: string;
   data_size: number;
@@ -27,10 +25,10 @@ export const saveChunk = async (connection: knex, chunk: DatabaseChunk) => {
   });
 };
 
-export const getPendingExport = async (
+export const getPendingExports = async (
   connection: knex,
   { limit = 100 }: { limit: number }
-) => {
+): Promise<DatabaseChunk[]> => {
   // select * from chunks where data_root in
   // (select data_root from chunks group by data_root, data_size having sum(chunk_size) = data_size)
   // and exported_started_at is null order by created_at asc
@@ -52,4 +50,40 @@ export const getPendingExport = async (
   }
 
   return query;
+};
+
+export const startedExport = async (
+  connection: knex,
+  chunk: {
+    data_root: string;
+    data_size: number;
+    offset: number;
+  }
+) => {
+  const query = connection
+    .update({
+      exported_started_at: moment().format(),
+    })
+    .from("chunks")
+    .where(chunk);
+
+  console.log(query.toSQL());
+
+  await query;
+};
+
+export const completedExport = async (
+  connection: knex,
+  chunk: {
+    data_root: string;
+    data_size: number;
+    offset: number;
+  }
+) => {
+  await connection
+    .update({
+      exported_started_at: moment().format(),
+    })
+    .from("chunks")
+    .where(chunk);
 };

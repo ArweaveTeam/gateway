@@ -1,7 +1,8 @@
 import fetch from "node-fetch";
 import log from "../lib/log";
+import { Chunk, Transaction } from "./arweave";
 
-export async function broadcastTx(tx: any, hosts: string[]) {
+export async function broadcastTx(tx: Transaction, hosts: string[]) {
   log.info(`[broadcast-tx] broadcasting new tx`, { id: tx.id });
   await Promise.all(
     hosts.map(async (host) => {
@@ -14,19 +15,21 @@ export async function broadcastTx(tx: any, hosts: string[]) {
         async (attempt) => {
           log.info(`[broadcast-tx] sending`, { attempt, host, id: tx.id });
 
-          const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
+          const { status: existingStatus, ok: isReceived } = await fetch(
+            `${host}/tx/${tx.id}/id`
+          );
 
-          if ([200, 202, 208].includes(txStatus)) {
+          if (isReceived) {
             log.info(`[broadcast-tx] already received`, {
               attempt,
               host,
               id: tx.id,
-              txStatus,
+              existingStatus,
             });
             return true;
           }
 
-          const { ok, status } = await fetch(`${host}/tx`, {
+          const { status: postStatus, ok: postOk } = await fetch(`${host}/tx`, {
             method: "POST",
             body: JSON.stringify(tx),
             headers: { "Content-Type": "application/json" },
@@ -37,33 +40,10 @@ export async function broadcastTx(tx: any, hosts: string[]) {
             attempt,
             host,
             id: tx.id,
-            status,
+            postStatus,
           });
 
-          await wait(200);
-
-          const { status: confirmationStatus } = await fetch(
-            `${host}/tx/${tx.id}/id`
-          );
-
-          if ([200, 202, 208].includes(confirmationStatus)) {
-            log.info(`[broadcast-tx] delivered`, {
-              attempt,
-              host,
-              id: tx.id,
-              txStatus,
-            });
-            return true;
-          } else {
-            log.warn(`[broadcast-tx] not delivered`, {
-              attempt,
-              host,
-              id: tx.id,
-              txStatus,
-            });
-          }
-
-          return ok;
+          return postOk;
         },
         (error, attempt) => {
           log.warn(`[broadcast-tx] warning`, {
@@ -76,6 +56,63 @@ export async function broadcastTx(tx: any, hosts: string[]) {
       ).catch((error) => {
         log.error(`[broadcast-tx] failed`, {
           id: tx.id,
+          host,
+          error: error.message,
+        });
+      });
+    })
+  );
+}
+
+export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
+  log.info(`[broadcast-chunk] broadcasting new chunk`, {
+    chunk: chunk.data_root,
+  });
+  await Promise.all(
+    hosts.map(async (host) => {
+      await retry(
+        {
+          retryCount: 5,
+          retryDelay: 1000,
+          timeout: 10000,
+        },
+        async (attempt) => {
+          log.info(`[broadcast-tx] sending`, {
+            attempt,
+            host,
+            chunk: chunk.data_root,
+          });
+
+          const { ok: postOk, status: postStatus } = await fetch(
+            `${host}/chunk`,
+            {
+              method: "POST",
+              body: JSON.stringify(chunk),
+              headers: { "Content-Type": "application/json" },
+              timeout: 10000,
+            }
+          );
+
+          log.info(`[broadcast-chunk] sent`, {
+            attempt,
+            host,
+            chunk: chunk.data_root,
+            postStatus,
+          });
+
+          return postOk;
+        },
+        (error, attempt) => {
+          log.warn(`[broadcast-chunk] warning`, {
+            error: error.message,
+            attempt,
+            host,
+            chunk: chunk.data_root,
+          });
+        }
+      ).catch((error) => {
+        log.error(`[broadcast-chunk] failed`, {
+          chunk: chunk.data_root,
           host,
           error: error.message,
         });
