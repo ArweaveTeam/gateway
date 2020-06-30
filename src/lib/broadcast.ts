@@ -1,7 +1,8 @@
 import fetch from "node-fetch";
 import log from "../lib/log";
+import { Transaction } from "./arweave";
 
-export async function broadcastTx(tx: any, hosts: string[]) {
+export async function broadcastTx(tx: Transaction, hosts: string[]) {
   log.info(`[broadcast-tx] broadcasting new tx`, { id: tx.id });
   await Promise.all(
     hosts.map(async (host) => {
@@ -13,20 +14,21 @@ export async function broadcastTx(tx: any, hosts: string[]) {
         },
         async (attempt) => {
           log.info(`[broadcast-tx] sending`, { attempt, host, id: tx.id });
+          const { status: existingStatus, ok: isReceived } = await fetch(
+            `${host}/tx/${tx.id}/id`
+          );
 
-          const { status: txStatus } = await fetch(`${host}/tx/${tx.id}/id`);
-
-          if ([200, 202, 208].includes(txStatus)) {
-            log.info(`[broadcast-tx] confirmed`, {
+          if (isReceived) {
+            log.info(`[broadcast-tx] already received`, {
               attempt,
               host,
               id: tx.id,
-              txStatus,
+              existingStatus,
             });
             return true;
           }
 
-          const { ok, status } = await fetch(`${host}/tx`, {
+          const { status: postStatus, ok: postOk } = await fetch(`${host}/tx`, {
             method: "POST",
             body: JSON.stringify(tx),
             headers: { "Content-Type": "application/json" },
@@ -37,10 +39,10 @@ export async function broadcastTx(tx: any, hosts: string[]) {
             attempt,
             host,
             id: tx.id,
-            status,
+            postStatus,
           });
 
-          return ok;
+          return postOk;
         },
         (error, attempt) => {
           log.warn(`[broadcast-tx] warning`, {
@@ -86,13 +88,14 @@ const retry = async <T>(
         const result = await action(attempt);
         if (result) {
           resolve(result);
+          return;
         }
-        await wait(retryDelay * attempt);
       } catch (error) {
         if (onError) {
           await onError(error, attempt);
         }
       }
+      await wait(retryDelay * attempt);
     }
   });
 };
