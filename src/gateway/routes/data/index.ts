@@ -24,7 +24,7 @@ export const handler: RequestHandler = async (req, res) => {
     }
 
     res.header("etag", txid);
-    res.type(contentType || "text/plain");
+    res.type(contentType || "text/html");
     res.send(data);
   }
 };
@@ -53,7 +53,7 @@ const handleManifest = async (
     const { data, contentType } = await fetchAndCache(req, resolvedTx);
 
     res.header("etag", resolvedTx);
-    res.type(contentType || "text/plain");
+    res.type(contentType || "text/html");
     res.send(data);
   }
 };
@@ -82,8 +82,11 @@ const fetchAndCache = async (
   const { data, contentType } = await fetchTransactionData(txid);
 
   if (data.byteLength > 1) {
-    request.log.info(`[get-data] loading data into cache`, { txid });
-    await cachePut(txid, data, contentType);
+    request.log.info(`[get-data] loading data into cache`, {
+      txid,
+      contentType,
+    });
+    await cachePut(txid, data, contentType || "text/html");
   }
 
   return {
