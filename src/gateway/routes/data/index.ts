@@ -1,11 +1,12 @@
-import { fetchTransactionData, DataResponse } from "../../../lib/arweave";
+import { fetchTransactionData } from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
-import { get, put } from "../../../lib/buckets";
-import { RequestHandler, Request, Response, response } from "express";
-import createError from "http-errors";
+import { put, getStream, putStream } from "../../../lib/buckets";
+import { RequestHandler, Request, Response } from "express";
+import { streamToJson } from "../../../lib/encoding";
+import { Readable, PassThrough } from "stream";
 
 const getTxIdFromPath = (path: string): string | undefined => {
   const matches = path.match(/^\/?([a-z0-9-_]{43})/i) || [];
@@ -16,17 +17,67 @@ export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    const { data, contentType } = await fetchAndCache(req, txid);
-
-    if (contentType == "application/x.arweave-manifest+json") {
-      req.log.info("[get-data] manifest content-type detected", { txid });
-      return handleManifest(req, res, JSON.parse(data.toString("utf8")), txid);
-    }
+    const { stream, contentType, cached } = await getData(txid);
 
     res.header("etag", txid);
-    res.type(contentType || "text/plain");
-    res.send(data);
+
+    if (stream) {
+      if (contentType == "application/x.arweave-manifest+json") {
+        req.log.info("[get-data] manifest content-type detected", { txid });
+
+        return handleManifest(req, res, await streamToJson(stream), txid);
+      }
+
+      res.type(contentType || "text/html");
+
+      if (cached) {
+        stream.pipe(res);
+      } else {
+        await sendAndCache({ txid, req, res, stream, contentType });
+      }
+    }
   }
+};
+
+const sendAndCache = async ({
+  txid,
+  contentType,
+  stream,
+  res,
+  req,
+}: {
+  txid: string;
+  contentType: undefined | string;
+  stream: Readable;
+  req: Request;
+  res: Response;
+}) => {
+  res.type(contentType || "text/plain");
+
+  const cacheStream = PassThrough.from(stream, { autoDestroy: true });
+  const userStream = PassThrough.from(stream, { autoDestroy: true });
+
+  const upload = await putStream("tx-data", `tx/${txid}`, {
+    contentType,
+  });
+
+  const abort = (err?: any) => {
+    cacheStream.destroy();
+    userStream.destroy();
+    stream.destroy();
+    upload.upload.abort();
+    res.end();
+  };
+
+  req.on("error", abort);
+  stream.on("error", abort);
+  userStream.on("error", abort);
+  cacheStream.on("error", abort);
+
+  cacheStream.pipe(upload.stream);
+  userStream.pipe(res);
+
+  await upload.upload.promise();
 };
 
 const handleManifest = async (
@@ -44,69 +95,60 @@ const handleManifest = async (
 
   const resolvedTx = resolveManifestPath(manifest, subpath);
 
+  // return resolvedTx;
+
   req.log.info("[get-data] resolved manifest path content", {
     subpath,
     resolvedTx,
   });
 
   if (resolvedTx) {
-    const { data, contentType } = await fetchAndCache(req, resolvedTx);
+    const { stream, contentType, cached } = await getData(resolvedTx);
 
-    res.header("etag", resolvedTx);
-    res.type(contentType || "text/plain");
-    res.send(data);
+    res.type(contentType || "text/html");
+
+    if (stream) {
+      if (cached) {
+        stream.pipe(res);
+      } else {
+        await sendAndCache({ txid, req, res, stream, contentType });
+      }
+    }
   }
 };
 
-const fetchAndCache = async (
-  request: Request,
+const getData = async (
   txid: string
-): Promise<DataResponse> => {
+): Promise<{ stream?: Readable; contentType?: string; cached?: boolean }> => {
   try {
-    const cached = await cacheGet(txid);
-    if (cached) {
-      request.log.error(`[get-data] cache hit`, {
-        txid,
-        type: cached.contentType,
-        bytes: cached.data.byteLength,
-      });
-      return cached;
+    const { stream, contentType } = await getStream("tx-data", `tx/${txid}`);
+
+    if (stream) {
+      return {
+        stream,
+        contentType,
+        cached: true,
+      };
     }
   } catch (error) {
-    request.log.warn(`[get-data] cache warning`, {
-      txid,
-      error: error.message,
-    });
+    console.log(error);
   }
 
-  const { data, contentType } = await fetchTransactionData(txid);
+  const { stream, contentType } = await fetchTransactionData(txid);
 
-  if (data.byteLength > 1) {
-    request.log.info(`[get-data] loading data into cache`, { txid });
-    await cachePut(txid, data, contentType);
+  if (stream) {
+    return { contentType, stream };
   }
 
-  return {
-    data,
-    contentType,
-  };
+  return {};
 };
 
-const cacheGet = async (txid: string): Promise<DataResponse | undefined> => {
-  const { Body, ContentType } = await get("tx-data", `tx/${txid}`);
-  if (Body) {
-    return {
-      data: Buffer.from(Body),
-      contentType: ContentType,
-    };
-  }
-};
 const cachePut = async (
   txid: string,
-  data: Buffer,
+  data: Buffer | Readable,
   contentType: string | undefined
 ): Promise<void> => {
-  return put("tx-data", `tx/${txid}`, data, {
+  await put("tx-data", `tx/${txid}`, data, {
     contentType,
   });
 };

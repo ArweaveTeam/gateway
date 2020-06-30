@@ -1,5 +1,6 @@
 import { base32 } from "rfc4648";
 import { createHash } from "crypto";
+import { Readable } from "stream";
 
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
@@ -39,3 +40,31 @@ export function toB32(input: Buffer): string {
 export function sha256B64Url(input: Buffer): string {
   return toB64url(createHash("sha256").update(input).digest());
 }
+
+export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
+  let buffer = Buffer.alloc(0);
+  return new Promise((resolve, reject) => {
+    stream.on("data", (chunk: Buffer) => {
+      buffer = Buffer.concat([buffer, chunk]);
+    });
+
+    stream.on("end", () => {
+      resolve(buffer);
+    });
+    stream.on("close", () => {
+      console.log("CLOSWE");
+    });
+  });
+};
+
+export const bufferToJson = (input: Buffer): any | undefined => {
+  try {
+    return JSON.parse(input.toString());
+  } catch (error) {
+    return undefined;
+  }
+};
+
+export const streamToJson = async (input: Readable): Promise<any> => {
+  return bufferToJson(await streamToBuffer(input));
+};
