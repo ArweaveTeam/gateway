@@ -58,6 +58,10 @@ app.use(sandboxMiddleware);
 
 // Route handlers
 
+app.options("/tx", (req, res) => {
+  res.send("OK");
+});
+
 app.post("/tx", jsonBodyMiddleware, newTxHandler);
 
 app.post("/webhook", jsonBodyMiddleware, webhookHandler);
