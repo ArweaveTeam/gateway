@@ -146,13 +146,14 @@ const retry = async <T>(
         const result = await action(attempt);
         if (result) {
           resolve(result);
+          return;
         }
-        await wait(retryDelay * attempt);
       } catch (error) {
         if (onError) {
           await onError(error, attempt);
         }
       }
+      await wait(retryDelay * attempt);
     }
   });
 };

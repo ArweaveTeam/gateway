@@ -12,6 +12,7 @@ export const configureRequestLogging: RequestHandler = (req, res, next) => {
   req.log = log.child({
     trace: traceId,
   });
+  req.sentry = { captureEvent: Sentry.captureEvent };
   Sentry.configureScope(function (scope) {
     scope.setTag("trace", traceId);
     scope.setTag("aws_trace", getTraceId(req));
@@ -34,11 +35,11 @@ export const handler = morgan(
   }
 );
 
-const getTraceId = (req: Request): string => {
+const getTraceId = (req: any): string => {
   return req.id || "";
 };
 
-const getAwsTraceId = (req: Request): string => {
+const getAwsTraceId = (req: any): string => {
   return req.headers["x-amzn-trace-id"]
     ? (req.headers["x-amzn-trace-id"] as string)
     : "";

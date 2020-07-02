@@ -23,7 +23,10 @@ const queues: { [key in QueueType]: SQSQueueUrl } = {
   "import-blocks": process.env.ARWEAVE_SQS_IMPORT_BLOCKS_URL!,
 };
 
-const sqs = new SQS();
+const sqs = new SQS({
+  maxRetries: 3,
+  httpOptions: { timeout: 5000, connectTimeout: 5000 },
+});
 
 export const getQueueUrl = (type: QueueType): SQSQueueUrl => {
   return queues[type];
@@ -36,6 +39,9 @@ export const enqueue = async <MessageType extends object>(
     | { messagegroup?: MessageGroup; deduplicationId?: MessageDeduplicationId }
     | undefined
 ) => {
+  if (!queueUrl) {
+    throw new Error(`Queue URL undefined`);
+  }
   await sqs
     .sendMessage({
       QueueUrl: queueUrl,

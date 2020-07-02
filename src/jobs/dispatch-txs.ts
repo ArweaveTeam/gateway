@@ -15,9 +15,10 @@ export const handler = createQueueHandler<DispatchTx>(
 
     const fullTx = {
       ...tx,
-      data: dataSize
-        ? toB64url((await get("tx-data", `tx/${tx.id}`)).Body as Buffer)
-        : "",
+      data:
+        dataSize > 0
+          ? toB64url((await get("tx-data", `tx/${tx.id}`)).Body as Buffer)
+          : "",
     };
 
     console.log(`broadcasting: ${tx.id}`);

@@ -7,7 +7,6 @@ import { RequestHandler } from "express";
 import { put } from "../../../lib/buckets";
 import NodeCryptoDriver from "arweave/node/lib/crypto/node-driver";
 import Arweave from "arweave/node";
-
 Arweave.crypto = new NodeCryptoDriver();
 
 import { validatePath } from "arweave/node/lib/merkle";
@@ -27,7 +26,16 @@ export const handler: RequestHandler = async (req, res, next) => {
 
   const root = parseOrThrow(chunk.data_root, "data_root");
 
-  const isValid = validateChunk(root, chunk.offset, chunk.data_size, dataPath);
+  const isValid = await validateChunk(
+    root,
+    chunk.offset,
+    chunk.data_size,
+    dataPath
+  );
+
+  req.log.warn("[new-chunk] validate chunk", {
+    isValid,
+  });
 
   if (!isValid) {
     throw new BadRequest("validation_failed");
@@ -36,6 +44,8 @@ export const handler: RequestHandler = async (req, res, next) => {
   await put("tx-data", `chunks/${chunk.data_root}/${chunk.offset}`, chunkData, {
     contentType: "application/octet-stream",
   });
+
+  req.log.warn("[new-chunk] cached successfully");
 
   await enqueue<ImportChunk>(getQueueUrl("import-chunks"), {
     size: chunkData.byteLength,
@@ -60,8 +70,9 @@ const validateChunk = async (
   proof: Buffer
 ) => {
   try {
-    return await validatePath(root, offset, 0, size, proof);
+    return validatePath(root, offset, 0, size, proof);
   } catch (error) {
-    throw new BadRequest("validation_failed");
+    console.warn(error);
+    return false;
   }
 };

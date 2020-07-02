@@ -1,6 +1,7 @@
 import { ErrorRequestHandler, RequestHandler } from "express";
 import { HttpError, NotFound } from "http-errors";
 import * as Sentry from "@sentry/node";
+import log from "../../lib/log";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -27,19 +28,26 @@ export const errorResponseHandler: ErrorRequestHandler = (
   res,
   next
 ) => {
+  req.log.error(error);
   const response = {
     status: error.expose ? error.status : 500,
     error: error.expose ? error.message : "unknown",
     ...(res.sentry && { id: res.sentry }),
   };
 
-  if (res.sentry) {
-    res.header("X-Sentry", res.sentry);
+  if (!res.headersSent) {
+    res.status(response.status);
+    res.contentType("application/json");
+
+    if (res.sentry) {
+      res.header("X-Sentry", res.sentry);
+    }
   }
 
-  res.status(response.status);
-
-  res.send(response);
+  if (!res.finished) {
+    res.write(Buffer.from(JSON.stringify(response), "utf8"));
+    res.end();
+  }
 };
 
 export const notFoundHandler: RequestHandler = (req, res, next) => {

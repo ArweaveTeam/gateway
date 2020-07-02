@@ -1,6 +1,7 @@
 import { base32 } from "rfc4648";
 import { createHash } from "crypto";
-import { Readable } from "stream";
+import { Readable, PassThrough } from "stream";
+import { Base64DUrlecode } from "./base64url-stream";
 
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
@@ -51,20 +52,29 @@ export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
     stream.on("end", () => {
       resolve(buffer);
     });
-    stream.on("close", () => {
-      console.log("CLOSWE");
-    });
   });
 };
 
-export const bufferToJson = (input: Buffer): any | undefined => {
-  try {
-    return JSON.parse(input.toString());
-  } catch (error) {
-    return undefined;
-  }
+export const bufferToJson = <T = any | undefined>(input: Buffer): T => {
+  return JSON.parse(input.toString("utf8"));
 };
 
-export const streamToJson = async (input: Readable): Promise<any> => {
-  return bufferToJson(await streamToBuffer(input));
+export const streamToJson = async <T = any | undefined>(
+  input: Readable
+): Promise<T> => {
+  return bufferToJson<T>(await streamToBuffer(input));
+};
+
+export const isValidUTF8 = function (buffer: Buffer) {
+  return Buffer.compare(Buffer.from(buffer.toString(), "utf8"), buffer) === 0;
+};
+
+export const streamDecoderb64url = (readable: Readable): Readable => {
+  const outputStream = new PassThrough();
+
+  const decoder = new Base64DUrlecode();
+
+  readable.pipe(decoder).pipe(outputStream);
+
+  return outputStream;
 };

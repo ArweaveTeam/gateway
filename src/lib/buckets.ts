@@ -1,6 +1,7 @@
 import { S3 } from "aws-sdk";
 import log from "../lib/log";
 import { Readable, PassThrough } from "stream";
+import { ManagedUpload } from "aws-sdk/clients/s3";
 
 const buckets: { [key in BucketType]: string } = {
   "tx-data": process.env.ARWEAVE_S3_TX_DATA_BUCKET!,
@@ -38,23 +39,23 @@ export const put = async (
 export const putStream = async (
   bucketType: BucketType,
   key: string,
-  { contentType }: { contentType?: string }
-) => {
+  stream: PassThrough,
+  {
+    contentType,
+    contentLength,
+  }: { contentType?: string; contentLength?: number }
+): Promise<{ upload: ManagedUpload; stream: PassThrough }> => {
   const bucket = buckets[bucketType];
 
   log.info(`[s3] uploading to bucket`, { bucket, key, type: contentType });
 
-  const stream = new PassThrough({ objectMode: false, autoDestroy: true });
-
-  const upload = s3.upload(
-    {
-      Key: key,
-      Bucket: bucket,
-      Body: stream,
-      ContentType: contentType,
-    },
-    { queueSize: 5 }
-  );
+  const upload = s3.upload({
+    Key: key,
+    Bucket: bucket,
+    Body: stream,
+    ContentType: contentType,
+    ContentLength: contentLength,
+  });
 
   return { stream, upload };
 };
@@ -76,11 +77,15 @@ export const get = async (
 export const getStream = async (
   bucketType: BucketType,
   key: string
-): Promise<{ contentType: string | undefined; stream: Readable }> => {
+): Promise<{
+  contentType: string | undefined;
+  contentLength: number;
+  stream: Readable;
+}> => {
   const bucket = buckets[bucketType];
   log.info(`[s3] getting stream from bucket`, { bucket, key });
 
-  const { ContentType } = await s3
+  const { ContentType, ContentLength } = await s3
     .headObject({
       Key: key,
       Bucket: bucket,
@@ -88,6 +93,7 @@ export const getStream = async (
     .promise();
 
   return {
+    contentLength: ContentLength || 0,
     contentType: ContentType,
     stream: s3
       .getObject({

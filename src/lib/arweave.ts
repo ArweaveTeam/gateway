@@ -5,6 +5,8 @@ import {
   bufferToJson,
   streamToBuffer,
   streamToJson,
+  isValidUTF8,
+  streamDecoderb64url,
 } from "./encoding";
 import AbortController from "abort-controller";
 import fetch, {
@@ -16,7 +18,7 @@ import { shuffle } from "lodash";
 import log from "../lib/log";
 import { NotFound } from "http-errors";
 import { Readable, PassThrough } from "stream";
-import { Base64DUrlecode } from "./base64-stream";
+import { wait } from "./helpers";
 
 export type TransactionHeader = Omit<Transaction, "data">;
 
@@ -78,6 +80,7 @@ export interface Block {
 
 export interface DataResponse {
   stream?: Readable;
+  contentLength: number;
   contentType: string | undefined;
 }
 
@@ -149,6 +152,10 @@ export const fetchTransactionHeader = async (
   throw new NotFound();
 };
 
+const getContentLength = (headers: any): number => {
+  return parseInt(headers.get("content-length"));
+};
+
 export const fetchTransactionData = async (
   txid: string
 ): Promise<DataResponse> => {
@@ -158,11 +165,7 @@ export const fetchTransactionData = async (
     const [tagsResponse, dataResponse] = await Promise.all([
       fetchRequest(`tx/${txid}/tags`, ({ status }) => status == 200),
       fetchRequest(`tx/${txid}/data`, ({ status, headers }) => {
-        if ([200, 400].includes(status)) {
-          console.log(headers.get("content-length"));
-          return parseInt(headers.get("content-length") || "0") > 0;
-        }
-        return false;
+        return [200, 400].includes(status) && getContentLength(headers) > 0;
       }),
     ]);
 
@@ -174,21 +177,26 @@ export const fetchTransactionData = async (
     const contentType = getTagValue(tags, "content-type");
 
     if (dataResponse.status == 200 && dataResponse.body) {
-      const outputStream = new PassThrough();
-
-      const decoder = new Base64DUrlecode();
-
-      dataResponse.body.pipe(decoder).pipe(outputStream);
-
       return {
         contentType,
-        stream: outputStream,
+        contentLength: dataResponse.body.readableLength,
+        stream: streamDecoderb64url(dataResponse.body),
       };
     }
 
     if (dataResponse.body) {
+      if (dataResponse.status == 200) {
+        return {
+          contentType,
+          contentLength: getContentLength(dataResponse),
+          stream: streamDecoderb64url(dataResponse.body),
+        };
+      }
+
       if (dataResponse.status == 400) {
-        const { error } = await streamToJson(dataResponse.body);
+        const { error } = await streamToJson<{ error: string }>(
+          dataResponse.body
+        );
 
         if (error == "tx_data_too_big") {
           const offsetResponse = await fetchRequest(`tx/${txid}/offset`);
@@ -197,38 +205,18 @@ export const fetchTransactionData = async (
             const { size, offset } = await streamToJson(offsetResponse.body);
             return {
               contentType,
-              stream: await streamChunks({ size, offset }),
+              contentLength: size,
+              stream: await streamChunks({
+                size: parseInt(size),
+                offset: parseInt(offset),
+              }),
             };
           }
         }
       }
-
-      if (dataResponse.status == 200) {
-        return {
-          contentType,
-          stream,
-          data: fromB64Url(dataResponse.body!.toString("utf8")),
-        };
-      }
     }
 
     log.info(`[arweave] failed to find tx`, { txid });
-
-    // if (dataResponse.body) {
-    //   log.info(`[arweave] found tx`, { txid, type: contentType });
-    //   // return {
-    //   //   contentType,
-    //   //   stream,
-    //   //   data: fromB64Url(dataResponse.body!.toString("utf8")),
-    //   // };
-    // } else {
-    //   const [dataSize, offset] = await Promise.all([
-    //     fetchRequest(`tx/${txid}/data_size`, ({ status }) => status == 200),
-    //     fetchRequest(`tx/${txid}/offset`, ({ status }) => status == 200),
-    //   ]);
-
-    //   log.info(`[arweave] failed to find tx`, { txid });
-    // }
   } catch (error) {
     log.error(`[arweave] error finding tx`, { txid, error: error.message });
   }
@@ -244,24 +232,26 @@ export const streamChunks = function ({
   size: number;
 }): Readable {
   let bytesReceived = 0;
-  let i = 0;
+  let initialOffset = offset - size + 1;
 
   const stream = new Readable({
+    autoDestroy: true,
     read: async function () {
+      let next = initialOffset + bytesReceived;
+
       try {
         if (bytesReceived >= size) {
           this.push(null);
+          return;
         }
 
         const { body } = await fetchRequest(
-          `chunk/${offset - bytesReceived}`,
+          `chunk/${next}`,
           ({ status }) => status == 200
         );
 
         if (body) {
-          const chunk = await streamToJson(body);
-
-          const data = fromB64Url(chunk.chunk);
+          const data = fromB64Url((await streamToJson(body)).chunk);
 
           if (stream.destroyed) {
             return;
@@ -270,20 +260,12 @@ export const streamChunks = function ({
           this.push(data);
 
           bytesReceived += data.byteLength;
-
-          log.info("bytesReceived", {
-            bytesReceived,
-            mbReceived: bytesReceived / 1024 / 1024,
-            size: size / 1024 / 1024,
-          });
         }
       } catch (error) {
-        console.error(error);
+        console.error("stream error", error);
         stream.emit("error", error);
       }
     },
-    autoDestroy: true,
-    highWaterMark: 1024 * 1024 * 10,
   });
 
   return stream;
@@ -325,10 +307,6 @@ export const getTagValue = (tags: Tag[], name: string): string | undefined => {
     return undefined;
   }
 };
-
-function isValidUTF8(buffer: Buffer) {
-  return Buffer.compare(Buffer.from(buffer.toString(), "utf8"), buffer) === 0;
-}
 
 export const utf8DecodeTag = (
   tag: Tag
@@ -376,7 +354,7 @@ const getFirstResponse = async <T = any>(
   const defaultFilter: FilterFunction = ({ status }) =>
     [200, 201, 202, 208].includes(status);
 
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     let isResolved = false;
     await Promise.all(
       shuffle(urls).map(async (url, index) => {

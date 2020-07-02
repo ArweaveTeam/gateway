@@ -3,10 +3,11 @@ declare global {
     export interface Request {
       id: string;
       log: import("winston").Logger;
+      sentry: { captureEvent: typeof import("@sentry/node").captureException };
     }
 
     export interface Response {
-      sentry?: string
+      sentry?: string;
     }
   }
 }

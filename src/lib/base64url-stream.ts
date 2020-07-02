@@ -8,7 +8,7 @@ export class Base64DUrlecode extends Transform {
     this.extra = "";
   }
 
-  _transform(chunk: Buffer | string, encoding: any, cb: aFunctionny) {
+  _transform(chunk: Buffer | string, encoding: any, cb: Function) {
     chunk = "" + chunk;
 
     chunk =
@@ -28,11 +28,6 @@ export class Base64DUrlecode extends Transform {
     cb();
   }
 
-  /**
-   * Emits 1, 2, or 3 extra characters of base64 data.
-   * @param cb
-   * @private
-   */
   _flush(cb: Function) {
     if (this.extra.length) {
       this.push(Buffer.from(this.extra, "base64"));

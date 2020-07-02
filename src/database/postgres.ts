@@ -17,8 +17,10 @@ export const initConnectionPool = (
   mode: ConnectionMode,
   config?: PoolConfig
 ) => {
-  log.info(`[Postgres] creating connection: ${mode}`);
-  poolCache[mode] = createConnectionPool(mode, config);
+  if (!poolCache[mode]) {
+    log.info(`[Postgres] creating connection: ${mode}`);
+    poolCache[mode] = createConnectionPool(mode, config);
+  }
 };
 
 export const getConnectionPool = (mode: ConnectionMode): knex => {

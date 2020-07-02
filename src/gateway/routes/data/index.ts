@@ -3,83 +3,142 @@ import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
-import { put, getStream, putStream } from "../../../lib/buckets";
+import { getStream, putStream } from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
 import { streamToJson } from "../../../lib/encoding";
 import { Readable, PassThrough } from "stream";
+import { NotFound } from "http-errors";
 
-const getTxIdFromPath = (path: string): string | undefined => {
-  const matches = path.match(/^\/?([a-z0-9-_]{43})/i) || [];
-  return matches[1];
-};
+const DEFAULT_TYPE = "text/html";
 
 export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    const { stream, contentType, cached } = await getData(txid);
+    const { stream, contentType, contentLength, cached } = await getData(
+      txid,
+      req
+    );
 
-    res.header("etag", txid);
+    req.log.info("tx stream", {
+      stream: stream && stream?.readable,
+      contentType,
+      contentLength,
+      cached,
+    });
 
-    if (stream) {
+    if (stream && contentLength) {
       if (contentType == "application/x.arweave-manifest+json") {
         req.log.info("[get-data] manifest content-type detected", { txid });
 
         return handleManifest(req, res, await streamToJson(stream), txid);
       }
 
-      res.type(contentType || "text/html");
+      setDataHeaders({ contentType, contentLength, txid, res });
 
       if (cached) {
         stream.pipe(res);
       } else {
-        await sendAndCache({ txid, req, res, stream, contentType });
+        await sendAndCache({
+          txid,
+          req,
+          res,
+          stream,
+          contentType,
+          contentLength,
+        });
       }
     }
+  }
+};
+
+const getTxIdFromPath = (path: string): string | undefined => {
+  const matches = path.match(/^\/?([a-z0-9-_]{43})/i) || [];
+  return matches[1];
+};
+
+const setDataHeaders = ({
+  res,
+  txid,
+  contentType,
+  contentLength,
+}: {
+  res: Response;
+  txid: string;
+  contentType?: string;
+  contentLength?: number;
+}) => {
+  res.header("Etag", txid);
+  if (contentType) {
+    res.type(contentType || DEFAULT_TYPE);
+  }
+  if (contentLength) {
+    res.header("Content-Length", contentLength.toString());
   }
 };
 
 const sendAndCache = async ({
   txid,
   contentType,
+  contentLength,
   stream,
   res,
   req,
 }: {
   txid: string;
   contentType: undefined | string;
+  contentLength: undefined | number;
   stream: Readable;
   req: Request;
   res: Response;
 }) => {
-  res.type(contentType || "text/plain");
+  await new Promise(async (resolve, reject) => {
+    req.log.info("[data] fetching chunks to stream to user/cache", { txid });
+    let bytesStreamed = 0;
 
-  const cacheStream = PassThrough.from(stream, { autoDestroy: true });
-  const userStream = PassThrough.from(stream, { autoDestroy: true });
+    const cacheStream = new PassThrough({
+      objectMode: false,
+      autoDestroy: true,
+    });
 
-  const upload = await putStream("tx-data", `tx/${txid}`, {
-    contentType,
+    const { upload } = await putStream("tx-data", `tx/${txid}`, cacheStream, {
+      contentType,
+      contentLength,
+    });
+
+    stream.on("readable", async () => {
+      let chunk: Buffer;
+
+      while ((chunk = stream.read())) {
+        bytesStreamed += chunk.byteLength;
+        cacheStream.write(chunk);
+        res.write(chunk);
+      }
+    });
+
+    stream.on("end", async () => {
+      req.log.info("[data] end of chunk stream", { txid });
+      cacheStream.end();
+    });
+
+    stream.on("error", (err: any) => {
+      req.log.warn(err, { txid });
+      upload.abort();
+      stream.destroy();
+      cacheStream.destroy();
+      reject(err);
+    });
+
+    cacheStream.on("end", async () => {
+      req.log.info("[data] end of cache stream", { txid });
+      await upload.promise();
+      req.log.info("[data] cache uploadc complete", { txid });
+      resolve();
+    });
+  }).catch((error) => {
+    req.sentry.captureEvent(error);
   });
-
-  const abort = (err?: any) => {
-    cacheStream.destroy();
-    userStream.destroy();
-    stream.destroy();
-    upload.upload.abort();
-    res.end();
-  };
-
-  req.on("error", abort);
-  stream.on("error", abort);
-  userStream.on("error", abort);
-  cacheStream.on("error", abort);
-
-  cacheStream.pipe(upload.stream);
-  userStream.pipe(res);
-
-  await upload.upload.promise();
 };
-
 const handleManifest = async (
   req: Request,
   res: Response,
@@ -89,13 +148,10 @@ const handleManifest = async (
   const subpath = getManifestSubpath(req.path);
 
   if (req.path == `/${txid}`) {
-    res.redirect(301, `${req.path}/`);
-    return;
+    return res.redirect(301, `${req.path}/`);
   }
 
   const resolvedTx = resolveManifestPath(manifest, subpath);
-
-  // return resolvedTx;
 
   req.log.info("[get-data] resolved manifest path content", {
     subpath,
@@ -103,54 +159,72 @@ const handleManifest = async (
   });
 
   if (resolvedTx) {
-    const { stream, contentType, cached } = await getData(resolvedTx);
+    const { stream, contentType, contentLength, cached } = await getData(
+      resolvedTx,
+      req
+    );
 
-    res.type(contentType || "text/html");
+    setDataHeaders({ contentType, contentLength, txid, res });
 
     if (stream) {
       if (cached) {
-        stream.pipe(res);
+        return stream.pipe(res);
       } else {
-        await sendAndCache({ txid, req, res, stream, contentType });
+        return sendAndCache({
+          txid: resolvedTx,
+          req,
+          res,
+          stream,
+          contentType,
+          contentLength,
+        });
       }
     }
   }
+
+  throw new NotFound();
 };
 
 const getData = async (
-  txid: string
-): Promise<{ stream?: Readable; contentType?: string; cached?: boolean }> => {
+  txid: string,
+  req: Request
+): Promise<{
+  stream?: Readable;
+  contentType?: string;
+  contentLength?: number;
+  cached?: boolean;
+  size?: number;
+}> => {
   try {
-    const { stream, contentType } = await getStream("tx-data", `tx/${txid}`);
-
+    const { stream, contentType, contentLength } = await getStream(
+      "tx-data",
+      `tx/${txid}`
+    );
     if (stream) {
       return {
         stream,
         contentType,
+        contentLength,
         cached: true,
       };
     }
   } catch (error) {
-    console.log(error);
+    req.log.error(error);
+  }
+  try {
+    const { stream, contentType, contentLength } = await fetchTransactionData(
+      txid
+    );
+
+    if (stream) {
+      return { contentType, contentLength, stream };
+    }
+  } catch (error) {
+    req.log.error(error);
+    throw new NotFound();
   }
 
-  const { stream, contentType } = await fetchTransactionData(txid);
-
-  if (stream) {
-    return { contentType, stream };
-  }
-
-  return {};
-};
-
-const cachePut = async (
-  txid: string,
-  data: Buffer | Readable,
-  contentType: string | undefined
-): Promise<void> => {
-  await put("tx-data", `tx/${txid}`, data, {
-    contentType,
-  });
+  throw new NotFound();
 };
 
 const getManifestSubpath = (requestPath: string): string | undefined => {
