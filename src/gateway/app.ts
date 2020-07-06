@@ -59,6 +59,11 @@ app.use(sandboxMiddleware);
 
 // Route handlers
 
+app.get("/favicon.ico", (req, res) => {
+  res.status(204);
+  res.end();
+});
+
 app.options("/tx", (req, res) => {
   res.send("OK");
 });
@@ -80,9 +85,9 @@ app.post("/arql", jsonBodyMiddleware, arqlHandler);
 // is invoked first it will emit an error if it received an arql request.
 apolloServer.applyMiddleware({ app, path: "/arql" });
 
-app.get(dataPathRegex, dataHandler);
-
 app.get("/health", healthHandler);
+
+app.get(dataPathRegex, dataHandler);
 
 app.get("*", proxyHandler);
 

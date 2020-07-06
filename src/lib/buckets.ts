@@ -12,7 +12,7 @@ type BucketType = "tx-data";
 export type BucketObject = S3.GetObjectOutput;
 
 const s3 = new S3({
-  httpOptions: { timeout: 5000, connectTimeout: 5000 },
+  httpOptions: { timeout: 30000, connectTimeout: 5000 },
   logger: console,
 });
 
@@ -39,7 +39,6 @@ export const put = async (
 export const putStream = async (
   bucketType: BucketType,
   key: string,
-  stream: PassThrough,
   {
     contentType,
     contentLength,
@@ -49,15 +48,20 @@ export const putStream = async (
 
   log.info(`[s3] uploading to bucket`, { bucket, key, type: contentType });
 
+  const cacheStream = new PassThrough({
+    objectMode: false,
+    autoDestroy: true,
+  });
+
   const upload = s3.upload({
     Key: key,
     Bucket: bucket,
-    Body: stream,
+    Body: cacheStream,
     ContentType: contentType,
     ContentLength: contentLength,
   });
 
-  return { stream, upload };
+  return { stream: cacheStream, upload };
 };
 
 export const get = async (

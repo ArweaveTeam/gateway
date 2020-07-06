@@ -3,10 +3,10 @@ import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
-import { getStream, putStream } from "../../../lib/buckets";
+import { getStream, putStream, put } from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
-import { streamToJson } from "../../../lib/encoding";
-import { Readable, PassThrough } from "stream";
+import { streamToJson, jsonToBuffer } from "../../../lib/encoding";
+import { Readable } from "stream";
 import { NotFound } from "http-errors";
 
 const DEFAULT_TYPE = "text/html";
@@ -31,7 +31,20 @@ export const handler: RequestHandler = async (req, res) => {
       if (contentType == "application/x.arweave-manifest+json") {
         req.log.info("[get-data] manifest content-type detected", { txid });
 
-        return handleManifest(req, res, await streamToJson(stream), txid);
+        const manifest = await streamToJson<PathManifest>(stream);
+
+        let cacheRequest: any = null;
+
+        if (!cached) {
+          cacheRequest = put("tx-data", `tx/${txid}`, jsonToBuffer(manifest), {
+            contentType,
+          });
+        }
+
+        return await Promise.all([
+          cacheRequest,
+          handleManifest(req, res, manifest, txid),
+        ]);
       }
 
       setDataHeaders({ contentType, contentLength, txid, res });
@@ -87,57 +100,72 @@ const sendAndCache = async ({
 }: {
   txid: string;
   contentType: undefined | string;
-  contentLength: undefined | number;
+  contentLength: number;
   stream: Readable;
   req: Request;
   res: Response;
 }) => {
   await new Promise(async (resolve, reject) => {
-    req.log.info("[data] fetching chunks to stream to user/cache", { txid });
+    req.log.info("[get-data] fetching chunks to stream to user/cache", {
+      txid,
+    });
     let bytesStreamed = 0;
 
-    const cacheStream = new PassThrough({
-      objectMode: false,
-      autoDestroy: true,
-    });
-
-    const { upload } = await putStream("tx-data", `tx/${txid}`, cacheStream, {
-      contentType,
-      contentLength,
-    });
-
-    stream.on("readable", async () => {
-      let chunk: Buffer;
-
-      while ((chunk = stream.read())) {
-        bytesStreamed += chunk.byteLength;
-        cacheStream.write(chunk);
-        res.write(chunk);
+    const { upload, stream: cacheStream } = await putStream(
+      "tx-data",
+      `tx/${txid}`,
+      {
+        contentType,
+        contentLength,
       }
+    );
+
+    cacheStream.on("error", (error) => {
+      req.log.error("[get-data] cacheStream error", { error, txid });
     });
 
-    stream.on("end", async () => {
-      req.log.info("[data] end of chunk stream", { txid });
-      cacheStream.end();
-    });
-
-    stream.on("error", (err: any) => {
-      req.log.warn(err, { txid });
+    stream.on("error", (error: any) => {
+      req.log.error("[get-data] stream error", { error, txid });
       upload.abort();
       stream.destroy();
       cacheStream.destroy();
-      reject(err);
+      reject(error);
     });
 
-    cacheStream.on("end", async () => {
-      req.log.info("[data] end of cache stream", { txid });
-      await upload.promise();
-      req.log.info("[data] cache uploadc complete", { txid });
-      resolve();
+    stream.on("data", (chunk) => {
+      req.log.info("[get-data] data stream is readable", {
+        txid,
+        bytesStreamed,
+        contentLength,
+        bytes: chunk.byteLength,
+      });
+      bytesStreamed += chunk.byteLength;
+
+      cacheStream.write(chunk, (error) => {
+        if (error) {
+          reject(error);
+        }
+        res.write(chunk, () => {
+          if (bytesStreamed >= contentLength) {
+            cacheStream.end(() => {
+              req.log.info("[get-data] closing cache stream", { txid });
+              upload.send((error, data) => {
+                req.log.info("[get-data] cache upload complete", {
+                  error,
+                  data,
+                });
+                if (error) {
+                  reject(error);
+                }
+                resolve();
+              });
+            });
+          }
+        });
+      });
     });
-  }).catch((error) => {
-    req.sentry.captureEvent(error);
   });
+  req.log.info("[get-data] streaming handler complete");
 };
 const handleManifest = async (
   req: Request,
@@ -166,7 +194,7 @@ const handleManifest = async (
 
     setDataHeaders({ contentType, contentLength, txid, res });
 
-    if (stream) {
+    if (stream && contentLength && contentLength > 0) {
       if (cached) {
         return stream.pipe(res);
       } else {
@@ -193,7 +221,6 @@ const getData = async (
   contentType?: string;
   contentLength?: number;
   cached?: boolean;
-  size?: number;
 }> => {
   try {
     const { stream, contentType, contentLength } = await getStream(
@@ -209,7 +236,9 @@ const getData = async (
       };
     }
   } catch (error) {
-    req.log.error(error);
+    if (error.code != "NotFound") {
+      req.log.error(error);
+    }
   }
   try {
     const { stream, contentType, contentLength } = await fetchTransactionData(

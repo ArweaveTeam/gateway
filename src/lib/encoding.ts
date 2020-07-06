@@ -59,6 +59,10 @@ export const bufferToJson = <T = any | undefined>(input: Buffer): T => {
   return JSON.parse(input.toString("utf8"));
 };
 
+export const jsonToBuffer = (input: object): Buffer => {
+  return Buffer.from(JSON.stringify(input));
+};
+
 export const streamToJson = async <T = any | undefined>(
   input: Readable
 ): Promise<T> => {
@@ -70,11 +74,20 @@ export const isValidUTF8 = function (buffer: Buffer) {
 };
 
 export const streamDecoderb64url = (readable: Readable): Readable => {
-  const outputStream = new PassThrough();
+  const outputStream = new PassThrough({ objectMode: false });
 
   const decoder = new Base64DUrlecode();
 
   readable.pipe(decoder).pipe(outputStream);
 
   return outputStream;
+};
+export const bufferToStream = (buffer: Buffer) => {
+  return new Readable({
+    objectMode: false,
+    read() {
+      this.push(buffer);
+      this.push(null);
+    },
+  });
 };

@@ -7,6 +7,7 @@ import {
   streamToJson,
   isValidUTF8,
   streamDecoderb64url,
+  bufferToStream,
 } from "./encoding";
 import AbortController from "abort-controller";
 import fetch, {
@@ -176,20 +177,16 @@ export const fetchTransactionData = async (
 
     const contentType = getTagValue(tags, "content-type");
 
-    if (dataResponse.status == 200 && dataResponse.body) {
-      return {
-        contentType,
-        contentLength: dataResponse.body.readableLength,
-        stream: streamDecoderb64url(dataResponse.body),
-      };
-    }
-
     if (dataResponse.body) {
       if (dataResponse.status == 200) {
+        const content = fromB64Url(
+          (await streamToBuffer(dataResponse.body)).toString()
+        );
+
         return {
           contentType,
-          contentLength: getContentLength(dataResponse),
-          stream: streamDecoderb64url(dataResponse.body),
+          contentLength: content.byteLength,
+          stream: bufferToStream(content),
         };
       }
 

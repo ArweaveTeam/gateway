@@ -2,28 +2,33 @@ import { Transform } from "stream";
 
 export class Base64DUrlecode extends Transform {
   protected extra: string;
+  protected bytes: number;
 
   constructor() {
     super({ decodeStrings: false });
     this.extra = "";
+    this.bytes = 0;
   }
 
-  _transform(chunk: Buffer | string, encoding: any, cb: Function) {
-    chunk = "" + chunk;
-
-    chunk =
+  _transform(chunk: Buffer, encoding: any, cb: Function) {
+    let conbinedChunk =
       this.extra +
       chunk
+        .toString("base64")
         .replace(/\-/g, "+")
         .replace(/\_/g, "/")
         .replace(/(\r\n|\n|\r)/gm, "");
 
+    this.bytes += chunk.byteLength;
+
     const remaining = chunk.length % 4;
 
-    this.extra = chunk.slice(chunk.length - remaining);
-    chunk = chunk.slice(0, chunk.length - remaining);
+    this.extra = conbinedChunk.slice(chunk.length - remaining);
 
-    const buf = Buffer.from(chunk, "base64");
+    const buf = Buffer.from(
+      conbinedChunk.slice(0, chunk.length - remaining),
+      "base64"
+    );
     this.push(buf);
     cb();
   }
