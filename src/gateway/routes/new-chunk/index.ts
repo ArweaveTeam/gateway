@@ -11,6 +11,15 @@ Arweave.crypto = new NodeCryptoDriver();
 
 import { validatePath } from "arweave/node/lib/merkle";
 import { BadRequest } from "http-errors";
+import Joi, { Schema, ValidationError } from "@hapi/joi";
+
+export const txSchema: Schema = Joi.object({
+  chunk: Joi.string().required(),
+  data_size: Joi.string().required(),
+  data_root: Joi.string().required(),
+  offset: Joi.string().required(),
+  data_path: Joi.string().required(),
+});
 
 export const handler: RequestHandler = async (req, res, next) => {
   const chunk: Chunk = req.body;
@@ -38,7 +47,7 @@ export const handler: RequestHandler = async (req, res, next) => {
   });
 
   if (!isValid) {
-    throw new BadRequest("validation_failed");
+    throw new BadRequest("Chunk validation failed");
   }
 
   await put("tx-data", `chunks/${chunk.data_root}/${chunk.offset}`, chunkData, {

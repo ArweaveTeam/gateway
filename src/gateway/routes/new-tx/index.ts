@@ -7,29 +7,53 @@ import { ImportTx, DispatchTx } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
 
-export const handler: RequestHandler = async (req, res, next) => {
-  const tx: Transaction = req.body;
+import Joi, { Schema, ValidationError } from "@hapi/joi";
 
-  if (!tx.id) {
-    req.log.warn(`[new-tx] invalid request, missing id`, {
-      body: req.body,
-    });
-    throw new BadRequest("missing tx field: id");
+export const txSchema: Schema = Joi.object({
+  id: Joi.string()
+    .required()
+    .pattern(/^[a-zA-Z0-9_-]{43}$/),
+  last_tx: Joi.string().required(),
+  owner: Joi.string().required(),
+  signature: Joi.string().required(),
+  target: Joi.string(),
+  quantity: Joi.string(),
+  reward: Joi.string(),
+  data: Joi.string(),
+  tags: Joi.array().items(
+    Joi.object({
+      name: Joi.string().required(),
+      value: Joi.string().required(),
+    })
+  ),
+  format: Joi.number(),
+  data_root: Joi.string(),
+  data_size: Joi.string(),
+  data_tree: Joi.array().items(Joi.string()),
+});
+
+const parseInput = <T = any>(schema: Schema, payload: any): T => {
+  try {
+    return Joi.attempt(payload, txSchema, { abortEarly: false });
+  } catch (error) {
+    const report: ValidationError = error;
+    throw new BadRequest({
+      // We only want to expose the message and path, so ignore the other fields
+      validation: report.details.map(({ message, path }) => ({
+        message,
+        path,
+      })),
+    } as any);
   }
+};
+
+export const handler: RequestHandler = async (req, res, next) => {
+  const tx = parseInput<Transaction>(txSchema, req.body);
 
   req.log.info(`[new-tx]`, {
+    ...tx,
     byteLength: req.body.byteLength,
-    id: tx.id,
     data: tx.data && tx.data.substr(0, 100) + "...",
-    tags: tx.tags && tx.tags.length,
-    last_tx: tx.last_tx && tx.last_tx,
-    owner: tx.owner && tx.owner,
-    target: tx.target && tx.target,
-    quantity: tx.quantity && tx.quantity,
-    reward: tx.reward && tx.reward,
-    signature: tx.signature && tx.signature,
-    data_root: tx.data_root && tx.data_root,
-    data_size: tx.data_size && tx.data_size,
   });
 
   const dataSize = getDataSize(tx);
