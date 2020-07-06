@@ -3,7 +3,11 @@ import { fromB64Url } from "../../../lib/encoding";
 import { Transaction, getTagValue } from "../../../lib/arweave";
 import { enqueue, getQueueUrl } from "../../../lib/queues";
 import { pick } from "lodash";
-import { ImportTx, DispatchTx } from "../../../interfaces/messages";
+import {
+  ImportTx,
+  DispatchTx,
+  DataFormatVersion,
+} from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
 
@@ -16,20 +20,23 @@ export const txSchema: Schema = Joi.object({
   last_tx: Joi.string().required(),
   owner: Joi.string().required(),
   signature: Joi.string().required(),
-  target: Joi.string(),
-  quantity: Joi.string(),
-  reward: Joi.string(),
-  data: Joi.string(),
-  tags: Joi.array().items(
-    Joi.object({
-      name: Joi.string().required(),
-      value: Joi.string().required(),
-    })
-  ),
-  format: Joi.number(),
-  data_root: Joi.string(),
-  data_size: Joi.string(),
-  data_tree: Joi.array().items(Joi.string()),
+  reward: Joi.string().required(),
+  target: Joi.string().optional().allow("").default(""),
+  quantity: Joi.string().optional().allow("").default(""),
+  data: Joi.string().optional().allow("").default(""),
+  tags: Joi.array()
+    .optional()
+    .items(
+      Joi.object({
+        name: Joi.string().required().allow("").default(""),
+        value: Joi.string().required().allow("").default(""),
+      })
+    )
+    .default([]),
+  format: Joi.number().optional().default(1),
+  data_root: Joi.string().optional().allow("").default(""),
+  data_size: Joi.string().optional().allow("").default(""),
+  data_tree: Joi.array().items(Joi.string()).optional().default([]),
 });
 
 const parseInput = <T = any>(schema: Schema, payload: any): T => {
@@ -74,6 +81,7 @@ export const handler: RequestHandler = async (req, res, next) => {
   });
 
   await enqueue<DispatchTx>(getQueueUrl("dispatch-txs"), {
+    data_format: getPayloadFormat(tx),
     data_size: dataSize,
     tx: pick(tx, [
       "format",
@@ -130,4 +138,20 @@ const getDataSize = (tx: Transaction) => {
     console.error(error);
     throw new BadRequest();
   }
+};
+
+const getPayloadFormat = (tx: Transaction): DataFormatVersion => {
+  const dataSize = getDataSize(tx);
+
+  if (tx.format == 1) {
+    return 1;
+  }
+
+  if (tx.format == 2) {
+    return tx.data && typeof tx.data == "string" && tx.data.length > 0
+      ? 2.0
+      : 2.1;
+  }
+
+  return 1;
 };
