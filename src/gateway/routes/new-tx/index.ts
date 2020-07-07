@@ -11,16 +11,17 @@ import {
 import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
 
-import Joi, { Schema, ValidationError } from "@hapi/joi";
+import Joi, { Schema } from "@hapi/joi";
+import { parseInput } from "../../middleware/validate-body";
 
 export const txSchema: Schema = Joi.object({
   id: Joi.string()
     .required()
     .pattern(/^[a-zA-Z0-9_-]{43}$/),
-  last_tx: Joi.string().required(),
   owner: Joi.string().required(),
   signature: Joi.string().required(),
   reward: Joi.string().required(),
+  last_tx: Joi.string().optional().allow("").default(""),
   target: Joi.string().optional().allow("").default(""),
   quantity: Joi.string().optional().allow("").default(""),
   data: Joi.string().optional().allow("").default(""),
@@ -39,27 +40,18 @@ export const txSchema: Schema = Joi.object({
   data_tree: Joi.array().items(Joi.string()).optional().default([]),
 });
 
-const parseInput = <T = any>(schema: Schema, payload: any): T => {
-  try {
-    return Joi.attempt(payload, txSchema, { abortEarly: false });
-  } catch (error) {
-    const report: ValidationError = error;
-    throw new BadRequest({
-      // We only want to expose the message and path, so ignore the other fields
-      validation: report.details.map(({ message, path }) => ({
-        message,
-        path,
-      })),
-    } as any);
-  }
-};
+const dispatchQueueUrl = getQueueUrl("dispatch-txs");
+const importQueueUrl = getQueueUrl("import-txs");
 
-export const handler: RequestHandler = async (req, res, next) => {
+export const handler: RequestHandler<{}, {}, Transaction> = async (
+  req,
+  res,
+  next
+) => {
   const tx = parseInput<Transaction>(txSchema, req.body);
 
   req.log.info(`[new-tx]`, {
     ...tx,
-    byteLength: req.body.byteLength,
     data: tx.data && tx.data.substr(0, 100) + "...",
   });
 
@@ -77,10 +69,10 @@ export const handler: RequestHandler = async (req, res, next) => {
 
   req.log.info(`[new-tx] queuing for dispatch to network`, {
     id: tx.id,
-    queue: getQueueUrl("dispatch-txs"),
+    queue: dispatchQueueUrl,
   });
 
-  await enqueue<DispatchTx>(getQueueUrl("dispatch-txs"), {
+  await enqueue<DispatchTx>(dispatchQueueUrl, {
     data_format: getPayloadFormat(tx),
     data_size: dataSize,
     tx: pick(tx, [
@@ -101,10 +93,10 @@ export const handler: RequestHandler = async (req, res, next) => {
 
   req.log.info(`[new-tx] queuing for import`, {
     id: tx.id,
-    queue: getQueueUrl("import-txs"),
+    queue: importQueueUrl,
   });
 
-  await enqueue<ImportTx>(getQueueUrl("import-txs"), {
+  await enqueue<ImportTx>(importQueueUrl, {
     tx: pick(tx, [
       "format",
       "id",
@@ -141,8 +133,6 @@ const getDataSize = (tx: Transaction) => {
 };
 
 const getPayloadFormat = (tx: Transaction): DataFormatVersion => {
-  const dataSize = getDataSize(tx);
-
   if (tx.format == 1) {
     return 1;
   }

@@ -12,17 +12,20 @@ Arweave.crypto = new NodeCryptoDriver();
 import { validatePath } from "arweave/node/lib/merkle";
 import { BadRequest } from "http-errors";
 import Joi, { Schema, ValidationError } from "@hapi/joi";
+import { parseInput } from "../../middleware/validate-body";
 
-export const txSchema: Schema = Joi.object({
+// the API defintion uses numeric string instead of numbers,
+// Joi.number will accept either number or string and coerce it.
+export const chunkSchema: Schema = Joi.object({
   chunk: Joi.string().required(),
-  data_size: Joi.string().required(),
+  data_size: Joi.number().required().integer(),
   data_root: Joi.string().required(),
-  offset: Joi.string().required(),
+  offset: Joi.number().required().integer(),
   data_path: Joi.string().required(),
 });
 
 export const handler: RequestHandler = async (req, res, next) => {
-  const chunk: Chunk = req.body;
+  const chunk = parseInput<Chunk>(chunkSchema, req.body);
 
   req.log.info(`[new-chunk] received new chunk`, {
     ...chunk,
