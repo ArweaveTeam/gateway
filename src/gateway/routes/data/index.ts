@@ -1,8 +1,14 @@
-import { fetchTransactionData, getTagValue, Tag } from "../../../lib/arweave";
+import {
+  fetchTransactionData,
+  getTagValue,
+  Tag,
+  utf8DecodeTag,
+} from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
+import { getExtension } from "mime";
 import {
   getStream,
   putStream,
@@ -11,13 +17,17 @@ import {
   // objectHeader,
 } from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
-import { streamToJson, jsonToBuffer } from "../../../lib/encoding";
+import { streamToJson, jsonToBuffer, fromB64Url } from "../../../lib/encoding";
 import { Readable } from "stream";
 import { NotFound } from "http-errors";
 // import { query } from "../../../database/transaction-db";
 // import { getConnectionPool } from "../../../database/postgres";
 
 const DEFAULT_TYPE = "text/html";
+
+interface Bundle {
+  items: { id: string; data: string; tags: Tag[] }[];
+}
 
 export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
@@ -47,6 +57,7 @@ export const handler: RequestHandler = async (req, res) => {
         if (!cached) {
           cacheRequest = put("tx-data", `tx/${txid}`, jsonToBuffer(manifest), {
             contentType,
+            tags,
           });
         }
 
@@ -62,11 +73,39 @@ export const handler: RequestHandler = async (req, res) => {
           getTagValue(tags, "bundle-format") == "json" &&
           getTagValue(tags, "bundle-version") == "1.0.0"
         ) {
-          // Parse data here
+          const bundle = await streamToJson<Bundle>(stream);
+
+          if (bundle && bundle.items) {
+            let cacheRequest: any = null;
+
+            if (!cached) {
+              cacheRequest = put(
+                "tx-data",
+                `tx/${txid}`,
+                jsonToBuffer(bundle),
+                {
+                  contentType,
+                  tags,
+                }
+              );
+            }
+
+            return await Promise.all([
+              cacheRequest,
+              handleBundle({
+                req,
+                res,
+                bundle,
+                txid,
+                contentType,
+                contentLength,
+              }),
+            ]);
+          }
         }
       }
 
-      setDataHeaders({ contentType, contentLength, txid, res });
+      setDataHeaders({ contentType, contentLength, etag: txid, res });
 
       if (cached) {
         stream.pipe(res);
@@ -92,16 +131,16 @@ const getTxIdFromPath = (path: string): string | undefined => {
 
 const setDataHeaders = ({
   res,
-  txid,
+  etag,
   contentType,
   contentLength,
 }: {
   res: Response;
-  txid: string;
+  etag: string;
   contentType?: string;
   contentLength?: number;
 }) => {
-  res.header("Etag", txid);
+  res.header("Etag", etag);
   if (contentType) {
     res.type(contentType || DEFAULT_TYPE);
   }
@@ -215,7 +254,7 @@ const handleManifest = async (
       req
     );
 
-    setDataHeaders({ contentType, contentLength, txid, res });
+    setDataHeaders({ contentType, contentLength, etag: txid, res });
 
     if (stream && contentLength && contentLength > 0) {
       if (cached) {
@@ -234,6 +273,64 @@ const handleManifest = async (
   }
 
   throw new NotFound();
+};
+
+const handleBundle = async ({
+  req,
+  res,
+  contentType,
+  contentLength,
+  bundle,
+  txid,
+}: {
+  req: Request;
+  res: Response;
+  contentType: string;
+  contentLength: number;
+  bundle: Bundle;
+  txid: string;
+}) => {
+  const subpath = (getTransactionSubpath(req.path) || "").replace(/\//g, "");
+
+  req.log.info("[get-data] parsing data bundle", {
+    txid,
+    subpath,
+    bundle: {
+      contentLength,
+      items: bundle && bundle.items && bundle.items.length,
+    },
+  });
+
+  if (subpath) {
+    const item = bundle.items.find(({ id }) => subpath == id);
+
+    if (item) {
+      req.log.info("[get-data] matched bundle item", { txid, subpath });
+
+      const data = fromB64Url(item.data);
+      const contentType = getTagValue(item.tags, "content-type");
+      const contentLength = data.byteLength;
+
+      setDataHeaders({ contentType, contentLength, etag: subpath, res });
+
+      const extension = contentType && getExtension(contentType);
+
+      if (extension) {
+        res.header(
+          "Content-Disposition",
+          `inline;filename=${subpath}.${extension}`
+        );
+      }
+
+      return res.send(item.data);
+    }
+
+    throw new NotFound();
+  }
+
+  setDataHeaders({ contentType, contentLength, etag: txid, res });
+
+  res.send(JSON.stringify(bundle));
 };
 
 const getData = async (
@@ -373,7 +470,12 @@ const getData = async (
 //   };
 // };
 
+//@deprecated
 const getManifestSubpath = (requestPath: string): string | undefined => {
+  return getTransactionSubpath(requestPath);
+};
+
+const getTransactionSubpath = (requestPath: string): string | undefined => {
   const subpath = requestPath.match(/^\/?[a-zA-Z0-9-_]{43}\/(.*)$/i);
   return (subpath && subpath[1]) || undefined;
 };
