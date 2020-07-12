@@ -1,9 +1,17 @@
 import Joi, { Schema, ValidationError } from "@hapi/joi";
 import { BadRequest } from "http-errors";
 
-export const parseInput = <T = any>(schema: Schema, payload: any): T => {
+export const parseInput = <T = any>(
+  schema: Schema,
+  payload: any,
+  options: { transform?: (validatedPayload: any) => T } = {}
+): T => {
+  const { transform } = options;
   try {
-    return Joi.attempt(payload, schema, { abortEarly: false });
+    const validatedPayload = Joi.attempt(payload, schema, {
+      abortEarly: false,
+    });
+    return transform ? transform(validatedPayload) : validatedPayload;
   } catch (error) {
     const report: ValidationError = error;
     throw new BadRequest({

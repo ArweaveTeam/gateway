@@ -1,13 +1,21 @@
-import { fetchTransactionData } from "../../../lib/arweave";
+import { fetchTransactionData, getTagValue, Tag } from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
-import { getStream, putStream, put } from "../../../lib/buckets";
+import {
+  getStream,
+  putStream,
+  put,
+  // get,
+  // objectHeader,
+} from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
 import { streamToJson, jsonToBuffer } from "../../../lib/encoding";
 import { Readable } from "stream";
 import { NotFound } from "http-errors";
+// import { query } from "../../../database/transaction-db";
+// import { getConnectionPool } from "../../../database/postgres";
 
 const DEFAULT_TYPE = "text/html";
 
@@ -241,20 +249,110 @@ const getData = async (
     }
   }
   try {
-    const { stream, contentType, contentLength } = await fetchTransactionData(
-      txid
-    );
+    req.log.info("Trying network");
+    const {
+      stream,
+      contentType,
+      contentLength,
+    } = await fetchTransactionData(txid);
 
     if (stream) {
       return { contentType, contentLength, stream };
     }
   } catch (error) {
     req.log.error(error);
-    throw new NotFound();
   }
 
   throw new NotFound();
+
+  // console.log("Trying chunk cache");
+
+  // const pool = getConnectionPool("read");
+
+  // const [txHeader] = await query(pool, {
+  //   id: txid,
+  //   limit: 1,
+  //   select: ["data_root", "data_size", "content_type"],
+  // });
+
+  // console.log({ txHeader });
+
+  // if (txHeader) {
+  //   const { stream } = await streamCachedChunks({
+  //     root: txHeader.data_root,
+  //     contentLength: txHeader.data_size,
+  //   });
+
+  //   if (stream) {
+  //     return {
+  //       stream,
+  //       contentType: txHeader.content_type,
+  //       contentLength: txHeader.data_size,
+  //     };
+  //   }
+  // }
+
+  // console.log("No matches!");
+
+  // throw new NotFound();
 };
+
+// export const streamCachedChunks = async ({
+//   root,
+//   contentLength,
+// }: {
+//   root: string;
+//   contentLength: number;
+// }): Promise<{
+//   stream: Readable;
+// }> => {
+//   let offset = 0;
+
+//   const { contentType, contentLength: chunkContentLength } = await objectHeader(
+//     "tx-data",
+//     `chunks/${root}/0`
+//   );
+
+//   if (chunkContentLength < 1) {
+//     throw new NotFound();
+//   }
+
+//   const stream = new Readable({
+//     autoDestroy: true,
+//     read: async function () {
+//       try {
+//         if (offset >= contentLength) {
+//           this.push(null);
+//           return;
+//         }
+
+//         const { Body } = await get(
+//           "tx-data",
+//           `chunks/${root}/${Math.max(offset, -1, 0)}`
+//         );
+
+//         if (Buffer.isBuffer(Body)) {
+//           if (stream.destroyed) {
+//             return;
+//           }
+
+//           this.push(Body);
+
+//           offset += Body.byteLength;
+//         } else {
+//           this.push(null);
+//         }
+//       } catch (error) {
+//         console.error("stream error", error);
+//         stream.emit("error", error);
+//       }
+//     },
+//   });
+
+//   return {
+//     stream,
+//   };
+// };
 
 const getManifestSubpath = (requestPath: string): string | undefined => {
   const subpath = requestPath.match(/^\/?[a-zA-Z0-9-_]{43}\/(.*)$/i);

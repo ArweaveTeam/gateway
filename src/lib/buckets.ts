@@ -82,7 +82,7 @@ export const getStream = async (
   bucketType: BucketType,
   key: string
 ): Promise<{
-  contentType: string | undefined;
+  contentType?: string;
   contentLength: number;
   stream: Readable;
 }> => {
@@ -106,4 +106,23 @@ export const getStream = async (
       })
       .createReadStream(),
   };
+};
+
+export const objectHeader = async (
+  bucketType: BucketType,
+  key: string
+): Promise<{
+  contentType?: string;
+  contentLength: number;
+}> => {
+  const bucket = buckets[bucketType];
+
+  const { ContentType, ContentLength } = await s3
+    .headObject({
+      Key: key,
+      Bucket: bucket,
+    })
+    .promise();
+
+  return { contentLength: ContentLength || 0, contentType: ContentType };
 };

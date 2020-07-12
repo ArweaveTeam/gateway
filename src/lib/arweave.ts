@@ -82,7 +82,7 @@ export interface Block {
 export interface DataResponse {
   stream?: Readable;
   contentLength: number;
-  contentType: string | undefined;
+  contentType?: string;
 }
 
 export const origins = JSON.parse(
@@ -218,7 +218,7 @@ export const fetchTransactionData = async (
     log.error(`[arweave] error finding tx`, { txid, error: error.message });
   }
 
-  throw new NotFound();
+  return { contentLength: 0 };
 };
 
 export const streamChunks = function ({

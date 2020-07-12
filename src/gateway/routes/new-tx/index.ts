@@ -17,13 +17,19 @@ import { parseInput } from "../../middleware/validate-body";
 export const txSchema: Schema = Joi.object({
   id: Joi.string()
     .required()
-    .pattern(/^[a-zA-Z0-9_-]{43}$/),
+    .regex(/^[a-zA-Z0-9_-]{43}$/),
   owner: Joi.string().required(),
   signature: Joi.string().required(),
-  reward: Joi.string().required(),
+  reward: Joi.string()
+    .regex(/[0-9]*/)
+    .required(),
   last_tx: Joi.string().optional().allow("").default(""),
   target: Joi.string().optional().allow("").default(""),
-  quantity: Joi.string().optional().allow("").default(""),
+  quantity: Joi.string()
+    .regex(/[0-9]*/)
+    .optional()
+    .allow("")
+    .default(""),
   data: Joi.string().optional().allow("").default(""),
   tags: Joi.array()
     .optional()
@@ -36,7 +42,10 @@ export const txSchema: Schema = Joi.object({
     .default([]),
   format: Joi.number().optional().default(1),
   data_root: Joi.string().optional().allow("").default(""),
-  data_size: Joi.string().optional().allow("").default(""),
+  data_size: Joi.string()
+    .regex(/[0-9]*/)
+    .optional()
+    .default(""),
   data_tree: Joi.array().items(Joi.string()).optional().default([]),
 });
 

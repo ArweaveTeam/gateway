@@ -18,14 +18,26 @@ import { parseInput } from "../../middleware/validate-body";
 // Joi.number will accept either number or string and coerce it.
 export const chunkSchema: Schema = Joi.object({
   chunk: Joi.string().required(),
-  data_size: Joi.number().required().integer(),
   data_root: Joi.string().required(),
-  offset: Joi.number().required().integer(),
+  data_size: Joi.string()
+    .required()
+    .regex(/[0-9]*/), // After validation this must be transformed to a numeric type
+  offset: Joi.string()
+    .required()
+    .regex(/[0-9]*/), // After validation this must be transformed to a numeric type
   data_path: Joi.string().required(),
 });
 
 export const handler: RequestHandler = async (req, res, next) => {
-  const chunk = parseInput<Chunk>(chunkSchema, req.body);
+  const chunk = parseInput<Chunk>(chunkSchema, req.body, {
+    transform: (validatedPayload) => {
+      return {
+        ...validatedPayload,
+        data_size: parseInt(validatedPayload.data_size),
+        offset: parseInt(validatedPayload.offset),
+      };
+    },
+  });
 
   req.log.info(`[new-chunk] received new chunk`, {
     ...chunk,
@@ -82,7 +94,7 @@ const validateChunk = async (
   proof: Buffer
 ) => {
   try {
-    return validatePath(root, offset, 0, size, proof);
+    return (await validatePath(root, offset, 0, size, proof)) !== false;
   } catch (error) {
     console.warn(error);
     return false;

@@ -87,3 +87,23 @@ export const completedExport = async (
     .from("chunks")
     .where(chunk);
 };
+
+export const queryRecentChunks = async (
+  connection: knex,
+  {
+    root,
+    size,
+  }: {
+    root: string;
+    size: number;
+  }
+) => {
+  return connection
+    .select(["data_root", "data_size", "offset"])
+    .from("chunks")
+    .where({
+      data_root: root,
+      data_size: size,
+    })
+    .orderBy("offset", "asc");
+};
