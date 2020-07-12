@@ -9,6 +9,8 @@ interface ResolverMap {
   [field: string]: ResolverFn;
 }
 
+export const defaultMaxResults = 5000;
+
 export const resolvers: Resolvers = {
   Query: {
     transaction: async (parent, { id }, context) => {
@@ -20,7 +22,7 @@ export const resolvers: Resolvers = {
       console.log("parent", parent);
 
       const sqlQuery = query(context.connection, {
-        limit: 100,
+        limit: defaultMaxResults,
         to,
         from,
         tags,
@@ -45,7 +47,7 @@ export const resolvers: Resolvers = {
       context
     ) => {
       const sqlQuery = query(context.connection, {
-        limit: 1000,
+        limit: defaultMaxResults,
         to,
         from,
         tags: ((tags as any[]) || []).concat({
@@ -71,7 +73,7 @@ export const resolvers: Resolvers = {
       context
     ) => {
       const sqlQuery = query(context.connection, {
-        limit: 1000,
+        limit: defaultMaxResults,
         to,
         from,
         tags: ((tags as any[]) || []).concat({
