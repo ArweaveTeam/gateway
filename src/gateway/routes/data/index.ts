@@ -23,7 +23,7 @@ export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    const { stream, contentType, contentLength, cached } = await getData(
+    const { stream, contentType, contentLength, tags, cached } = await getData(
       txid,
       req
     );
@@ -33,6 +33,7 @@ export const handler: RequestHandler = async (req, res) => {
       contentType,
       contentLength,
       cached,
+      tags,
     });
 
     if (stream && contentLength) {
@@ -55,6 +56,16 @@ export const handler: RequestHandler = async (req, res) => {
         ]);
       }
 
+      if (tags) {
+        if (
+          contentType == "application/json" &&
+          getTagValue(tags, "bundle-format") == "json" &&
+          getTagValue(tags, "bundle-version") == "1.0.0"
+        ) {
+          // Parse data here
+        }
+      }
+
       setDataHeaders({ contentType, contentLength, txid, res });
 
       if (cached) {
@@ -67,6 +78,7 @@ export const handler: RequestHandler = async (req, res) => {
           stream,
           contentType,
           contentLength,
+          tags,
         });
       }
     }
@@ -102,13 +114,15 @@ const sendAndCache = async ({
   txid,
   contentType,
   contentLength,
+  tags,
   stream,
   res,
   req,
 }: {
   txid: string;
-  contentType: undefined | string;
+  contentType?: string;
   contentLength: number;
+  tags?: Tag[];
   stream: Readable;
   req: Request;
   res: Response;
@@ -125,6 +139,7 @@ const sendAndCache = async ({
       {
         contentType,
         contentLength,
+        tags,
       }
     );
 
@@ -229,9 +244,11 @@ const getData = async (
   contentType?: string;
   contentLength?: number;
   cached?: boolean;
+  tags?: Tag[];
 }> => {
   try {
-    const { stream, contentType, contentLength } = await getStream(
+    req.log.info("Trying cache");
+    const { stream, contentType, contentLength, tags } = await getStream(
       "tx-data",
       `tx/${txid}`
     );
@@ -240,6 +257,7 @@ const getData = async (
         stream,
         contentType,
         contentLength,
+        tags,
         cached: true,
       };
     }
@@ -254,10 +272,11 @@ const getData = async (
       stream,
       contentType,
       contentLength,
+      tags,
     } = await fetchTransactionData(txid);
 
     if (stream) {
-      return { contentType, contentLength, stream };
+      return { contentType, contentLength, stream, tags };
     }
   } catch (error) {
     req.log.error(error);

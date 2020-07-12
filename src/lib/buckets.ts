@@ -1,7 +1,8 @@
 import { S3 } from "aws-sdk";
 import log from "../lib/log";
 import { Readable, PassThrough } from "stream";
-import { ManagedUpload } from "aws-sdk/clients/s3";
+import { ManagedUpload, Metadata } from "aws-sdk/clients/s3";
+import { Tag } from "./arweave";
 
 const buckets: { [key in BucketType]: string } = {
   "tx-data": process.env.ARWEAVE_S3_TX_DATA_BUCKET!,
@@ -20,11 +21,16 @@ export const put = async (
   bucketType: BucketType,
   key: string,
   body: Buffer | Readable,
-  { contentType }: { contentType?: string }
+  { contentType, tags }: { contentType?: string; tags?: Tag[] }
 ) => {
   const bucket = buckets[bucketType];
 
-  log.info(`[s3] uploading to bucket`, { bucket, key, type: contentType });
+  log.info(`[s3] uploading to bucket`, {
+    bucket,
+    key,
+    type: contentType,
+    tags,
+  });
 
   await s3
     .upload({
@@ -32,6 +38,9 @@ export const put = async (
       Bucket: bucket,
       Body: body,
       ContentType: contentType,
+      Metadata: {
+        ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
+      },
     })
     .promise();
 };
@@ -42,11 +51,17 @@ export const putStream = async (
   {
     contentType,
     contentLength,
-  }: { contentType?: string; contentLength?: number }
+    tags,
+  }: { contentType?: string; contentLength?: number; tags?: Tag[] }
 ): Promise<{ upload: ManagedUpload; stream: PassThrough }> => {
   const bucket = buckets[bucketType];
 
-  log.info(`[s3] uploading to bucket`, { bucket, key, type: contentType });
+  log.info(`[s3] uploading to bucket`, {
+    bucket,
+    key,
+    type: contentType,
+    tags,
+  });
 
   const cacheStream = new PassThrough({
     objectMode: false,
@@ -59,6 +74,9 @@ export const putStream = async (
     Body: cacheStream,
     ContentType: contentType,
     ContentLength: contentLength,
+    Metadata: {
+      "x-arweave-tags": JSON.stringify(tags),
+    },
   });
 
   return { stream: cacheStream, upload };
@@ -85,11 +103,12 @@ export const getStream = async (
   contentType?: string;
   contentLength: number;
   stream: Readable;
+  tags?: Tag[];
 }> => {
   const bucket = buckets[bucketType];
   log.info(`[s3] getting stream from bucket`, { bucket, key });
 
-  const { ContentType, ContentLength } = await s3
+  const { ContentType, ContentLength, Metadata } = await s3
     .headObject({
       Key: key,
       Bucket: bucket,
@@ -99,6 +118,7 @@ export const getStream = async (
   return {
     contentLength: ContentLength || 0,
     contentType: ContentType,
+    tags: parseMetadataTags(Metadata || {}),
     stream: s3
       .getObject({
         Key: key,
@@ -114,15 +134,34 @@ export const objectHeader = async (
 ): Promise<{
   contentType?: string;
   contentLength: number;
+  tags?: Tag[];
 }> => {
   const bucket = buckets[bucketType];
 
-  const { ContentType, ContentLength } = await s3
+  const { ContentType, ContentLength, Metadata } = await s3
     .headObject({
       Key: key,
       Bucket: bucket,
     })
     .promise();
 
-  return { contentLength: ContentLength || 0, contentType: ContentType };
+  return {
+    contentLength: ContentLength || 0,
+    contentType: ContentType,
+    tags: parseMetadataTags(Metadata || {}),
+  };
+};
+
+const parseMetadataTags = (metadata: Metadata): Tag[] => {
+  const rawTags = metadata["x-arweave-tags"];
+
+  if (rawTags) {
+    try {
+      return JSON.parse(rawTags) as Tag[];
+    } catch (error) {
+      log.info(`[s3] error parsing tags`, { metadata, rawTags });
+    }
+  }
+
+  return [];
 };

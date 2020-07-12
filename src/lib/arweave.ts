@@ -83,6 +83,7 @@ export interface DataResponse {
   stream?: Readable;
   contentLength: number;
   contentType?: string;
+  tags?: Tag[];
 }
 
 export const origins = JSON.parse(
@@ -171,7 +172,7 @@ export const fetchTransactionData = async (
     ]);
 
     const tags =
-      tagsResponse && tagsResponse.body
+      tagsResponse && tagsResponse.body && tagsResponse.status == 200
         ? ((await streamToJson(tagsResponse.body)) as Tag[])
         : [];
 
@@ -184,6 +185,7 @@ export const fetchTransactionData = async (
         );
 
         return {
+          tags,
           contentType,
           contentLength: content.byteLength,
           stream: bufferToStream(content),
@@ -201,6 +203,7 @@ export const fetchTransactionData = async (
           if (offsetResponse.body) {
             const { size, offset } = await streamToJson(offsetResponse.body);
             return {
+              tags,
               contentType,
               contentLength: size,
               stream: await streamChunks({
