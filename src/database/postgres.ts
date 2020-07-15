@@ -144,7 +144,9 @@ export const upsert = (
   const { sql, bindings } = query.toSQL();
 
   const upsertSql = sql.concat(
-    ` ON CONFLICT (${conflictKeys.join(",")}) DO UPDATE SET ${updateFields};`
+    ` ON CONFLICT (${conflictKeys
+      .map((key) => `"${key}"`)
+      .join(",")}) DO UPDATE SET ${updateFields};`
   );
 
   return connection.raw(upsertSql, bindings);

@@ -205,7 +205,7 @@ export const fetchTransactionData = async (
             return {
               tags,
               contentType,
-              contentLength: size,
+              contentLength: parseInt(size),
               stream: await streamChunks({
                 size: parseInt(size),
                 offset: parseInt(offset),

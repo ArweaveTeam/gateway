@@ -2,12 +2,12 @@ import { Transform } from "stream";
 
 export class Base64DUrlecode extends Transform {
   protected extra: string;
-  protected bytes: number;
+  protected bytesProcessed: number;
 
   constructor() {
-    super({ decodeStrings: false });
+    super({ decodeStrings: false, objectMode: false });
     this.extra = "";
-    this.bytes = 0;
+    this.bytesProcessed = 0;
   }
 
   _transform(chunk: Buffer, encoding: any, cb: Function) {
@@ -19,7 +19,7 @@ export class Base64DUrlecode extends Transform {
         .replace(/\_/g, "/")
         .replace(/(\r\n|\n|\r)/gm, "");
 
-    this.bytes += chunk.byteLength;
+    this.bytesProcessed += chunk.byteLength;
 
     const remaining = chunk.length % 4;
 

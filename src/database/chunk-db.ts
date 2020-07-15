@@ -25,6 +25,28 @@ export const saveChunk = async (connection: knex, chunk: DatabaseChunk) => {
   });
 };
 
+interface ChunkQuery {
+  limit?: number;
+  offset?: number;
+  root?: string;
+  select?: (keyof DatabaseChunk)[];
+  order?: "asc" | "desc";
+}
+
+export const query = (
+  connection: knex,
+  { select, order = "asc", root }: ChunkQuery
+): knex.QueryBuilder<any, Partial<DatabaseChunk>[]> => {
+  const query = connection
+    .queryBuilder()
+    .select(select || "*")
+    .from("chunks");
+
+  query.orderBy("offset", order);
+
+  return query;
+};
+
 export const getPendingExports = async (
   connection: knex,
   { limit = 100 }: { limit: number }
@@ -82,7 +104,7 @@ export const completedExport = async (
 ) => {
   await connection
     .update({
-      exported_started_at: moment().format(),
+      exported_completed_at: moment().format(),
     })
     .from("chunks")
     .where(chunk);

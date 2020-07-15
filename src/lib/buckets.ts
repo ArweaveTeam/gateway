@@ -66,18 +66,24 @@ export const putStream = async (
   const cacheStream = new PassThrough({
     objectMode: false,
     autoDestroy: true,
+    highWaterMark: 512 * 1024,
+    writableHighWaterMark: 512 * 1024,
   });
 
-  const upload = s3.upload({
-    Key: key,
-    Bucket: bucket,
-    Body: cacheStream,
-    ContentType: contentType,
-    ContentLength: contentLength,
-    Metadata: {
-      "x-arweave-tags": JSON.stringify(tags),
+  const upload = await s3.upload(
+    {
+      Key: key,
+      Bucket: bucket,
+      Body: cacheStream,
+      ContentType: contentType,
+      ContentLength: contentLength,
+      Metadata: {
+        ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
+      },
     },
-  });
+    { partSize: 10 * 1024 * 1024, queueSize: 2 },
+    () => undefined
+  );
 
   return { stream: cacheStream, upload };
 };

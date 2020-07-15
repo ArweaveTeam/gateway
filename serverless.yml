@@ -53,7 +53,7 @@ provider:
     blockPublicAccess: true
     useAccelerateEndpoint: true
   environment:
-    ARWEAVE_NODES: '["http://1.nodes.arweave.dev:1984","http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+    ARWEAVE_NODES: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
     ARWEAVE_SQS_DISPATCH_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.dispatchTxs}
     ARWEAVE_SQS_IMPORT_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importTxs}
@@ -112,10 +112,10 @@ functions:
 
   export-chunks:
     handler: dist/jobs/export-chunks.handler
-    timeout: 120
+    timeout: 30
     events:
       - sqs:
-          batchSize: 1
+          batchSize: 10
           arn:
             Fn::GetAtt: [SQSExportChunksQueue, Arn]
 
@@ -130,9 +130,14 @@ package:
   exclude:
     - .*/*
     - node_modules/aws-sdk/**
+    - node_modules/@sentry/browser/**
+    - node_modules/moment/min/**
+    - node_modules/moment/dist/**
+    - node_modules/moment/src/**
     - migrations/**
     - scripts/**
     - terraform/**
+    - test/**
     - tls/**
     - /*
   include:
@@ -252,11 +257,11 @@ resources:
         QueueName: ${self:custom.queues.exportChunks}
         MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
         ReceiveMessageWaitTimeSeconds: 10
-        VisibilityTimeout: 120
+        VisibilityTimeout: 90
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSExportChunksDLQ, Arn]
-          maxReceiveCount: 2
+          maxReceiveCount: 20
 
     SQSExportChunksDLQ:
       Type: AWS::SQS::Queue

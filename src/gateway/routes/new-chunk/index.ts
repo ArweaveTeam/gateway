@@ -2,7 +2,7 @@ import { fromB64Url } from "../../../lib/encoding";
 import { Chunk } from "../../../lib/arweave";
 import { enqueue, getQueueUrl } from "../../../lib/queues";
 import { pick } from "lodash";
-import { ImportChunk } from "../../../interfaces/messages";
+import { ImportChunk, ExportChunk } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 import { put } from "../../../lib/buckets";
 import NodeCryptoDriver from "arweave/node/lib/crypto/node-driver";
@@ -44,11 +44,11 @@ export const handler: RequestHandler = async (req, res, next) => {
     chunk: chunk.chunk && chunk.chunk.substr(0, 100) + "...",
   });
 
-  const chunkData = parseOrThrow(chunk.chunk, "chunk");
+  const chunkData = parseB64UrlOrThrow(chunk.chunk, "chunk");
 
-  const dataPath = parseOrThrow(chunk.data_path, "data_path");
+  const dataPath = parseB64UrlOrThrow(chunk.data_path, "data_path");
 
-  const root = parseOrThrow(chunk.data_root, "data_root");
+  const root = parseB64UrlOrThrow(chunk.data_root, "data_root");
 
   const isValid = await validateChunk(
     root,
@@ -65,21 +65,25 @@ export const handler: RequestHandler = async (req, res, next) => {
     throw new BadRequest("Chunk validation failed");
   }
 
-  await put("tx-data", `chunks/${chunk.data_root}/${chunk.offset}`, chunkData, {
-    contentType: "application/octet-stream",
-  });
-
   req.log.warn("[new-chunk] cached successfully");
 
-  await enqueue<ImportChunk>(getQueueUrl("import-chunks"), {
+  const queueItem = {
     size: chunkData.byteLength,
     header: pick(chunk, ["data_root", "data_size", "data_path", "offset"]),
-  });
+  };
+
+  await Promise.all([
+    put("tx-data", `chunks/${chunk.data_root}/${chunk.offset}`, chunkData, {
+      contentType: "application/octet-stream",
+    }),
+    enqueue<ImportChunk>(getQueueUrl("import-chunks"), queueItem),
+    enqueue<ExportChunk>(getQueueUrl("export-chunks"), queueItem),
+  ]);
 
   res.sendStatus(200);
 };
 
-const parseOrThrow = (b64urlString: string, fieldName: string) => {
+const parseB64UrlOrThrow = (b64urlString: string, fieldName: string) => {
   try {
     return fromB64Url(b64urlString);
   } catch (error) {

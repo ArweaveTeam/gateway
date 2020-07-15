@@ -1,27 +1,19 @@
-import {
-  fetchTransactionData,
-  getTagValue,
-  Tag,
-  utf8DecodeTag,
-} from "../../../lib/arweave";
+import { fetchTransactionData, getTagValue, Tag } from "../../../lib/arweave";
 import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
 import { getExtension } from "mime";
-import {
-  getStream,
-  putStream,
-  put,
-  // get,
-  // objectHeader,
-} from "../../../lib/buckets";
+import { getStream, putStream, put, get } from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
 import { streamToJson, jsonToBuffer, fromB64Url } from "../../../lib/encoding";
 import { Readable } from "stream";
 import { NotFound } from "http-errors";
-// import { query } from "../../../database/transaction-db";
-// import { getConnectionPool } from "../../../database/postgres";
+import { query } from "../../../database/transaction-db";
+import { query as queryChunks } from "../../../database/chunk-db";
+import { getConnectionPool } from "../../../database/postgres";
+import { StreamTap } from "../../../lib/stream-tap";
+import pump from "pump";
 
 const DEFAULT_TYPE = "text/html";
 
@@ -167,10 +159,9 @@ const sendAndCache = async ({
   res: Response;
 }) => {
   await new Promise(async (resolve, reject) => {
-    req.log.info("[get-data] fetching chunks to stream to user/cache", {
+    req.log.info("[get-data] streaming chunks from s3 cache", {
       txid,
     });
-    let bytesStreamed = 0;
 
     const { upload, stream: cacheStream } = await putStream(
       "tx-data",
@@ -182,49 +173,40 @@ const sendAndCache = async ({
       }
     );
 
-    cacheStream.on("error", (error) => {
-      req.log.error("[get-data] cacheStream error", { error, txid });
-    });
+    const copyToResponse = new StreamTap(res);
 
-    stream.on("error", (error: any) => {
-      req.log.error("[get-data] stream error", { error, txid });
-      upload.abort();
-      stream.destroy();
-      cacheStream.destroy();
-      reject(error);
-    });
+    cacheStream.on("end", (error: any) => {
+      req.log.info("[get-data] cach stream ended", { txid, error });
 
-    stream.on("data", (chunk) => {
-      req.log.info("[get-data] data stream is readable", {
-        txid,
-        bytesStreamed,
-        contentLength,
-        bytes: chunk.byteLength,
-      });
-      bytesStreamed += chunk.byteLength;
+      if (copyToResponse.getBytesProcessed() != contentLength) {
+        req.log.warn(
+          `[get-data] cached content doesn't match expected data_size`,
+          { contentLength, processedBytes: copyToResponse.getBytesProcessed }
+        );
+      }
 
-      cacheStream.write(chunk, (error) => {
-        if (error) {
-          reject(error);
+      upload.send((err, data) => {
+        req.log.info("[get-data] s3 upload done", { data });
+        if (err) {
+          upload.abort();
+          reject(err);
         }
-        res.write(chunk, () => {
-          if (bytesStreamed >= contentLength) {
-            cacheStream.end(() => {
-              req.log.info("[get-data] closing cache stream", { txid });
-              upload.send((error, data) => {
-                req.log.info("[get-data] cache upload complete", {
-                  error,
-                  data,
-                });
-                if (error) {
-                  reject(error);
-                }
-                resolve();
-              });
-            });
-          }
-        });
+        resolve(data);
       });
+    });
+
+    res.flushHeaders();
+
+    pump(stream, copyToResponse, cacheStream, async (err) => {
+      if (err) {
+        req.log.error("pump error", { err });
+        upload.abort();
+        res.end();
+        cacheStream.end();
+        stream.destroy();
+        console.log("rejecting...");
+        reject(err);
+      }
     });
   });
   req.log.info("[get-data] streaming handler complete");
@@ -322,7 +304,7 @@ const handleBundle = async ({
         );
       }
 
-      return res.send(item.data);
+      return res.send(data);
     }
 
     throw new NotFound();
@@ -344,7 +326,7 @@ const getData = async (
   tags?: Tag[];
 }> => {
   try {
-    req.log.info("Trying cache");
+    req.log.info("[get-data] searching for tx: s3 tx cache");
     const { stream, contentType, contentLength, tags } = await getStream(
       "tx-data",
       `tx/${txid}`
@@ -363,8 +345,62 @@ const getData = async (
       req.log.error(error);
     }
   }
+
   try {
-    req.log.info("Trying network");
+    req.log.info("[get-data] searching for tx: s3 chunk cache");
+    const pool = getConnectionPool("read");
+
+    const [txHeader] = await query(pool, {
+      id: txid,
+      limit: 1,
+      select: ["data_root", "data_size", "content_type"],
+    });
+
+    if (txHeader && txHeader.data_root && txHeader.data_size > 0) {
+      const contentType = txHeader.content_type || undefined;
+      const contentLength = parseInt(txHeader.data_size);
+      const chunks = (await queryChunks(pool, {
+        select: ["offset", "chunk_size"],
+        order: "asc",
+      }).where({ data_root: txHeader.data_root })) as {
+        offset: number;
+        chunk_size: number;
+      }[];
+
+      const cachedChunksSum = chunks.reduce(
+        (carry, { chunk_size }) => carry + (chunk_size || 0),
+        0
+      );
+
+      const hasAllChunks = cachedChunksSum == contentLength;
+
+      req.log.warn(`[get-data] cached chunks do not equal tx data_size`, {
+        cachedChunksSum,
+        contentLength,
+        hasAllChunks,
+      });
+
+      if (hasAllChunks) {
+        const { stream } = await streamCachedChunks({
+          offsets: chunks.map((chunk) => chunk.offset),
+          root: txHeader.data_root,
+        });
+
+        if (stream) {
+          return {
+            stream,
+            contentType,
+            contentLength,
+          };
+        }
+      }
+    }
+  } catch (error) {
+    req.log.error(error);
+  }
+
+  try {
+    req.log.info("[get-data] searching for tx: arweave nodes");
     const {
       stream,
       contentType,
@@ -373,102 +409,66 @@ const getData = async (
     } = await fetchTransactionData(txid);
 
     if (stream) {
-      return { contentType, contentLength, stream, tags };
+      return {
+        contentType,
+        contentLength,
+        stream,
+        tags,
+      };
     }
   } catch (error) {
     req.log.error(error);
   }
 
   throw new NotFound();
-
-  // console.log("Trying chunk cache");
-
-  // const pool = getConnectionPool("read");
-
-  // const [txHeader] = await query(pool, {
-  //   id: txid,
-  //   limit: 1,
-  //   select: ["data_root", "data_size", "content_type"],
-  // });
-
-  // console.log({ txHeader });
-
-  // if (txHeader) {
-  //   const { stream } = await streamCachedChunks({
-  //     root: txHeader.data_root,
-  //     contentLength: txHeader.data_size,
-  //   });
-
-  //   if (stream) {
-  //     return {
-  //       stream,
-  //       contentType: txHeader.content_type,
-  //       contentLength: txHeader.data_size,
-  //     };
-  //   }
-  // }
-
-  // console.log("No matches!");
-
-  // throw new NotFound();
 };
 
-// export const streamCachedChunks = async ({
-//   root,
-//   contentLength,
-// }: {
-//   root: string;
-//   contentLength: number;
-// }): Promise<{
-//   stream: Readable;
-// }> => {
-//   let offset = 0;
+export const streamCachedChunks = async ({
+  root,
+  offsets,
+}: {
+  root: string;
+  offsets: number[];
+}): Promise<{
+  stream: Readable;
+}> => {
+  let index = 0;
 
-//   const { contentType, contentLength: chunkContentLength } = await objectHeader(
-//     "tx-data",
-//     `chunks/${root}/0`
-//   );
+  const stream = new Readable({
+    autoDestroy: true,
+    read: async function () {
+      try {
+        const offset = offsets[index];
 
-//   if (chunkContentLength < 1) {
-//     throw new NotFound();
-//   }
+        if (!offset) {
+          this.push(null);
+          return;
+        }
 
-//   const stream = new Readable({
-//     autoDestroy: true,
-//     read: async function () {
-//       try {
-//         if (offset >= contentLength) {
-//           this.push(null);
-//           return;
-//         }
+        if (index > 3) {
+          throw new Error("test");
+        }
 
-//         const { Body } = await get(
-//           "tx-data",
-//           `chunks/${root}/${Math.max(offset, -1, 0)}`
-//         );
+        const { Body } = await get("tx-data", `chunks/${root}/${offset}`);
 
-//         if (Buffer.isBuffer(Body)) {
-//           if (stream.destroyed) {
-//             return;
-//           }
+        if (Body) {
+          index = index + 1;
+          this.push(Body);
+          return;
+        }
 
-//           this.push(Body);
+        throw new NotFound();
+      } catch (error) {
+        this.emit("error", error);
+        this.destroy();
+      }
+    },
+  });
 
-//           offset += Body.byteLength;
-//         } else {
-//           this.push(null);
-//         }
-//       } catch (error) {
-//         console.error("stream error", error);
-//         stream.emit("error", error);
-//       }
-//     },
-//   });
-
-//   return {
-//     stream,
-//   };
-// };
+  return {
+    stream,
+  };
+};
 
 //@deprecated
 const getManifestSubpath = (requestPath: string): string | undefined => {

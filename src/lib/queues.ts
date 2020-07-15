@@ -131,7 +131,10 @@ export const createQueueHandler = <MessageType>(
               ReceiptHandle: sqsMessage.receiptHandle,
             });
           } catch (error) {
-            log.error(`[sqs-handler] error processing message`, { event });
+            log.error(`[sqs-handler] error processing message`, {
+              event,
+              error,
+            });
             errors.push(error);
           }
         })
