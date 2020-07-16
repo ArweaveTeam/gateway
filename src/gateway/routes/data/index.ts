@@ -445,10 +445,6 @@ export const streamCachedChunks = async ({
           return;
         }
 
-        if (index > 3) {
-          throw new Error("test");
-        }
-
         const { Body } = await get("tx-data", `chunks/${root}/${offset}`);
 
         if (Body) {

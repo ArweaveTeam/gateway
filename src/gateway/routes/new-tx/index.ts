@@ -71,9 +71,11 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
   if (dataSize > 0) {
     const dataBuffer = fromB64Url(tx.data);
 
-    await put("tx-data", `tx/${tx.id}`, dataBuffer, {
-      contentType: getTagValue(tx.tags, "content-type"),
-    });
+    if (dataBuffer.byteLength > 0) {
+      await put("tx-data", `tx/${tx.id}`, dataBuffer, {
+        contentType: getTagValue(tx.tags, "content-type"),
+      });
+    }
   }
 
   req.log.info(`[new-tx] queuing for dispatch to network`, {
