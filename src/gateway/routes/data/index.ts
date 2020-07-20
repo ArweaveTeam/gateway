@@ -10,10 +10,9 @@ import { streamToJson, jsonToBuffer, fromB64Url } from "../../../lib/encoding";
 import { Readable } from "stream";
 import { NotFound } from "http-errors";
 import { query } from "../../../database/transaction-db";
-import { query as queryChunks } from "../../../database/chunk-db";
-import { getConnectionPool } from "../../../database/postgres";
 import { StreamTap } from "../../../lib/stream-tap";
 import pump from "pump";
+import { getData } from "../../../data/transactions";
 
 const DEFAULT_TYPE = "text/html";
 
@@ -313,157 +312,6 @@ const handleBundle = async ({
   setDataHeaders({ contentType, contentLength, etag: txid, res });
 
   res.send(JSON.stringify(bundle));
-};
-
-const getData = async (
-  txid: string,
-  req: Request
-): Promise<{
-  stream?: Readable;
-  contentType?: string;
-  contentLength?: number;
-  cached?: boolean;
-  tags?: Tag[];
-}> => {
-  try {
-    req.log.info("[get-data] searching for tx: s3 tx cache");
-    const { stream, contentType, contentLength, tags } = await getStream(
-      "tx-data",
-      `tx/${txid}`
-    );
-    if (stream) {
-      return {
-        stream,
-        contentType,
-        contentLength,
-        tags,
-        cached: true,
-      };
-    }
-  } catch (error) {
-    if (error.code != "NotFound") {
-      req.log.error(error);
-    }
-  }
-
-  try {
-    req.log.info("[get-data] searching for tx: s3 chunk cache");
-    const pool = getConnectionPool("read");
-
-    const [txHeader] = await query(pool, {
-      id: txid,
-      limit: 1,
-      select: ["data_root", "data_size", "content_type"],
-    });
-
-    if (txHeader && txHeader.data_root && txHeader.data_size > 0) {
-      const contentType = txHeader.content_type || undefined;
-      const contentLength = parseInt(txHeader.data_size);
-      const chunks = (await queryChunks(pool, {
-        select: ["offset", "chunk_size"],
-        order: "asc",
-      }).where({ data_root: txHeader.data_root })) as {
-        offset: number;
-        chunk_size: number;
-      }[];
-
-      const cachedChunksSum = chunks.reduce(
-        (carry, { chunk_size }) => carry + (chunk_size || 0),
-        0
-      );
-
-      const hasAllChunks = cachedChunksSum == contentLength;
-
-      req.log.warn(`[get-data] cached chunks do not equal tx data_size`, {
-        cachedChunksSum,
-        contentLength,
-        hasAllChunks,
-      });
-
-      if (hasAllChunks) {
-        const { stream } = await streamCachedChunks({
-          offsets: chunks.map((chunk) => chunk.offset),
-          root: txHeader.data_root,
-        });
-
-        if (stream) {
-          return {
-            stream,
-            contentType,
-            contentLength,
-          };
-        }
-      }
-    }
-  } catch (error) {
-    req.log.error(error);
-  }
-
-  try {
-    req.log.info("[get-data] searching for tx: arweave nodes");
-    const {
-      stream,
-      contentType,
-      contentLength,
-      tags,
-    } = await fetchTransactionData(txid);
-
-    if (stream) {
-      return {
-        contentType,
-        contentLength,
-        stream,
-        tags,
-      };
-    }
-  } catch (error) {
-    req.log.error(error);
-  }
-
-  throw new NotFound();
-};
-
-export const streamCachedChunks = async ({
-  root,
-  offsets,
-}: {
-  root: string;
-  offsets: number[];
-}): Promise<{
-  stream: Readable;
-}> => {
-  let index = 0;
-
-  const stream = new Readable({
-    autoDestroy: true,
-    read: async function () {
-      try {
-        const offset = offsets[index];
-
-        if (!offset) {
-          this.push(null);
-          return;
-        }
-
-        const { Body } = await get("tx-data", `chunks/${root}/${offset}`);
-
-        if (Body) {
-          index = index + 1;
-          this.push(Body);
-          return;
-        }
-
-        throw new NotFound();
-      } catch (error) {
-        this.emit("error", error);
-        this.destroy();
-      }
-    },
-  });
-
-  return {
-    stream,
-  };
 };
 
 //@deprecated
