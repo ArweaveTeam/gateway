@@ -6,11 +6,12 @@
 !/package-lock.json
 !/tsconfig.json
 !/src/**
+!/node_modules/arweave/**
+!/node_modules/arweave-asn1/**
 
 
 # Ignore unnecessary files inside allowed directories
 # This should go after the allowed directories
-**/*~
 **/*.log
 **/.DS_Store
 **/Thumbs.db

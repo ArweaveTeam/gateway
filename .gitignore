@@ -1,7 +1,11 @@
-dist
+dist 
 # package directories
 node_modules
 jspm_packages
 
 # Serverless directories
 .serverless
+.terraform
+
+.DS_STORE
+.env
