@@ -1,7 +1,5 @@
 // We must invoke config() this first to load environment variables
 // before importing any other modules.
-import { config } from "dotenv";
-config();
 import express from "express";
 import helmet from "helmet";
 import {
