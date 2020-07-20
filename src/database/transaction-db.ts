@@ -23,6 +23,7 @@ const txFields = [
   "quantity",
   "content_type",
   "data_size",
+  "data_root",
 ];
 
 export const getTxIds = async (

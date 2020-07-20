@@ -1,0 +1,4 @@
+domain: arweave.net
+ARWEAVE_DB_READ_HOST: arweave-gateway-prod.cluster-ro-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
+ARWEAVE_DB_WRITE_HOST: arweave-gateway-prod.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
+ARWEAVE_DB_SCHEMA: arweave

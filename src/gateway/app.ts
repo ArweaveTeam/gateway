@@ -27,6 +27,7 @@ import { handler as dataHandler } from "./routes/data";
 import { apolloServer } from "./routes/graphql";
 import { handler as healthHandler } from "./routes/health";
 import { handler as newTxHandler } from "./routes/new-tx";
+import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 
@@ -58,11 +59,22 @@ app.use(sandboxMiddleware);
 
 // Route handlers
 
+app.get("/favicon.ico", (req, res) => {
+  res.status(204);
+  res.end();
+});
+
 app.options("/tx", (req, res) => {
   res.send("OK");
 });
 
 app.post("/tx", jsonBodyMiddleware, newTxHandler);
+
+app.post("/chunk", jsonBodyMiddleware, newChunkHandler);
+
+app.options("/chunk", (req, res) => {
+  res.send("OK");
+});
 
 app.post("/webhook", jsonBodyMiddleware, webhookHandler);
 
@@ -73,9 +85,9 @@ app.post("/arql", jsonBodyMiddleware, arqlHandler);
 // is invoked first it will emit an error if it received an arql request.
 apolloServer.applyMiddleware({ app, path: "/arql" });
 
-app.get(dataPathRegex, dataHandler);
-
 app.get("/health", healthHandler);
+
+app.get(dataPathRegex, dataHandler);
 
 app.get("*", proxyHandler);
 

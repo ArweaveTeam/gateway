@@ -1,13 +1,32 @@
-import { Base64UrlEncodedString, fromB64Url, WinstonString } from "./encoding";
+import {
+  Base64UrlEncodedString,
+  fromB64Url,
+  WinstonString,
+  bufferToJson,
+  streamToBuffer,
+  streamToJson,
+  isValidUTF8,
+  streamDecoderb64url,
+  bufferToStream,
+} from "./encoding";
 import AbortController from "abort-controller";
 import fetch, {
   Headers as FetchHeaders,
   RequestInit as FetchRequestInit,
+  Response as FetchResponse,
 } from "node-fetch";
 import { shuffle } from "lodash";
 import log from "../lib/log";
 import { NotFound } from "http-errors";
+import { Readable, PassThrough } from "stream";
+import { wait } from "./helpers";
+
 export type TransactionHeader = Omit<Transaction, "data">;
+
+export type TransactionData = {
+  data: Buffer;
+  contentType: string | undefined;
+};
 
 export interface Transaction {
   format: number;
@@ -24,6 +43,16 @@ export interface Transaction {
   data_root: string;
   data_tree: string[];
 }
+
+export interface Chunk {
+  data_root: string;
+  data_size: number;
+  data_path: string;
+  chunk: string;
+  offset: number;
+}
+
+export type ChunkHeader = Omit<Chunk, "chunk">;
 
 export interface Tag {
   name: Base64UrlEncodedString;
@@ -51,8 +80,10 @@ export interface Block {
 }
 
 export interface DataResponse {
-  data: Buffer;
-  contentType: string | undefined;
+  stream?: Readable;
+  contentLength: number;
+  contentType?: string;
+  tags?: Tag[];
 }
 
 export const origins = JSON.parse(
@@ -68,7 +99,7 @@ export const fetchBlock = async (id: string): Promise<Block> => {
   );
 
   if (body) {
-    const block = JSON.parse(body.toString());
+    const block = await streamToJson(body);
 
     //For now we don't care about the poa and it's takes up too much
     // space when logged, so just remove it for now.
@@ -92,7 +123,7 @@ export const fetchBlockByHeight = async (height: string): Promise<Block> => {
   );
 
   if (body) {
-    const block = JSON.parse(body.toString());
+    const block = await streamToJson(body);
 
     //For now we don't care about the poa and it's takes up too much
     // space when logged, so just remove it for now.
@@ -117,10 +148,14 @@ export const fetchTransactionHeader = async (
   );
 
   if (body) {
-    return JSON.parse(body.toString()) as TransactionHeader;
+    return (await streamToJson(body)) as TransactionHeader;
   }
 
   throw new NotFound();
+};
+
+const getContentLength = (headers: any): number => {
+  return parseInt(headers.get("content-length"));
 };
 
 export const fetchTransactionData = async (
@@ -129,38 +164,111 @@ export const fetchTransactionData = async (
   log.info(`[arweave] fetching data and tags`, { txid });
 
   try {
-    const [data, contentType] = await Promise.all([
-      fetchRequest(`/tx/${txid}/data`, ({ status }) => status == 200).then(
-        (response) => {
-          return response && response.body
-            ? fromB64Url(response.body!.toString("utf8"))
-            : undefined;
-        }
-      ),
-      fetchRequest(`/tx/${txid}/tags`, ({ status }) => status == 200).then(
-        (response) => {
-          const tags =
-            response && response.body
-              ? (JSON.parse(response.body!.toString("utf8")) as Tag[])
-              : [];
-          return getTagValue(tags, "content-type");
-        }
-      ),
+    const [tagsResponse, dataResponse] = await Promise.all([
+      fetchRequest(`tx/${txid}/tags`, ({ status }) => status == 200),
+      fetchRequest(`tx/${txid}/data`, ({ status, headers }) => {
+        return [200, 400].includes(status) && getContentLength(headers) > 0;
+      }),
     ]);
-    if (data) {
-      log.info(`[arweave] found tx`, { txid, type: contentType });
-      return {
-        contentType,
-        data,
-      };
-    } else {
-      log.info(`[arweave] failed to find tx`, { txid });
+
+    const tags =
+      tagsResponse && tagsResponse.body && tagsResponse.status == 200
+        ? ((await streamToJson(tagsResponse.body)) as Tag[])
+        : [];
+
+    const contentType = getTagValue(tags, "content-type");
+
+    if (dataResponse.body) {
+      if (dataResponse.status == 200) {
+        const content = fromB64Url(
+          (await streamToBuffer(dataResponse.body)).toString()
+        );
+
+        return {
+          tags,
+          contentType,
+          contentLength: content.byteLength,
+          stream: bufferToStream(content),
+        };
+      }
+
+      if (dataResponse.status == 400) {
+        const { error } = await streamToJson<{ error: string }>(
+          dataResponse.body
+        );
+
+        if (error == "tx_data_too_big") {
+          const offsetResponse = await fetchRequest(`tx/${txid}/offset`);
+
+          if (offsetResponse.body) {
+            const { size, offset } = await streamToJson(offsetResponse.body);
+            return {
+              tags,
+              contentType,
+              contentLength: parseInt(size),
+              stream: await streamChunks({
+                size: parseInt(size),
+                offset: parseInt(offset),
+              }),
+            };
+          }
+        }
+      }
     }
+
+    log.info(`[arweave] failed to find tx`, { txid });
   } catch (error) {
     log.error(`[arweave] error finding tx`, { txid, error: error.message });
   }
 
-  throw new NotFound();
+  return { contentLength: 0 };
+};
+
+export const streamChunks = function ({
+  offset,
+  size,
+}: {
+  offset: number;
+  size: number;
+}): Readable {
+  let bytesReceived = 0;
+  let initialOffset = offset - size + 1;
+
+  const stream = new Readable({
+    autoDestroy: true,
+    read: async function () {
+      let next = initialOffset + bytesReceived;
+
+      try {
+        if (bytesReceived >= size) {
+          this.push(null);
+          return;
+        }
+
+        const { body } = await fetchRequest(
+          `chunk/${next}`,
+          ({ status }) => status == 200
+        );
+
+        if (body) {
+          const data = fromB64Url((await streamToJson(body)).chunk);
+
+          if (stream.destroyed) {
+            return;
+          }
+
+          this.push(data);
+
+          bytesReceived += data.byteLength;
+        }
+      } catch (error) {
+        console.error("stream error", error);
+        stream.emit("error", error);
+      }
+    },
+  });
+
+  return stream;
 };
 
 export const fetchRequest = async (
@@ -170,6 +278,15 @@ export const fetchRequest = async (
   const endpoints = origins.map((host) => `${host}/${endpoint}`);
 
   return await getFirstResponse(endpoints, filter);
+};
+
+export const streamRequest = async (
+  endpoint: string,
+  filter?: FilterFunction
+): Promise<RequestResponse> => {
+  const endpoints = origins.map((host) => `${host}/${endpoint}`);
+
+  return await getFirstResponse(endpoints, filter, { stream: true });
 };
 
 export const getTagValue = (tags: Tag[], name: string): string | undefined => {
@@ -190,10 +307,6 @@ export const getTagValue = (tags: Tag[], name: string): string | undefined => {
     return undefined;
   }
 };
-
-function isValidUTF8(buffer: Buffer) {
-  return Buffer.compare(Buffer.from(buffer.toString(), "utf8"), buffer) === 0;
-}
 
 export const utf8DecodeTag = (
   tag: Tag
@@ -219,25 +332,29 @@ export const utf8DecodeTag = (
 interface RequestResponse {
   status?: number;
   headers?: FetchHeaders;
-  body?: Buffer;
+  body?: Readable;
 }
 
 type FilterFunction = (options: {
   status: number;
   headers: FetchHeaders;
+  error?: any;
 }) => boolean;
 
 const getFirstResponse = async <T = any>(
   urls: string[],
   filter?: FilterFunction,
-  options?: FetchRequestInit
+  options?: {
+    stream?: boolean;
+    fetch?: FetchRequestInit;
+  }
 ): Promise<RequestResponse> => {
   const controllers: AbortController[] = [];
 
   const defaultFilter: FilterFunction = ({ status }) =>
     [200, 201, 202, 208].includes(status);
 
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     let isResolved = false;
     await Promise.all(
       shuffle(urls).map(async (url, index) => {
@@ -252,7 +369,7 @@ const getFirstResponse = async <T = any>(
 
         try {
           const response = await fetch(url, {
-            ...(options || {}),
+            ...((options && options.fetch) || {}),
             signal: controller.signal,
           });
 
@@ -271,7 +388,7 @@ const getFirstResponse = async <T = any>(
               }
             });
             resolve({
-              body: await response.buffer(),
+              body: response.body as Readable,
               status: response.status,
               headers: response.headers,
             });

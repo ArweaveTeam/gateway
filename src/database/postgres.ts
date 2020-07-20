@@ -17,8 +17,10 @@ export const initConnectionPool = (
   mode: ConnectionMode,
   config?: PoolConfig
 ) => {
-  log.info(`[Postgres] creating connection: ${mode}`);
-  poolCache[mode] = createConnectionPool(mode, config);
+  if (!poolCache[mode]) {
+    log.info(`[Postgres] creating connection: ${mode}`);
+    poolCache[mode] = createConnectionPool(mode, config);
+  }
 };
 
 export const getConnectionPool = (mode: ConnectionMode): knex => {
@@ -142,7 +144,9 @@ export const upsert = (
   const { sql, bindings } = query.toSQL();
 
   const upsertSql = sql.concat(
-    ` ON CONFLICT (${conflictKeys.join(",")}) DO UPDATE SET ${updateFields};`
+    ` ON CONFLICT (${conflictKeys
+      .map((key) => `"${key}"`)
+      .join(",")}) DO UPDATE SET ${updateFields};`
   );
 
   return connection.raw(upsertSql, bindings);

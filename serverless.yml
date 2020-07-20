@@ -53,11 +53,13 @@ provider:
     blockPublicAccess: true
     useAccelerateEndpoint: true
   environment:
-    ARWEAVE_NODES: '["http://1.nodes.arweave.dev:1984","http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
+    ARWEAVE_NODES: '["http://lon-1.eu-west-1.arweave.net:1984","http://lon-2.eu-west-1.arweave.net:1984","http://lon-3.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-5.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]'
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
     ARWEAVE_SQS_DISPATCH_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.dispatchTxs}
     ARWEAVE_SQS_IMPORT_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importTxs}
     ARWEAVE_SQS_IMPORT_BLOCKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importBlocks}.fifo
+    ARWEAVE_SQS_IMPORT_CHUNKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importChunks}
+    ARWEAVE_SQS_EXPORT_CHUNKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.exportChunks}
     ARWEAVE_S3_TX_DATA_BUCKET: ${self:custom.buckets.txData}
     ARWEAVE_DB_READ_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_READ_HOST}
     ARWEAVE_DB_WRITE_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_WRITE_HOST}
@@ -99,6 +101,24 @@ functions:
           arn:
             Fn::GetAtt: [SQSImportBlocksQueue, Arn]
 
+  import-chunks:
+    handler: dist/jobs/import-chunks.handler
+    timeout: 120
+    events:
+      - sqs:
+          batchSize: 1
+          arn:
+            Fn::GetAtt: [SQSImportChunksQueue, Arn]
+
+  export-chunks:
+    handler: dist/jobs/export-chunks.handler
+    timeout: 30
+    events:
+      - sqs:
+          batchSize: 10
+          arn:
+            Fn::GetAtt: [SQSExportChunksQueue, Arn]
+
   purge-orphans:
     handler: dist/jobs/purge-orphans.handler
     events:
@@ -110,9 +130,14 @@ package:
   exclude:
     - .*/*
     - node_modules/aws-sdk/**
+    - node_modules/@sentry/browser/**
+    - node_modules/moment/min/**
+    - node_modules/moment/dist/**
+    - node_modules/moment/src/**
     - migrations/**
     - scripts/**
     - terraform/**
+    - test/**
     - tls/**
     - /*
   include:
@@ -126,6 +151,8 @@ custom:
     dispatchTxs: ${self:service}-${opt:stage, 'dev'}-dispatch-txs
     importTxs: ${self:service}-${opt:stage, 'dev'}-import-txs
     importBlocks: ${self:service}-${opt:stage, 'dev'}-import-blocks
+    importChunks: ${self:service}-${opt:stage, 'dev'}-import-chunks
+    exportChunks: ${self:service}-${opt:stage, 'dev'}-export-chunks
   buckets:
     txData: ${self:service}-${opt:stage, 'dev'}-tx-data-${self:provider.region, 'eu-west-2'}
   serverless-offline-sqs:
@@ -204,6 +231,42 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queues.importTxs}-DLQ
+        MessageRetentionPeriod: 1209600 #14 days, max
+
+    SQSImportChunksQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.importChunks}
+        MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
+        ReceiveMessageWaitTimeSeconds: 10
+        VisibilityTimeout: 120
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [SQSImportChunksDLQ, Arn]
+          maxReceiveCount: 2
+
+    SQSImportChunksDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.importChunks}-DLQ
+        MessageRetentionPeriod: 1209600 #14 days, max
+
+    SQSExportChunksQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.exportChunks}
+        MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
+        ReceiveMessageWaitTimeSeconds: 10
+        VisibilityTimeout: 90
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [SQSExportChunksDLQ, Arn]
+          maxReceiveCount: 20
+
+    SQSExportChunksDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.exportChunks}-DLQ
         MessageRetentionPeriod: 1209600 #14 days, max
 
     SQSImportBlocksQueue:

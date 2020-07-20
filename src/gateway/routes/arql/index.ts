@@ -38,7 +38,7 @@ interface ArqlBooleanQuery {
 
 type ArqlResultSet = string[];
 
-export const defaultMaxResults = 500;
+export const defaultMaxResults = 5000;
 
 export const handler: RequestHandler = async (req, res, next: Function) => {
   if (req.body && req.body.query) {

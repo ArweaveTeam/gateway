@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import log from "../lib/log";
-import { Transaction } from "./arweave";
+import { Chunk, Transaction } from "./arweave";
 
 export async function broadcastTx(tx: Transaction, hosts: string[]) {
   log.info(`[broadcast-tx] broadcasting new tx`, { id: tx.id });
@@ -12,7 +12,7 @@ export async function broadcastTx(tx: Transaction, hosts: string[]) {
           retryDelay: 1000,
           timeout: 10000,
         },
-        async (attempt) => {
+        async (attempt, { reject }) => {
           log.info(`[broadcast-tx] sending`, { attempt, host, id: tx.id });
           const { status: existingStatus, ok: isReceived } = await fetch(
             `${host}/tx/${tx.id}/id`
@@ -42,6 +42,11 @@ export async function broadcastTx(tx: Transaction, hosts: string[]) {
             postStatus,
           });
 
+          // Don't even retry on these codes
+          if ([400, 410].includes(postStatus)) {
+            reject(postStatus);
+          }
+
           return postOk;
         },
         (error, attempt) => {
@@ -63,6 +68,85 @@ export async function broadcastTx(tx: Transaction, hosts: string[]) {
   );
 }
 
+export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
+  log.info(`[broadcast-chunk] broadcasting new chunk`, {
+    chunk: chunk.data_root,
+  });
+
+  let success = 0;
+
+  await Promise.all(
+    hosts.map(async (host) => {
+      try {
+        await retry(
+          {
+            retryCount: 3,
+            retryDelay: 500,
+            timeout: 5000,
+          },
+          async (attempt, { reject }) => {
+            log.info(`[broadcast-chunk] sending`, {
+              attempt,
+              host,
+              chunk: chunk.data_root,
+            });
+
+            const response = await fetch(`${host}/chunk`, {
+              method: "POST",
+              body: JSON.stringify({
+                ...chunk,
+                data_size: chunk.data_size.toString(),
+                offset: chunk.offset.toString(),
+              }),
+              headers: { "Content-Type": "application/json" },
+              timeout: 10000,
+            });
+
+            log.info(`[broadcast-chunk] sent`, {
+              attempt,
+              host,
+              chunk: chunk.data_root,
+              status: response.status,
+              body: await response.text(),
+            });
+
+            // Don't even retry on these codes
+            if ([400, 410].includes(response.status)) {
+              reject(response.status);
+            }
+
+            return response.ok;
+          },
+          (error, attempt) => {
+            log.warn(`[broadcast-chunk] warning`, {
+              error: error.message,
+              attempt,
+              host,
+              chunk: chunk.data_root,
+            });
+          }
+        );
+
+        success++;
+      } catch (error) {
+        log.warn(`[broadcast-chunk] failed to broadcast`, {
+          error: error.message,
+          host,
+          chunk: chunk.data_root,
+        });
+      }
+    })
+  );
+
+  log.warn(`[broadcast-chunk] complete`, {
+    success,
+  });
+
+  if (success < 3) {
+    throw new Error(`Failed to successfully broadcast to >=3 nodes`);
+  }
+}
+
 const wait = async (timeout: number) =>
   new Promise((resolve) => setTimeout(resolve, timeout));
 
@@ -76,16 +160,21 @@ const retry = async <T>(
     retryDelay: number;
     timeout?: number;
   },
-  action: (attempt: number) => Promise<T>,
+  action: (
+    attempt: number,
+    options: { resolve: Function; reject: Function }
+  ) => Promise<T>,
   onError?: (error: any, attempt: number) => any
 ): Promise<T | undefined> => {
   return new Promise(async (resolve, reject) => {
     setTimeout(() => {
       reject(`Timeout: operation took longer than ${timeout}ms`);
     }, timeout);
+    let lastError: Error | undefined;
     for (let attempt = 1; attempt < retryCount + 1; attempt++) {
+      lastError = undefined;
       try {
-        const result = await action(attempt);
+        const result = await action(attempt, { resolve, reject });
         if (result) {
           resolve(result);
           return;
@@ -97,5 +186,9 @@ const retry = async <T>(
       }
       await wait(retryDelay * attempt);
     }
+    if (lastError) {
+      reject(lastError);
+    }
+    reject();
   });
 };
