@@ -9,7 +9,6 @@ const apolloServer = (opts: ApolloServerExpressConfig = {}) => {
     resolvers,
     debug: false,
     context: () => {
-      console.log("context...");
       return {
         connection: getConnectionPool("read"),
       };

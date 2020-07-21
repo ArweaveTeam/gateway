@@ -6,7 +6,11 @@ import {
   Tag,
   utf8DecodeTag,
 } from "../lib/arweave";
-import { fromB64Url, sha256B64Url } from "../lib/encoding";
+import {
+  fromB64Url,
+  sha256B64Url,
+  ISO8601DateTimeString,
+} from "../lib/encoding";
 import { pick } from "lodash";
 
 const txFields = [
@@ -47,8 +51,11 @@ interface TxQuery {
   tags?: { name: string; value: string }[];
   limit?: number;
   offset?: number;
-  select?: string[];
+  select?: any;
+  blocks?: boolean;
+  since?: ISO8601DateTimeString;
   sort?: boolean;
+  status?: "any" | "confirmed" | "pending";
 }
 
 export const query = (
@@ -60,7 +67,10 @@ export const query = (
     limit = 100000,
     offset = 0,
     id,
+    status,
     select,
+    since,
+    blocks = false,
     sort = true,
   }: TxQuery
 ): knex.QueryBuilder => {
@@ -69,10 +79,22 @@ export const query = (
     .select(select || ["id", "height", "transactions.tags"])
     .from("transactions");
 
+  if (blocks) {
+    query.leftJoin("blocks", "transactions.height", "blocks.height");
+  }
+
   query.whereNull("transactions.deleted_at");
 
   if (to) {
     query.whereIn("transactions.target", to);
+  }
+
+  if (status == "confirmed") {
+    query.whereNotNull("transactions.height");
+  }
+
+  if (since) {
+    query.where("transactions.created_at", "<", since);
   }
 
   if (id) {
@@ -104,7 +126,7 @@ export const query = (
   query.limit(limit).offset(offset);
 
   if (sort) {
-    query.orderByRaw("height desc NULLS first");
+    query.orderByRaw("transactions.height desc NULLS first");
   }
 
   return query;

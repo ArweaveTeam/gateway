@@ -2,10 +2,15 @@ import { base32 } from "rfc4648";
 import { createHash } from "crypto";
 import { Readable, PassThrough } from "stream";
 import { Base64DUrlecode } from "./base64url-stream";
+import Ar from "arweave/node/ar";
+
+const ar = new Ar();
 
 export type Base64EncodedString = string;
 export type Base64UrlEncodedString = string;
 export type WinstonString = string;
+export type ArString = string;
+export type ISO8601DateTimeString = string;
 
 export function toB64url(buffer: Buffer): Base64UrlEncodedString {
   return buffer
@@ -90,4 +95,12 @@ export const bufferToStream = (buffer: Buffer) => {
       this.push(null);
     },
   });
+};
+
+export const winstonToAr = (amount: string) => {
+  return ar.winstonToAr(amount);
+};
+
+export const arToWinston = (amount: string) => {
+  return ar.arToWinston(amount);
 };

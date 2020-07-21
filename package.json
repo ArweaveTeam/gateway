@@ -44,7 +44,7 @@
     "@hapi/joi": "^17.1.1",
     "@sentry/node": "^5.19.0",
     "abort-controller": "^3.0.0",
-    "apollo-server-express": "^2.15.1",
+    "apollo-server-express": "^2.16.0",
     "arweave": "github:arweaveteam/arweave-js#a6ef78771d43361bfb09c66f252630ce98e21326",
     "async-retry": "^1.3.1",
     "aws-sdk": "^2.709.0",
