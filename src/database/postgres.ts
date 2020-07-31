@@ -1,6 +1,7 @@
 import AWS from "aws-sdk";
 import knex, { StaticConnectionConfig } from "knex";
 import log from "../lib/log";
+import { wait } from "../lib/helpers";
 export type ConnectionMode = "read" | "write";
 
 export type DBConnection = knex | knex.Transaction;
@@ -42,6 +43,7 @@ export const releaseConnectionPool = async (
       releaseConnectionPool("read"),
       releaseConnectionPool("write"),
     ]);
+    await wait(200);
   }
 };
 

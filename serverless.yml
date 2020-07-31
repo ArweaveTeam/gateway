@@ -57,6 +57,7 @@ provider:
     ARWEAVE_SNS_EVENTS_ARN: ${self:custom.events.topicArn}
     ARWEAVE_SQS_DISPATCH_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.dispatchTxs}
     ARWEAVE_SQS_IMPORT_TXS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importTxs}
+    ARWEAVE_SQS_IMPORT_BUNDLES_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importBundles}
     ARWEAVE_SQS_IMPORT_BLOCKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importBlocks}.fifo
     ARWEAVE_SQS_IMPORT_CHUNKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.importChunks}
     ARWEAVE_SQS_EXPORT_CHUNKS_URL: https://sqs.${self:provider.region, 'eu-west-2'}.amazonaws.com/384386061638/${self:custom.queues.exportChunks}
@@ -91,6 +92,15 @@ functions:
           batchSize: 10
           arn:
             Fn::GetAtt: [SQSImportTxsQueue, Arn]
+
+  import-bundles:
+    handler: dist/jobs/import-bundles.handler
+    timeout: 60
+    events:
+      - sqs:
+          batchSize: 10
+          arn:
+            Fn::GetAtt: [SQSImportBundlesQueue, Arn]
 
   import-blocks:
     handler: dist/jobs/import-blocks.handler
@@ -150,6 +160,7 @@ custom:
   queues:
     dispatchTxs: ${self:service}-${opt:stage, 'dev'}-dispatch-txs
     importTxs: ${self:service}-${opt:stage, 'dev'}-import-txs
+    importBundles: ${self:service}-${opt:stage, 'dev'}-import-bundles
     importBlocks: ${self:service}-${opt:stage, 'dev'}-import-blocks
     importChunks: ${self:service}-${opt:stage, 'dev'}-import-chunks
     exportChunks: ${self:service}-${opt:stage, 'dev'}-export-chunks
@@ -231,6 +242,24 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queues.importTxs}-DLQ
+        MessageRetentionPeriod: 1209600 #14 days, max
+
+    SQSImportBundlesQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.importBundles}
+        MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
+        ReceiveMessageWaitTimeSeconds: 10
+        VisibilityTimeout: 120
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [SQSImportBundlesDLQ, Arn]
+          maxReceiveCount: 2 #The handler for these messages handles retry logic, so this will only applies to uncaught errors
+
+    SQSImportbundlesDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queues.importBundles}-DLQ
         MessageRetentionPeriod: 1209600 #14 days, max
 
     SQSImportChunksQueue:

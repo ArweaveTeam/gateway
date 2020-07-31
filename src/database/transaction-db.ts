@@ -5,6 +5,7 @@ import {
   getTagValue,
   Tag,
   utf8DecodeTag,
+  DataBundleItem,
 } from "../lib/arweave";
 import {
   fromB64Url,
@@ -151,15 +152,12 @@ export const hasTxs = async (
 
 export const saveTx = async (connection: knex, tx: TransactionHeader) => {
   return await connection.transaction(async (knexTransaction) => {
-    const contentType = getTagValue(tx.tags, "content-type");
     await upsert(knexTransaction, {
       table: "transactions",
       conflictKeys: ["id"],
       rows: [
         txToRow({
           tx,
-          content_type: contentType || null,
-          data_size: tx.data_size,
         }),
       ],
     });
@@ -174,22 +172,50 @@ export const saveTx = async (connection: knex, tx: TransactionHeader) => {
   });
 };
 
-const txToRow = ({
-  tx,
-  content_type,
-  data_size,
-}: {
-  tx: TransactionHeader;
-  content_type: string | null;
-  data_size: number;
-}) => {
+export const saveBundleDataItem = async (
+  connection: knex,
+  tx: DataBundleItem,
+  { parent }: { parent: string }
+) => {
+  return await connection.transaction(async (knexTransaction) => {
+    await upsert(knexTransaction, {
+      table: "transactions",
+      conflictKeys: ["id"],
+      rows: [
+        {
+          parent,
+          format: 1,
+          id: tx.id,
+          signature: tx.signature,
+          owner: tx.owner,
+          target: tx.target,
+          reward: 0,
+          last_tx: tx.nonce,
+          tags: tx.tags,
+          quantity: 0,
+          data_size: fromB64Url((tx as any).data).byteLength,
+        },
+      ],
+    });
+
+    if (tx.tags.length > 0) {
+      await upsert(knexTransaction, {
+        table: "tags",
+        conflictKeys: ["tx_id", "index"],
+        rows: txTagsToRows(tx.id, tx.tags),
+      });
+    }
+  });
+};
+
+const txToRow = ({ tx }: { tx: TransactionHeader | DataBundleItem }) => {
   return pick(
     {
       ...tx,
-      content_type,
-      format: tx.format || 1,
+      content_type: getTagValue(tx.tags, "content-type"),
+      format: (tx as any).format || 0,
       data_size:
-        tx.data_size ||
+        (tx as any).data_size ||
         ((tx as any).data
           ? fromB64Url((tx as any).data).byteLength
           : undefined),

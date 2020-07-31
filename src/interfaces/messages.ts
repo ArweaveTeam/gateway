@@ -26,3 +26,7 @@ export interface ImportBlock {
   source: string;
   block: Block;
 }
+
+export interface ImportBundle {
+  tx: TransactionHeader;
+}

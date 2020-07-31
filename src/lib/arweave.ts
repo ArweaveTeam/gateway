@@ -1,25 +1,21 @@
-import {
-  Base64UrlEncodedString,
-  fromB64Url,
-  WinstonString,
-  bufferToJson,
-  streamToBuffer,
-  streamToJson,
-  isValidUTF8,
-  streamDecoderb64url,
-  bufferToStream,
-} from "./encoding";
 import AbortController from "abort-controller";
+import { NotFound } from "http-errors";
+import { shuffle } from "lodash";
 import fetch, {
   Headers as FetchHeaders,
   RequestInit as FetchRequestInit,
-  Response as FetchResponse,
 } from "node-fetch";
-import { shuffle } from "lodash";
+import { Readable } from "stream";
 import log from "../lib/log";
-import { NotFound } from "http-errors";
-import { Readable, PassThrough } from "stream";
-import { wait } from "./helpers";
+import {
+  Base64UrlEncodedString,
+  bufferToStream,
+  fromB64Url,
+  isValidUTF8,
+  streamToBuffer,
+  streamToJson,
+  WinstonString,
+} from "./encoding";
 
 export type TransactionHeader = Omit<Transaction, "data">;
 
@@ -42,6 +38,20 @@ export interface Transaction {
   data_size: number;
   data_root: string;
   data_tree: string[];
+}
+
+export interface DataBundleWrapper {
+  items: DataBundleItem[];
+}
+
+export interface DataBundleItem {
+  owner: string;
+  target: string;
+  nonce: string;
+  tags: Tag[];
+  data: Base64UrlEncodedString;
+  signature: string;
+  id: string;
 }
 
 export interface Chunk {
