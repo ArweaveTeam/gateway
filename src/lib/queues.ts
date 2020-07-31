@@ -6,11 +6,13 @@ type QueueType =
   | "dispatch-txs"
   | "import-txs"
   | "import-blocks"
+  | "import-bundles"
   | "import-chunks"
   | "export-chunks";
 type SQSQueueUrl = string;
 type MessageGroup = string;
 type MessageDeduplicationId = string;
+type DelaySeconds = number;
 interface HandlerContext {
   sqsMessage?: SQSRecord;
 }
@@ -21,6 +23,7 @@ const queues: { [key in QueueType]: SQSQueueUrl } = {
   "export-chunks": process.env.ARWEAVE_SQS_EXPORT_CHUNKS_URL!,
   "import-txs": process.env.ARWEAVE_SQS_IMPORT_TXS_URL!,
   "import-blocks": process.env.ARWEAVE_SQS_IMPORT_BLOCKS_URL!,
+  "import-bundles": process.env.ARWEAVE_SQS_IMPORT_BUNDLES_URL!,
 };
 
 const sqs = new SQS({
@@ -36,7 +39,11 @@ export const enqueue = async <MessageType extends object>(
   queueUrl: SQSQueueUrl,
   message: MessageType,
   options?:
-    | { messagegroup?: MessageGroup; deduplicationId?: MessageDeduplicationId }
+    | {
+        messagegroup?: MessageGroup;
+        deduplicationId?: MessageDeduplicationId;
+        delaySeconds?: DelaySeconds;
+      }
     | undefined
 ) => {
   if (!queueUrl) {
@@ -48,6 +55,7 @@ export const enqueue = async <MessageType extends object>(
       MessageBody: JSON.stringify(message),
       MessageGroupId: options && options.messagegroup,
       MessageDeduplicationId: options && options.deduplicationId,
+      DelaySeconds: options && options.delaySeconds,
     })
     .promise();
 };
