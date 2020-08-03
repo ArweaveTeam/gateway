@@ -1,4 +1,4 @@
-import { TransactionHeader, utf8DecodeTag } from "../../../lib/arweave";
+import { TransactionHeader, utf8DecodeTag, Tag } from "../../../lib/arweave";
 import { query } from "../../../database/transaction-db";
 import { IResolvers } from "apollo-server-express";
 
@@ -25,10 +25,15 @@ export const resolvers: Resolvers = {
         limit: defaultMaxResults,
         to,
         from,
-        tags,
+        tags: (tags || []).map((tag: Tag) => {
+          return {
+            name: tag.name,
+            values: [tag.value],
+          };
+        }),
       });
 
-      // console.log(sqlQuery.toSQL());
+      console.log(sqlQuery.toSQL());
 
       const results = (await sqlQuery) as TransactionHeader[];
 
@@ -52,7 +57,7 @@ export const resolvers: Resolvers = {
         from,
         tags: ((tags as any[]) || []).concat({
           name: byForeignTag,
-          value: parent.id,
+          values: [parent.id],
         }),
       });
 
@@ -78,7 +83,7 @@ export const resolvers: Resolvers = {
         from,
         tags: ((tags as any[]) || []).concat({
           name: byForeignTag,
-          value: parent.id,
+          values: [parent.id],
         }),
         select: [],
         sort: false,
