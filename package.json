@@ -27,7 +27,8 @@
     "local-cert": "openssl req -config tls/arweave.localhost/request.cnf -new -nodes -x509 -newkey rsa:2048 -sha256 -keyout tls/arweave.localhost/key.pem -out tls/arweave.localhost/cert.pem -days 365",
     "local-dns": "sudo brew services start dnsmasq",
     "aws-shell": "aws-vault exec arweave-gateway-dev",
-    "test": "mocha --require ts-node/register test/*.ts"
+    "test": "mocha --require ts-node/register test/*.ts",
+    "graphql-types": "graphql-codegen --config codegen.yml"
   },
   "repository": {
     "type": "git",
@@ -72,6 +73,9 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "1.17.7",
+    "@graphql-codegen/typescript": "1.17.7",
+    "@graphql-codegen/typescript-resolvers": "1.17.7",
     "@types/async-retry": "^1.4.2",
     "@types/aws-lambda": "^8.10.57",
     "@types/aws-serverless-express": "^3.3.3",

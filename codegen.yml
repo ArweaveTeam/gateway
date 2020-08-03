@@ -1,0 +1,6 @@
+schema: ./src/gateway/routes/graphql-v2/schema/types.graphql
+generates:
+  ./src/gateway/routes/graphql-v2/schema/types.ts:
+    plugins:
+      - typescript
+      - typescript-resolvers

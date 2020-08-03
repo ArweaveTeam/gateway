@@ -1,7 +1,13 @@
-import { ApolloServer, ApolloServerExpressConfig } from "apollo-server-express";
+import {
+  ApolloServer,
+  ApolloServerExpressConfig,
+  gql,
+} from "apollo-server-express";
 import { getConnectionPool } from "../../../database/postgres";
 import { resolvers } from "./resolvers";
-import { typeDefs } from "./schema";
+import { readFileSync } from "fs";
+
+const typeDefs = gql(readFileSync(__dirname + "/schema/types.graphql", "utf8"));
 
 const apolloServer = (opts: ApolloServerExpressConfig = {}) => {
   return new ApolloServer({

@@ -49,7 +49,8 @@ interface TxQuery {
   to?: string[];
   from?: string[];
   id?: string;
-  tags?: { name: string; value: string }[];
+  ids?: string[];
+  tags?: { name: string; values: string[] }[];
   limit?: number;
   offset?: number;
   select?: any;
@@ -68,6 +69,7 @@ export const query = (
     limit = 100000,
     offset = 0,
     id,
+    ids,
     status,
     select,
     since,
@@ -102,6 +104,10 @@ export const query = (
     query.where("transactions.id", id);
   }
 
+  if (ids) {
+    query.whereIn("transactions.id", ids);
+  }
+
   if (from) {
     query.whereIn("transactions.owner_address", from);
   }
@@ -110,16 +116,11 @@ export const query = (
     tags.forEach((tag) => {
       query.whereIn("transactions.id", (query) => {
         query.select("tx_id").from("tags");
-        if (tag.value.includes("%")) {
-          query
-            .where("tags.name", "=", tag.name)
-            .where("tags.value", "LIKE", tag.value);
-        } else {
-          query.where({
-            "tags.name": tag.name,
-            "tags.value": tag.value,
-          });
-        }
+        query.where({
+          "tags.name": tag.name,
+        });
+
+        query.whereIn("tags.value", tag.values);
       });
     });
   }

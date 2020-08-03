@@ -9,61 +9,66 @@ type Resolvers = IResolvers;
 
 type ResolverFn = (parent: any, args: any, ctx: any) => Promise<any>;
 
-export const DEFAULT_PAGE_SIZE = 3;
-export const MAX_PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 10;
+
+const fieldMap = {
+  id: "transactions.id",
+  anchor: "transactions.last_tx",
+  recipient: "transactions.target",
+  tags: "transactions.tags",
+  fee: "transactions.reward",
+  quantity: "transactions.quantity",
+  data_size: "transactions.data_size",
+  data_type: "transactions.content_type",
+  parent: "transactions.parent",
+  owner: "transactions.owner",
+  owner_address: "transactions.owner_address",
+  signature: "transactions.signature",
+  block_id: "blocks.id",
+  block_timestamp: "blocks.mined_at",
+  block_height: "blocks.height",
+  block_previous: "blocks.previous_block",
+};
 
 export const resolvers: Resolvers = {
   Query: {
-    transaction: async (parent, { id }, context) => {
-      return query(context.connection, {
-        id,
-      });
+    transaction: async (parent, queryParams, context) => {
+      console.log("[grqphql/v2] transaction()", queryParams);
+      const sqlQuery = query(context.connection, {
+        id: queryParams.id,
+        blocks: true,
+        select: fieldMap,
+      }).first();
+
+      const tx = (await sqlQuery) as TransactionHeader;
+
+      return tx;
     },
     transactions: async (parent, queryParams, context) => {
-      console.log("[grqphql/v2]", parent, queryParams);
-
-      const cursor = queryParams.after;
+      console.log("[grqphql/v2] transactions()", queryParams);
 
       const { timestamp, offset } = parseCursor(
         queryParams.after || newCursor()
       );
 
-      const pageSize = parsePageSize(queryParams.first);
+      const pageSize = Math.min(
+        queryParams.first || DEFAULT_PAGE_SIZE,
+        MAX_PAGE_SIZE
+      );
 
       const sqlQuery = query(context.connection, {
         // Add one to the limit, we'll remove this result but it tells
         // us if there's another page of data to fetch.
         limit: pageSize + 1,
         offset: offset,
-        to: queryParams.to,
-        from: queryParams.from,
+        ids: queryParams.ids,
+        to: queryParams.recipients,
+        from: queryParams.owners,
         tags: queryParams.tags,
         blocks: true,
         since: timestamp,
-        select: {
-          id: "transactions.id",
-          ancho: "transactions.last_tx",
-          target: "transactions.target",
-          tags: "transactions.tags",
-          fee: "transactions.reward",
-          transfer: "transactions.quantity",
-          data_size: "transactions.data_size",
-          data_type: "transactions.content_type",
-          parent: "transactions.parent",
-          owner: "transactions.owner",
-          owner_address: "transactions.owner_address",
-          block_id: "blocks.id",
-          block_timestamp: "blocks.mined_at",
-          block_height: "blocks.height",
-          block_previous: "blocks.previous_block",
-        },
-      });
-
-      console.log("[grqphql/v2/cursor]", {
-        cursor,
-        timestamp,
-        offset,
-        query: sqlQuery.toSQL(),
+        select: fieldMap,
       });
 
       const results = (await sqlQuery) as TransactionHeader[];
@@ -75,39 +80,46 @@ export const resolvers: Resolvers = {
           hasNextPage,
         },
         edges: async () => {
-          return results
-            .slice(0, pageSize)
-            .map((result: Partial<TransactionHeader>, index) => {
-              return {
-                cursor: encodeCursor({ timestamp, offset: offset + index }),
-                node: {
-                  ...result,
-                  tags: result?.tags?.map(utf8DecodeTag),
-                },
-              };
-            });
+          return results.slice(0, pageSize).map((result: any, index) => {
+            return {
+              cursor: encodeCursor({ timestamp, offset: offset + index + 1 }),
+              node: result,
+            };
+          });
         },
       };
     },
   },
   Transaction: {
-    transfer: (parent) => {
+    tags: (parent) => {
+      return parent.tags.map(utf8DecodeTag);
+    },
+    recipient: (parent) => {
+      return parent.recipient.trim();
+    },
+    data: (parent) => {
       return {
-        ar: winstonToAr(parent.amount),
-        winston: parent.amount,
+        size: parent.data_size || 0,
+        type: parent.data_type,
+      };
+    },
+    quantity: (parent) => {
+      return {
+        ar: winstonToAr(parent.quantity || 0),
+        winston: parent.quantity || 0,
       };
     },
     fee: (parent) => {
       return {
-        ar: winstonToAr(parent.transfer),
-        winston: parent.transfer,
+        ar: winstonToAr(parent.fee || 0),
+        winston: parent.fee || 0,
       };
     },
     block: (parent) => {
       return {
         id: parent.block_id,
         previous: parent.block_previous,
-        timestamp: parent.block_timestamp,
+        timestamp: moment(parent.block_timestamp).unix(),
         height: parent.block_height,
       };
     },
@@ -120,8 +132,8 @@ export const resolvers: Resolvers = {
   },
 };
 
-const newCursor = (): { timestamp: ISO8601DateTimeString; offset: number } => {
-  return { timestamp: moment().format(), offset: 0 };
+const newCursor = (): string => {
+  return encodeCursor({ timestamp: moment().format(), offset: 0 });
 };
 
 const encodeCursor = ({
@@ -145,13 +157,7 @@ const parseCursor = (
 
     return { timestamp, offset };
   } catch (error) {
+    console.error(error);
     throw new BadRequest("invalid cursor");
   }
-};
-
-const parsePageSize = (limit: any): number => {
-  return Math.min(
-    limit ? parseInt(limit as string) : DEFAULT_PAGE_SIZE,
-    MAX_PAGE_SIZE
-  );
 };
