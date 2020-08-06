@@ -7,10 +7,8 @@ import { BadRequest } from "http-errors";
 
 type Resolvers = IResolvers;
 
-type ResolverFn = (parent: any, args: any, ctx: any) => Promise<any>;
-
 const DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
 
 const fieldMap = {
   id: "transactions.id",
@@ -41,9 +39,7 @@ export const resolvers: Resolvers = {
         select: fieldMap,
       }).first();
 
-      const tx = (await sqlQuery) as TransactionHeader;
-
-      return tx;
+      return (await sqlQuery) as TransactionHeader;
     },
     transactions: async (parent, queryParams, context) => {
       console.log("[grqphql/v2] transactions()", queryParams);
@@ -127,6 +123,11 @@ export const resolvers: Resolvers = {
       return {
         address: parent.owner_address,
         key: parent.owner,
+      };
+    },
+    parent: (parent) => {
+      return {
+        id: parent.parent,
       };
     },
   },
