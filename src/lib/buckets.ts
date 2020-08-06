@@ -38,9 +38,9 @@ export const put = async (
       Bucket: bucket,
       Body: body,
       ContentType: contentType,
-      Metadata: {
-        ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
-      },
+      // Metadata: {
+      //   ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
+      // },
     })
     .promise();
 };
@@ -77,9 +77,9 @@ export const putStream = async (
       Body: cacheStream,
       ContentType: contentType,
       ContentLength: contentLength,
-      Metadata: {
-        ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
-      },
+      // Metadata: {
+      //   ...(tags ? { "x-arweave-tags": JSON.stringify(tags) } : {}),
+      // },
     },
     { partSize: 10 * 1024 * 1024, queueSize: 2 },
     () => undefined
