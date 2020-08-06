@@ -129,12 +129,12 @@ functions:
           arn:
             Fn::GetAtt: [SQSExportChunksQueue, Arn]
 
-  purge-orphans:
-    handler: dist/jobs/purge-orphans.handler
-    events:
-      - schedule:
-          rate: cron(* * * * ? *)
-          enabled: true
+  # purge-orphans:
+  #   handler: dist/jobs/purge-orphans.handler
+  #   events:
+  #     - schedule:
+  #         rate: cron(* * * * ? *)
+  #         enabled: true
 
 package:
   exclude:
