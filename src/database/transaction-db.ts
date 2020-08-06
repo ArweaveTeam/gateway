@@ -140,7 +140,7 @@ export const query = (
   query.limit(limit).offset(offset);
 
   if (sort) {
-    query.orderByRaw("transactions.height desc NULLS first");
+    query.orderByRaw("transactions.height DESC NULLS FIRST, id ASC");
   }
 
   return query;
