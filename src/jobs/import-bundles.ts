@@ -4,6 +4,7 @@ import {
   fetchTransactionData,
   DataBundleWrapper,
   getTagValue,
+  DataBundleItem,
 } from "../lib/arweave";
 import log from "../lib/log";
 import {
@@ -18,7 +19,7 @@ import {
   releaseConnectionPool,
 } from "../database/postgres";
 import { streamToJson, fromB64Url } from "../lib/encoding";
-import { wait } from "../lib/helpers";
+import { wait, sequentialBatch } from "../lib/helpers";
 import { saveBundleDataItem } from "../database/transaction-db";
 import { put } from "../lib/buckets";
 
@@ -27,35 +28,60 @@ const RETRY_BACKOFF_SECONDS = 30;
 
 export const handler = createQueueHandler<ImportBundle>(
   getQueueUrl("import-bundles"),
-  async ({ tx }) => {
-    log.info(`[import-bundles] importing tx bundles`, { id: tx.id });
+  async ({ header }) => {
     const pool = getConnectionPool("write");
 
-    const { attempts } = await getBundleImport(pool, tx.id);
+    const { attempts = 0 } = await getBundleImport(pool, header.id);
 
-    const incrementedAttempts = (attempts || 0) + 1;
+    const incrementedAttempts = attempts + 1;
 
-    const { stream } = await fetchTransactionData(tx.id);
+    log.info("[import-bundles] importing tx bundle", {
+      attempt: incrementedAttempts,
+      bundle: header.id,
+    });
+
+    const { stream } = await fetchTransactionData(header.id);
 
     if (stream) {
       const data = await streamToJson<DataBundleWrapper>(stream);
+
       try {
-        await Promise.all(
-          data.items.map(async (item) => {
-            const contentType = getTagValue(item.tags, "content-type");
-            await saveBundleDataItem(pool, item, { parent: tx.id });
-            await put("tx-data", `tx/${item.id}`, fromB64Url(item.data), {
-              contentType,
-              tags: item.tags,
-            });
-          })
+        await sequentialBatch(
+          data.items,
+          10,
+          async (items: DataBundleItem[]) => {
+            await Promise.all(
+              items.map(async (item) => {
+                const contentType = getTagValue(item.tags, "content-type");
+
+                const bundleData = fromB64Url(item.data);
+
+                log.info("[import-bundles] importing tx bundle item", {
+                  attempts,
+                  bundle: header.id,
+                  item: item.id,
+                  contentType,
+                  contentLength: bundleData.byteLength,
+                });
+
+                await saveBundleDataItem(pool, item, { parent: header.id });
+
+                await put("tx-data", `tx/${item.id}`, bundleData, {
+                  contentType,
+                });
+              })
+            );
+          }
         );
+
+        await complete(pool, header.id, { attempts });
       } catch (error) {
-        log.error(error);
-        retry(pool, tx, { attempts: incrementedAttempts });
+        log.error("error", error?.message);
+        retry(pool, header, { attempts: incrementedAttempts });
       }
     } else {
-      retry(pool, tx, { attempts: incrementedAttempts });
+      log.error("Data not available, requeuing");
+      retry(pool, header, { attempts: incrementedAttempts });
     }
   },
   {
@@ -72,31 +98,44 @@ export const handler = createQueueHandler<ImportBundle>(
 
 const retry = async (
   connection: Knex,
-  tx: TransactionHeader,
+  header: TransactionHeader,
   { attempts }: { attempts: number }
 ) => {
   if (attempts && attempts >= MAX_RETRY) {
-    await saveBundleStatus(connection, [
+    return saveBundleStatus(connection, [
       {
-        id: tx.id,
+        id: header.id,
         status: "error",
         attempts,
       },
     ]);
-  } else {
-    await Promise.all([
-      saveBundleStatus(connection, [
-        {
-          id: tx.id,
-          status: "pending",
-          attempts,
-        },
-      ]),
-      enqueue<ImportBundle>(
-        getQueueUrl("import-bundles"),
-        { tx },
-        { delaySeconds: attempts * RETRY_BACKOFF_SECONDS }
-      ),
-    ]);
   }
+  return Promise.all([
+    saveBundleStatus(connection, [
+      {
+        id: header.id,
+        status: "pending",
+        attempts,
+      },
+    ]),
+    enqueue<ImportBundle>(
+      getQueueUrl("import-bundles"),
+      { header },
+      { delaySeconds: attempts * RETRY_BACKOFF_SECONDS }
+    ),
+  ]);
+};
+
+const complete = async (
+  connection: Knex,
+  id: string,
+  { attempts }: { attempts: number }
+) => {
+  await saveBundleStatus(connection, [
+    {
+      id,
+      status: "complete",
+      attempts,
+    },
+  ]);
 };

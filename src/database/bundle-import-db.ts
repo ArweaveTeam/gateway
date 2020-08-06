@@ -43,10 +43,5 @@ export const getBundleImport = async (
     };
   }
 
-  return {
-    id: undefined,
-    status: undefined,
-    attempts: undefined,
-    error: undefined,
-  };
+  return {};
 };

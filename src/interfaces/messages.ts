@@ -28,5 +28,5 @@ export interface ImportBlock {
 }
 
 export interface ImportBundle {
-  tx: TransactionHeader;
+  header: TransactionHeader;
 }
