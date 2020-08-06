@@ -176,34 +176,34 @@ type Tag {
   value: String
 }
 
-"""
-The operator to apply to a tag value.
-"""
-enum TagOperator {
-  """
-  Equals
-  """
-  EQ
-  """
-  Greater than
-  """
-  GT
-  """
-  Less than
-  """
-  LT
-}
+# """
+# The operator to apply to a tag value.
+# """
+# enum TagOperator {
+#   """
+#   Equals
+#   """
+#   EQ
+#   """
+#   Greater than
+#   """
+#   GT
+#   """
+#   Less than
+#   """
+#   LT
+# }
 
-"""
-Transaction statuses
-"""
-enum Status {
-  """
-  Transaction is included in a block
-  """
-  CONFIRMED
-  """
-  Transaction is not yet included in a block
-  """
-  PENDING
-}
+# """
+# Transaction statuses
+# """
+# enum Status {
+#   """
+#   Transaction is included in a block
+#   """
+#   CONFIRMED
+#   """
+#   Transaction is not yet included in a block
+#   """
+#   PENDING
+# }
