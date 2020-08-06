@@ -4,6 +4,7 @@ import { query } from "../../../database/transaction-db";
 import moment from "moment";
 import { ISO8601DateTimeString, winstonToAr } from "../../../lib/encoding";
 import { BadRequest } from "http-errors";
+import graphqlFields from "graphql-fields";
 
 type Resolvers = IResolvers;
 
@@ -31,9 +32,9 @@ const fieldMap = {
 
 export const resolvers: Resolvers = {
   Query: {
-    transaction: async (parent, queryParams, context) => {
-      console.log("[grqphql/v2] transaction()", queryParams);
-      const sqlQuery = query(context.connection, {
+    transaction: async (parent, queryParams, { req, connection }) => {
+      req.log.info("[grqphql/v2] transaction/request", queryParams);
+      const sqlQuery = query(connection, {
         id: queryParams.id,
         blocks: true,
         select: fieldMap,
@@ -41,8 +42,11 @@ export const resolvers: Resolvers = {
 
       return (await sqlQuery) as TransactionHeader;
     },
-    transactions: async (parent, queryParams, context) => {
-      console.log("[grqphql/v2] transactions()", queryParams);
+    transactions: async (parent, queryParams, { req, connection }, info) => {
+      req.log.info("[grqphql/v2] transactions/request", {
+        queryParams,
+        fields: graphqlFields(info as any),
+      });
 
       const { timestamp, offset } = parseCursor(
         queryParams.after || newCursor()
@@ -53,7 +57,7 @@ export const resolvers: Resolvers = {
         MAX_PAGE_SIZE
       );
 
-      const sqlQuery = query(context.connection, {
+      const sqlQuery = query(connection, {
         // Add one to the limit, we'll remove this result but it tells
         // us if there's another page of data to fetch.
         limit: pageSize + 1,
@@ -68,6 +72,13 @@ export const resolvers: Resolvers = {
       });
 
       const results = (await sqlQuery) as TransactionHeader[];
+
+      req.log.info("[grqphql/v2] transactions/response", {
+        queryParams,
+        results: results.length,
+        pageSize,
+        offset,
+      });
 
       const hasNextPage = results.length > pageSize;
 
