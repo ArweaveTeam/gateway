@@ -58,6 +58,7 @@ interface TxQuery {
   since?: ISO8601DateTimeString;
   sort?: boolean;
   status?: "any" | "confirmed" | "pending";
+  pendingMinutes?: number;
 }
 
 export const query = (
@@ -75,22 +76,29 @@ export const query = (
     since,
     blocks = false,
     sort = true,
+    pendingMinutes = 60,
   }: TxQuery
 ): knex.QueryBuilder => {
   const query = connection
     .queryBuilder()
-    .select(select || ["id", "height", "transactions.tags"])
+    .select(select || { id: "id", heihgt: "height", tags: "transactions.tags" })
     .from("transactions");
 
   if (blocks) {
     query.leftJoin("blocks", "transactions.height", "blocks.height");
   }
 
-  query.whereNull("transactions.deleted_at");
-
-  if (to) {
-    query.whereIn("transactions.target", to);
-  }
+  query.where((query) => {
+    // Include recent pending transactions up to pendingMinutes old.
+    // After this threshold they will be considered orphaned so not included in results.
+    query
+      .whereNotNull("transactions.height")
+      .orWhere(
+        "transactions.created_at",
+        ">",
+        connection.raw(`NOW() - INTERVAL '${pendingMinutes} minutes'`)
+      );
+  });
 
   if (status == "confirmed") {
     query.whereNotNull("transactions.height");
@@ -106,6 +114,10 @@ export const query = (
 
   if (ids) {
     query.whereIn("transactions.id", ids);
+  }
+
+  if (to) {
+    query.whereIn("transactions.target", to);
   }
 
   if (from) {
@@ -189,10 +201,11 @@ export const saveBundleDataItem = async (
           id: tx.id,
           signature: tx.signature,
           owner: tx.owner,
+          owner_address: sha256B64Url(fromB64Url(tx.owner)),
           target: tx.target,
           reward: 0,
           last_tx: tx.nonce,
-          tags: tx.tags,
+          tags: JSON.stringify(tx.tags),
           quantity: 0,
           data_size: fromB64Url((tx as any).data).byteLength,
         },
