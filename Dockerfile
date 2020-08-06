@@ -33,8 +33,7 @@ RUN ls ./node_modules/arweave
 
 COPY src ./src
 
-RUN npm run tsc -- --version
-RUN npm run tsc
+RUN npm run build
 
 RUN npm prune --production
 

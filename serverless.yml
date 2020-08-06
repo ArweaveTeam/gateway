@@ -256,7 +256,7 @@ resources:
             Fn::GetAtt: [SQSImportBundlesDLQ, Arn]
           maxReceiveCount: 2 #The handler for these messages handles retry logic, so this will only applies to uncaught errors
 
-    SQSImportbundlesDLQ:
+    SQSImportBundlesDLQ:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queues.importBundles}-DLQ
