@@ -29,7 +29,6 @@ export const put = async (
     bucket,
     key,
     type: contentType,
-    tags,
   });
 
   await s3
@@ -60,7 +59,6 @@ export const putStream = async (
     bucket,
     key,
     type: contentType,
-    tags,
   });
 
   const cacheStream = new PassThrough({
@@ -114,7 +112,7 @@ export const getStream = async (
   const bucket = buckets[bucketType];
   log.info(`[s3] getting stream from bucket`, { bucket, key });
 
-  const { ContentType, ContentLength, Metadata } = await s3
+  const { ContentType, ContentLength } = await s3
     .headObject({
       Key: key,
       Bucket: bucket,
@@ -124,7 +122,7 @@ export const getStream = async (
   return {
     contentLength: ContentLength || 0,
     contentType: ContentType,
-    tags: parseMetadataTags(Metadata || {}),
+    tags: [],
     stream: s3
       .getObject({
         Key: key,

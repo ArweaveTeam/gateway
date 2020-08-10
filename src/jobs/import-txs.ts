@@ -92,7 +92,7 @@ const save = async (connection: Knex, tx: TransactionHeader) => {
             attempts: attempts || 0,
           },
         ]),
-        enqueue<ImportBundle>(getQueueUrl("import-bundles"), { tx }),
+        enqueue<ImportBundle>(getQueueUrl("import-bundles"), { header: tx }),
       ]);
       log.info(`[import-txs] successfully queued bundle for import`, {
         id: tx.id,
