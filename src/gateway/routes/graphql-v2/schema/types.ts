@@ -29,6 +29,14 @@ export type Block = {
   previous: Scalars['ID'];
 };
 
+/** Find transactions within the given block range */
+export type BlockFilter = {
+  /** Minimum block height to filter from */
+  min?: Maybe<Scalars['Int']>;
+  /** Maximum block height to filter to */
+  max?: Maybe<Scalars['Int']>;
+};
+
 /** Basic metadata about the transaction data payload. */
 export type MetaData = {
   __typename?: 'MetaData';
@@ -80,9 +88,10 @@ export type QueryTransactionsArgs = {
   ids?: Maybe<Array<Scalars['ID']>>;
   owners?: Maybe<Array<Scalars['String']>>;
   recipients?: Maybe<Array<Scalars['String']>>;
-  tags?: Maybe<Array<TagInput>>;
+  tags?: Maybe<Array<TagFilter>>;
   first?: Maybe<Scalars['Int']>;
   after?: Maybe<Scalars['String']>;
+  block?: Maybe<BlockFilter>;
 };
 
 export type Tag = {
@@ -94,7 +103,7 @@ export type Tag = {
 };
 
 /** Find transactions with the folowing tag name and value */
-export type TagInput = {
+export type TagFilter = {
   /** The tag name */
   name: Scalars['String'];
   /**
@@ -242,7 +251,8 @@ export type ResolversTypes = {
   Tag: ResolverTypeWrapper<Tag>;
   Block: ResolverTypeWrapper<Block>;
   Parent: ResolverTypeWrapper<Parent>;
-  TagInput: TagInput;
+  TagFilter: TagFilter;
+  BlockFilter: BlockFilter;
   TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
@@ -262,7 +272,8 @@ export type ResolversParentTypes = {
   Tag: Tag;
   Block: Block;
   Parent: Parent;
-  TagInput: TagInput;
+  TagFilter: TagFilter;
+  BlockFilter: BlockFilter;
   TransactionConnection: TransactionConnection;
   PageInfo: PageInfo;
   Boolean: Scalars['Boolean'];

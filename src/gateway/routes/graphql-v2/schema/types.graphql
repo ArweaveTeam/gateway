@@ -22,7 +22,7 @@ type Query {
     """
     Find transactions using tags.
     """
-    tags: [TagInput!]
+    tags: [TagFilter!]
     """
     Only match the first n transactions.
     """
@@ -31,13 +31,17 @@ type Query {
     A pagination cursor value, for fetching subsequent pages from a result set.
     """
     after: String
+    """
+    Find transactions within the given block range
+    """
+    block: BlockFilter
   ): TransactionConnection!
 }
 
 """
 Find transactions with the folowing tag name and value
 """
-input TagInput {
+input TagFilter {
   """
   The tag name
   """
@@ -56,6 +60,20 @@ input TagInput {
   Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
   """
   values: [String!]!
+}
+
+"""
+Find transactions within the given block range
+"""
+input BlockFilter {
+  """
+  Minimum block height to filter from
+  """
+  min: Int
+  """
+  Maximum block height to filter to
+  """
+  max: Int
 }
 
 """

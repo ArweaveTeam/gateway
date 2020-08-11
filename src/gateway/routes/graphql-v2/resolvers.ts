@@ -5,6 +5,7 @@ import moment from "moment";
 import { ISO8601DateTimeString, winstonToAr } from "../../../lib/encoding";
 import { BadRequest } from "http-errors";
 import graphqlFields from "graphql-fields";
+import { QueryTransactionsArgs } from "./schema/types";
 
 type Resolvers = IResolvers;
 
@@ -42,7 +43,12 @@ export const resolvers: Resolvers = {
 
       return (await sqlQuery) as TransactionHeader;
     },
-    transactions: async (parent, queryParams, { req, connection }, info) => {
+    transactions: async (
+      parent,
+      queryParams: QueryTransactionsArgs,
+      { req, connection },
+      info
+    ) => {
       req.log.info("[grqphql/v2] transactions/request", {
         queryParams,
         fields: graphqlFields(info as any),
@@ -62,14 +68,18 @@ export const resolvers: Resolvers = {
         // us if there's another page of data to fetch.
         limit: pageSize + 1,
         offset: offset,
-        ids: queryParams.ids,
-        to: queryParams.recipients,
-        from: queryParams.owners,
-        tags: queryParams.tags,
+        ids: queryParams.ids || undefined,
+        to: queryParams.recipients || undefined,
+        from: queryParams.owners || undefined,
+        tags: queryParams.tags || undefined,
         blocks: true,
         since: timestamp,
         select: fieldMap,
+        minHeight: queryParams.block?.min || undefined,
+        maxHeight: queryParams.block?.max || undefined,
       });
+
+      console.log(sqlQuery.toSQL());
 
       const results = (await sqlQuery) as TransactionHeader[];
 

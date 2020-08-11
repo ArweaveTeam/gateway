@@ -59,6 +59,8 @@ interface TxQuery {
   sort?: boolean;
   status?: "any" | "confirmed" | "pending";
   pendingMinutes?: number;
+  minHeight?: number;
+  maxHeight?: number;
 }
 
 export const query = (
@@ -77,11 +79,19 @@ export const query = (
     blocks = false,
     sort = true,
     pendingMinutes = 60,
+    minHeight = -1,
+    maxHeight = -1,
   }: TxQuery
 ): knex.QueryBuilder => {
   const query = connection
     .queryBuilder()
-    .select(select || { id: "id", heihgt: "height", tags: "transactions.tags" })
+    .select(
+      select || {
+        id: "transactions.id",
+        heihgt: "transactions.height",
+        tags: "transactions.tags",
+      }
+    )
     .from("transactions");
 
   if (blocks) {
@@ -135,6 +145,14 @@ export const query = (
         query.whereIn("tags.value", tag.values);
       });
     });
+  }
+
+  if (minHeight >= 0) {
+    query.where("transactions.height", ">=", minHeight);
+  }
+
+  if (maxHeight >= 0) {
+    query.where("transactions.height", "<=", maxHeight);
   }
 
   query.limit(limit).offset(offset);
