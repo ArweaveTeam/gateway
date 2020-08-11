@@ -59,7 +59,7 @@ export type PageInfo = {
  */
 export type Parent = {
   __typename?: 'Parent';
-  id?: Maybe<Scalars['ID']>;
+  id: Scalars['ID'];
 };
 
 export type Query = {
@@ -77,34 +77,26 @@ export type QueryTransactionArgs = {
 
 
 export type QueryTransactionsArgs = {
-  ids?: Maybe<Array<Maybe<Scalars['ID']>>>;
-  owners?: Maybe<Array<Maybe<Scalars['String']>>>;
-  recipients?: Maybe<Array<Maybe<Scalars['String']>>>;
-  tags?: Maybe<Array<Maybe<TagInput>>>;
+  ids?: Maybe<Array<Scalars['ID']>>;
+  owners?: Maybe<Array<Scalars['String']>>;
+  recipients?: Maybe<Array<Scalars['String']>>;
+  tags?: Maybe<Array<TagInput>>;
   first?: Maybe<Scalars['Int']>;
   after?: Maybe<Scalars['String']>;
 };
 
-/** Transaction statuses */
-export enum Status {
-  /** Transaction is included in a block */
-  Confirmed = 'CONFIRMED',
-  /** Transaction is not yet included in a block */
-  Pending = 'PENDING'
-}
-
 export type Tag = {
   __typename?: 'Tag';
   /** UTF-8 tag name */
-  name?: Maybe<Scalars['String']>;
+  name: Scalars['String'];
   /** UTF-8 tag value */
-  value?: Maybe<Scalars['String']>;
+  value: Scalars['String'];
 };
 
 /** Find transactions with the folowing tag name and value */
 export type TagInput = {
   /** The tag name */
-  name?: Maybe<Scalars['String']>;
+  name: Scalars['String'];
   /**
    * An array of values to match against. If multiple values are passed then
    * transactions with _any_ matching tag value from the set will be returned.
@@ -119,18 +111,8 @@ export type TagInput = {
    * 
    * Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
    */
-  values?: Maybe<Array<Scalars['String']>>;
+  values: Array<Scalars['String']>;
 };
-
-/** The operator to apply to a tag value. */
-export enum TagOperator {
-  /** Equals */
-  Eq = 'EQ',
-  /** Greater than */
-  Gt = 'GT',
-  /** Less than */
-  Lt = 'LT'
-}
 
 export type Transaction = {
   __typename?: 'Transaction';
@@ -142,7 +124,7 @@ export type Transaction = {
   fee: Amount;
   quantity: Amount;
   data: MetaData;
-  tags: Array<Maybe<Tag>>;
+  tags: Array<Tag>;
   block?: Maybe<Block>;
   parent?: Maybe<Parent>;
 };
@@ -154,7 +136,7 @@ export type Transaction = {
 export type TransactionConnection = {
   __typename?: 'TransactionConnection';
   pageInfo: PageInfo;
-  edges: Array<Maybe<TransactionEdge>>;
+  edges: Array<TransactionEdge>;
 };
 
 /** Paginated result set using the GraphQL cursor spec. */
@@ -265,8 +247,6 @@ export type ResolversTypes = {
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
   TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
-  TagOperator: TagOperator;
-  Status: Status;
 };
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -321,7 +301,7 @@ export type PageInfoResolvers<ContextType = any, ParentType extends ResolversPar
 };
 
 export type ParentResolvers<ContextType = any, ParentType extends ResolversParentTypes['Parent'] = ResolversParentTypes['Parent']> = {
-  id?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
@@ -331,8 +311,8 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
 };
 
 export type TagResolvers<ContextType = any, ParentType extends ResolversParentTypes['Tag'] = ResolversParentTypes['Tag']> = {
-  name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  value?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
@@ -345,7 +325,7 @@ export type TransactionResolvers<ContextType = any, ParentType extends Resolvers
   fee?: Resolver<ResolversTypes['Amount'], ParentType, ContextType>;
   quantity?: Resolver<ResolversTypes['Amount'], ParentType, ContextType>;
   data?: Resolver<ResolversTypes['MetaData'], ParentType, ContextType>;
-  tags?: Resolver<Array<Maybe<ResolversTypes['Tag']>>, ParentType, ContextType>;
+  tags?: Resolver<Array<ResolversTypes['Tag']>, ParentType, ContextType>;
   block?: Resolver<Maybe<ResolversTypes['Block']>, ParentType, ContextType>;
   parent?: Resolver<Maybe<ResolversTypes['Parent']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
@@ -353,7 +333,7 @@ export type TransactionResolvers<ContextType = any, ParentType extends Resolvers
 
 export type TransactionConnectionResolvers<ContextType = any, ParentType extends ResolversParentTypes['TransactionConnection'] = ResolversParentTypes['TransactionConnection']> = {
   pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
-  edges?: Resolver<Array<Maybe<ResolversTypes['TransactionEdge']>>, ParentType, ContextType>;
+  edges?: Resolver<Array<ResolversTypes['TransactionEdge']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 

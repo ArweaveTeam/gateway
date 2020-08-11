@@ -123,12 +123,14 @@ export const resolvers: Resolvers = {
       };
     },
     block: (parent) => {
-      return {
-        id: parent.block_id,
-        previous: parent.block_previous,
-        timestamp: moment(parent.block_timestamp).unix(),
-        height: parent.block_height,
-      };
+      if (parent.block_id) {
+        return {
+          id: parent.block_id,
+          previous: parent.block_previous,
+          timestamp: moment(parent.block_timestamp).unix(),
+          height: parent.block_height,
+        };
+      }
     },
     owner: (parent) => {
       return {
@@ -137,9 +139,11 @@ export const resolvers: Resolvers = {
       };
     },
     parent: (parent) => {
-      return {
-        id: parent.parent,
-      };
+      if (parent.parent) {
+        return {
+          id: parent.parent,
+        };
+      }
     },
   },
 };

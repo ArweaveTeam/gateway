@@ -10,19 +10,19 @@ type Query {
     """
     Find transactions from a list of ids.
     """
-    ids: [ID]
+    ids: [ID!]
     """
     Find transactions from a list of owner wallet addresses, or wallet owner public keys.
     """
-    owners: [String]
+    owners: [String!]
     """
     Find transactions from a list of recipient wallet addresses.
     """
-    recipients: [String]
+    recipients: [String!]
     """
     Find transactions using tags.
     """
-    tags: [TagInput]
+    tags: [TagInput!]
     """
     Only match the first n transactions.
     """
@@ -41,7 +41,7 @@ input TagInput {
   """
   The tag name
   """
-  name: String
+  name: String!
   """
   An array of values to match against. If multiple values are passed then transactions with _any_ matching tag value from the set will be returned.
 
@@ -55,7 +55,7 @@ input TagInput {
 
   Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
   """
-  values: [String!]
+  values: [String!]!
 }
 
 """
@@ -64,7 +64,7 @@ see: https://relay.dev/graphql/connections.htm.
 """
 type TransactionConnection {
   pageInfo: PageInfo!
-  edges: [TransactionEdge]!
+  edges: [TransactionEdge!]!
 }
 
 """
@@ -101,7 +101,7 @@ type Transaction {
   fee: Amount!
   quantity: Amount!
   data: MetaData!
-  tags: [Tag]!
+  tags: [Tag!]!
   block: Block
   parent: Parent
 }
@@ -111,17 +111,17 @@ The parent transaction for bundled transactions,
 see: https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md.
 """
 type Parent {
-  id: ID
+  id: ID!
 }
 
 """
 The block in which the transaction was included.
 """
 type Block {
-  id: ID
-  timestamp: Int
-  height: Int
-  previous: ID
+  id: ID!
+  timestamp: Int!
+  height: Int!
+  previous: ID!
 }
 
 """
@@ -169,11 +169,11 @@ type Tag {
   """
   UTF-8 tag name
   """
-  name: String
+  name: String!
   """
   UTF-8 tag value
   """
-  value: String
+  value: String!
 }
 
 # """
