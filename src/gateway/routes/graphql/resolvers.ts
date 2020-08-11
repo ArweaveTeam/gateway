@@ -19,8 +19,6 @@ export const resolvers: Resolvers = {
       });
     },
     transactions: async (parent, { to, from, tags }, context) => {
-      console.log("parent", parent);
-
       const sqlQuery = query(context.connection, {
         limit: defaultMaxResults,
         to,
@@ -33,7 +31,7 @@ export const resolvers: Resolvers = {
         }),
       });
 
-      console.log(sqlQuery.toSQL());
+      // console.log(sqlQuery.toSQL());
 
       const results = (await sqlQuery) as TransactionHeader[];
 
