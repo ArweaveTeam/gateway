@@ -24,31 +24,18 @@ export const handler = createQueueHandler<ImportTx>(
   async ({ id, tx }) => {
     const pool = getConnectionPool("write");
 
+    const header = tx || (await fetchTransactionHeader(id || ""));
+
     if (tx) {
       log.info(`[import-txs] importing tx header`, { id });
       return await save(pool, tx);
     }
 
     if (id) {
-      const result = await getTx(pool, { id });
-      if (result) {
-        if (
-          result.id &&
-          result.signature &&
-          result.owner &&
-          result.owner_address &&
-          result.tags &&
-          result.format &&
-          result.data_size &&
-          result.content_type
-        ) {
-          log.info(`[import-txs] transaction already exists`, { id });
-        } else {
-          log.info(`[import-txs] fetching tx header`, { id });
-          return await save(pool, await fetchTransactionHeader(id));
-        }
-      }
+      return await save(pool, await fetchTransactionHeader(id));
     }
+
+    await handleBundle(pool, header);
   },
   {
     before: async () => {
@@ -68,9 +55,13 @@ const save = async (connection: Knex, tx: TransactionHeader) => {
 
   await saveTx(connection, tx);
 
+  log.info(`[import-txs] successfully saved tx header`, { id: tx.id });
+};
+
+const handleBundle = async (connection: Knex, tx: TransactionHeader) => {
   if (tx?.data_size > 0 && isBundle(tx)) {
     log.info(`[import-txs] detected data bundle tx`, { id: tx.id });
-    const { status, attempts } = await getBundleImport(connection, tx.id);
+    const { attempts } = await getBundleImport(connection, tx.id);
 
     // A single bundle import will trigger the importing of all the contained txs,
     // This  process will queue all the txs and a consumer will keep polling until the
@@ -82,24 +73,21 @@ const save = async (connection: Knex, tx: TransactionHeader) => {
     // or if it's been seen before but failed to import for whatever reason.
     //
     // When we get tx sync download webhoooks this can be improved.
-    if (!status || !["pending", "complete"].includes(status)) {
-      log.info(`[import-txs] queuing bundle for import`, { id: tx.id });
-      await Promise.all([
-        saveBundleStatus(connection, [
-          {
-            id: tx.id,
-            status: "pending",
-            attempts: attempts || 0,
-          },
-        ]),
-        enqueue<ImportBundle>(getQueueUrl("import-bundles"), { header: tx }),
-      ]);
-      log.info(`[import-txs] successfully queued bundle for import`, {
-        id: tx.id,
-      });
-    }
+    log.info(`[import-txs] queuing bundle for import`, { id: tx.id });
+    await Promise.all([
+      saveBundleStatus(connection, [
+        {
+          id: tx.id,
+          status: "pending",
+          attempts: attempts || 0,
+        },
+      ]),
+      enqueue<ImportBundle>(getQueueUrl("import-bundles"), { header: tx }),
+    ]);
+    log.info(`[import-txs] successfully queued bundle for import`, {
+      id: tx.id,
+    });
   }
-  log.info(`[import-txs] successfully saved tx header`, { id: tx.id });
 };
 
 const isBundle = (tx: TransactionHeader): boolean => {

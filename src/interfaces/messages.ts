@@ -28,5 +28,6 @@ export interface ImportBlock {
 }
 
 export interface ImportBundle {
-  header: TransactionHeader;
+  id?: string;
+  header?: TransactionHeader;
 }

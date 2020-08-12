@@ -5,6 +5,7 @@ import {
   DataBundleWrapper,
   getTagValue,
   DataBundleItem,
+  fetchTransactionHeader,
 } from "../lib/arweave";
 import log from "../lib/log";
 import {
@@ -28,28 +29,51 @@ const RETRY_BACKOFF_SECONDS = 30;
 
 export const handler = createQueueHandler<ImportBundle>(
   getQueueUrl("import-bundles"),
-  async ({ header }) => {
+  async ({ header, id }) => {
+    log.info({ header, id });
+    log.info("[import-bundles] importing tx bundle", {
+      bundle: {
+        id,
+        tx: header?.id,
+      },
+    });
+
     const pool = getConnectionPool("write");
 
-    const { attempts = 0 } = await getBundleImport(pool, header.id);
+    const tx = header ? header : await fetchTransactionHeader(id || "");
+
+    const { attempts = 0 } = await getBundleImport(pool, tx.id);
+
+    log.info("[import-bundles] importing tx bundle status", {
+      bundle: {
+        id: tx.id,
+        attempts,
+      },
+    });
 
     const incrementedAttempts = attempts + 1;
 
-    log.info("[import-bundles] importing tx bundle", {
-      attempt: incrementedAttempts,
-      bundle: header.id,
-    });
-
-    const { stream } = await fetchTransactionData(header.id);
+    const { stream } = await fetchTransactionData(tx.id);
 
     if (stream) {
       const data = await streamToJson<DataBundleWrapper>(stream);
 
       try {
-        await sequentialBatch(
-          data.items,
-          10,
-          async (items: DataBundleItem[]) => {
+        await Promise.all([
+          sequentialBatch(data.items, 100, async (items: DataBundleItem[]) => {
+            await Promise.all(
+              items.map(async (item) => {
+                const contentType = getTagValue(item.tags, "content-type");
+
+                const bundleData = fromB64Url(item.data);
+
+                await put("tx-data", `tx/${item.id}`, bundleData, {
+                  contentType,
+                });
+              })
+            );
+          }),
+          sequentialBatch(data.items, 5, async (items: DataBundleItem[]) => {
             await Promise.all(
               items.map(async (item) => {
                 const contentType = getTagValue(item.tags, "content-type");
@@ -58,30 +82,24 @@ export const handler = createQueueHandler<ImportBundle>(
 
                 log.info("[import-bundles] importing tx bundle item", {
                   attempts,
-                  bundle: header.id,
+                  bundle: tx.id,
                   item: item.id,
                   contentType,
                   contentLength: bundleData.byteLength,
                 });
-
-                await saveBundleDataItem(pool, item, { parent: header.id });
-
-                await put("tx-data", `tx/${item.id}`, bundleData, {
-                  contentType,
-                });
+                await saveBundleDataItem(pool, item, { parent: tx.id });
               })
             );
-          }
-        );
-
-        await complete(pool, header.id, { attempts });
+          }),
+        ]);
+        await complete(pool, tx.id, { attempts });
       } catch (error) {
         log.error("error", error?.message);
-        retry(pool, header, { attempts: incrementedAttempts });
+        await retry(pool, tx, { attempts: incrementedAttempts });
       }
     } else {
       log.error("Data not available, requeuing");
-      retry(pool, header, { attempts: incrementedAttempts });
+      await retry(pool, tx, { attempts: incrementedAttempts });
     }
   },
   {

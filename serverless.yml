@@ -95,10 +95,10 @@ functions:
 
   import-bundles:
     handler: dist/jobs/import-bundles.handler
-    timeout: 60
+    timeout: 180
     events:
       - sqs:
-          batchSize: 10
+          batchSize: 1
           arn:
             Fn::GetAtt: [SQSImportBundlesQueue, Arn]
 
@@ -250,11 +250,11 @@ resources:
         QueueName: ${self:custom.queues.importBundles}
         MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
         ReceiveMessageWaitTimeSeconds: 10
-        VisibilityTimeout: 120
+        VisibilityTimeout: 180
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportBundlesDLQ, Arn]
-          maxReceiveCount: 2 #The handler for these messages handles retry logic, so this will only applies to uncaught errors
+          maxReceiveCount: 5 #The handler for these messages handles retry logic, so this will only applies to uncaught errors
 
     SQSImportBundlesDLQ:
       Type: AWS::SQS::Queue
