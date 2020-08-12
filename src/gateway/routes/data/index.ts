@@ -58,44 +58,6 @@ export const handler: RequestHandler = async (req, res) => {
         ]);
       }
 
-      if (tags) {
-        if (
-          contentType == "application/json" &&
-          getTagValue(tags, "bundle-format") == "json" &&
-          getTagValue(tags, "bundle-version") == "1.0.0"
-        ) {
-          const bundle = await streamToJson<Bundle>(stream);
-
-          if (bundle && bundle.items) {
-            let cacheRequest: any = null;
-
-            if (!cached) {
-              cacheRequest = put(
-                "tx-data",
-                `tx/${txid}`,
-                jsonToBuffer(bundle),
-                {
-                  contentType,
-                  tags,
-                }
-              );
-            }
-
-            return await Promise.all([
-              cacheRequest,
-              handleBundle({
-                req,
-                res,
-                bundle,
-                txid,
-                contentType,
-                contentLength,
-              }),
-            ]);
-          }
-        }
-      }
-
       setDataHeaders({ contentType, contentLength, etag: txid, res });
 
       if (cached) {
@@ -254,64 +216,6 @@ const handleManifest = async (
   }
 
   throw new NotFound();
-};
-
-const handleBundle = async ({
-  req,
-  res,
-  contentType,
-  contentLength,
-  bundle,
-  txid,
-}: {
-  req: Request;
-  res: Response;
-  contentType: string;
-  contentLength: number;
-  bundle: Bundle;
-  txid: string;
-}) => {
-  const subpath = (getTransactionSubpath(req.path) || "").replace(/\//g, "");
-
-  req.log.info("[get-data] parsing data bundle", {
-    txid,
-    subpath,
-    bundle: {
-      contentLength,
-      items: bundle && bundle.items && bundle.items.length,
-    },
-  });
-
-  if (subpath) {
-    const item = bundle.items.find(({ id }) => subpath == id);
-
-    if (item) {
-      req.log.info("[get-data] matched bundle item", { txid, subpath });
-
-      const data = fromB64Url(item.data);
-      const contentType = getTagValue(item.tags, "content-type");
-      const contentLength = data.byteLength;
-
-      setDataHeaders({ contentType, contentLength, etag: subpath, res });
-
-      const extension = contentType && getExtension(contentType);
-
-      if (extension) {
-        res.header(
-          "Content-Disposition",
-          `inline;filename=${subpath}.${extension}`
-        );
-      }
-
-      return res.send(data);
-    }
-
-    throw new NotFound();
-  }
-
-  setDataHeaders({ contentType, contentLength, etag: txid, res });
-
-  res.send(JSON.stringify(bundle));
 };
 
 //@deprecated

@@ -1,5 +1,10 @@
 import { Logger } from "winston";
-import { fetchTransactionData, getTagValue, Tag } from "../lib/arweave";
+import {
+  fetchTransactionData,
+  getTagValue,
+  Tag,
+  DataBundleWrapper,
+} from "../lib/arweave";
 import { Readable } from "stream";
 import { getStream, putStream, put, get, objectHeader } from "../lib/buckets";
 import { query as queryChunks } from "../database/chunk-db";
@@ -7,6 +12,8 @@ import { query as transactionsQuery } from "../database/transaction-db";
 import { getConnectionPool } from "../database/postgres";
 import { NotFound } from "http-errors";
 import Knex from "knex";
+import { streamToJson, bufferToStream, fromB64Url } from "../lib/encoding";
+import { b64UrlDecode } from "arweave/node/lib/utils";
 
 interface DataStream {
   stream?: Readable;
@@ -27,16 +34,45 @@ export const getData = async (
     return s3CacheResponse;
   }
 
+  const connection = getConnectionPool("read");
+
+  const [txHeader] = await transactionsQuery(connection, {
+    id: txid,
+    limit: 1,
+    select: ["data_root", "data_size", "content_type", "parent"],
+  });
+
+  console.log({ txHeader });
+
   try {
+    if (txHeader && txHeader.data_size > 0 && txHeader.parent) {
+      log.info(`[get-data] item is data bundle item, searching for parent tx`, {
+        txid,
+        parent: txHeader.parent,
+      });
+      const parent = await getData(txHeader.parent, { log });
+      if (parent.stream) {
+        log.info(`[get-data] item is data bundle item, found parent tx`, {
+          txid,
+          parent: txHeader.parent,
+        });
+        const parentData = await streamToJson<DataBundleWrapper>(parent.stream);
+        const item = parentData.items.find((item) => {
+          return item.id == txid;
+        });
+
+        if (item) {
+          const data = fromB64Url(item.data);
+          return {
+            stream: bufferToStream(data),
+            contentType: getTagValue(item.tags, "content-type"),
+            contentLength: data.byteLength,
+          };
+        }
+      }
+    }
+
     log.info("[get-data] searching for tx: s3 chunk cache");
-
-    const connection = getConnectionPool("read");
-
-    const [txHeader] = await transactionsQuery(connection, {
-      id: txid,
-      limit: 1,
-      select: ["data_root", "data_size", "content_type"],
-    });
 
     if (txHeader && txHeader.data_root && txHeader.data_size > 0) {
       const contentType = txHeader.content_type || undefined;
