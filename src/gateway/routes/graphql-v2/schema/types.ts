@@ -98,14 +98,14 @@ export type QueryTransactionsArgs = {
 /** Optionally reverse the result sort order from `HEIGHT_DESC` (default) to `HEIGHT_ASC`. */
 export enum SortOrder {
   /**
-   * Results are sorted by the transactions block height in descending order, with
-   * the most recent and unconfirmed/pending transactions appearing first.
+   * Results are sorted by the transaction block height in ascending order, with
+   * the oldest transactions appearing first, and the most recent and
+   * pending/unconfirmed appearing last.
    */
   HeightAsc = 'HEIGHT_ASC',
   /**
-   * Results are sorted by the transactions block height in ascending order, with
-   * the oldest transactions appearing first, and the most recent and
-   * pending/unconfirmed appearing last.
+   * Results are sorted by the transaction block height in descending order, with
+   * the most recent and unconfirmed/pending transactions appearing first.
    */
   HeightDesc = 'HEIGHT_DESC'
 }
