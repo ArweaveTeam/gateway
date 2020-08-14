@@ -26,7 +26,7 @@ type Query {
     """
     Only match the first n transactions.
     """
-    first: Int
+    first: Int = 10
     """
     A pagination cursor value, for fetching subsequent pages from a result set.
     """
@@ -36,14 +36,22 @@ type Query {
     """
     block: BlockFilter
     """
-    Reverse the result sort order from `HEIGHT_DESC` to `HEIGHT_ASC`. By default results are sorted by the transactions block height in descending order, with recent and unconfirmed/pending transactions appearing first.
+    Optionally specify the result sort order.
     """
-    sort: SortOrder
+    sort: SortOrder = HEIGHT_DESC
   ): TransactionConnection!
 }
-
+"""
+Optionally reverse the result sort order from `HEIGHT_DESC` (default) to `HEIGHT_ASC`.
+"""
 enum SortOrder {
+  """
+  Results are sorted by the transactions block height in descending order, with the most recent and unconfirmed/pending transactions appearing first.
+  """
   HEIGHT_ASC
+  """
+  Results are sorted by the transactions block height in ascending order, with the oldest transactions appearing first, and the most recent and pending/unconfirmed appearing last.
+  """
   HEIGHT_DESC
 }
 

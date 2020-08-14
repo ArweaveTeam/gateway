@@ -95,8 +95,18 @@ export type QueryTransactionsArgs = {
   sort?: Maybe<SortOrder>;
 };
 
+/** Optionally reverse the result sort order from `HEIGHT_DESC` (default) to `HEIGHT_ASC`. */
 export enum SortOrder {
+  /**
+   * Results are sorted by the transactions block height in descending order, with
+   * the most recent and unconfirmed/pending transactions appearing first.
+   */
   HeightAsc = 'HEIGHT_ASC',
+  /**
+   * Results are sorted by the transactions block height in ascending order, with
+   * the oldest transactions appearing first, and the most recent and
+   * pending/unconfirmed appearing last.
+   */
   HeightDesc = 'HEIGHT_DESC'
 }
 
@@ -333,7 +343,7 @@ export type ParentResolvers<ContextType = any, ParentType extends ResolversParen
 
 export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   transaction?: Resolver<Maybe<ResolversTypes['Transaction']>, ParentType, ContextType, RequireFields<QueryTransactionArgs, 'id'>>;
-  transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, RequireFields<QueryTransactionsArgs, never>>;
+  transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, RequireFields<QueryTransactionsArgs, 'first' | 'sort'>>;
 };
 
 export type TagResolvers<ContextType = any, ParentType extends ResolversParentTypes['Tag'] = ResolversParentTypes['Tag']> = {

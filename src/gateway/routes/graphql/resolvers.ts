@@ -84,7 +84,6 @@ export const resolvers: Resolvers = {
           values: [parent.id],
         }),
         select: [],
-        sort: false,
       }).count();
 
       // console.log(sqlQuery.toSQL());
