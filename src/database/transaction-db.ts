@@ -45,6 +45,13 @@ export const getTx = async (
   return connection.select().from("transactions").where(predicates).first();
 };
 
+type TxSortOrder = "HEIGHT_ASC" | "HEIGHT_DESC";
+
+const orderByClauses: { [key in TxSortOrder]: string } = {
+  HEIGHT_ASC: "transactions.height ASC NULLS LAST, id ASC",
+  HEIGHT_DESC: "transactions.height DESC NULLS FIRST, id ASC",
+};
+
 interface TxQuery {
   to?: string[];
   from?: string[];
@@ -56,7 +63,7 @@ interface TxQuery {
   select?: any;
   blocks?: boolean;
   since?: ISO8601DateTimeString;
-  sort?: boolean;
+  sortOrder?: TxSortOrder;
   status?: "any" | "confirmed" | "pending";
   pendingMinutes?: number;
   minHeight?: number;
@@ -77,7 +84,7 @@ export const query = (
     select,
     since,
     blocks = false,
-    sort = true,
+    sortOrder = "HEIGHT_DESC",
     pendingMinutes = 60,
     minHeight = -1,
     maxHeight = -1,
@@ -157,8 +164,8 @@ export const query = (
 
   query.limit(limit).offset(offset);
 
-  if (sort) {
-    query.orderByRaw("transactions.height DESC NULLS FIRST, id ASC");
+  if (Object.keys(orderByClauses).includes(sortOrder)) {
+    query.orderByRaw(orderByClauses[sortOrder]);
   }
 
   return query;

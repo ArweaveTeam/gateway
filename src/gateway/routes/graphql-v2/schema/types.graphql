@@ -35,7 +35,16 @@ type Query {
     Find transactions within the given block range
     """
     block: BlockFilter
+    """
+    Reverse the result sort order from `HEIGHT_DESC` to `HEIGHT_ASC`. By default results are sorted by the transactions block height in descending order, with recent and unconfirmed/pending transactions appearing first.
+    """
+    sort: SortOrder
   ): TransactionConnection!
+}
+
+enum SortOrder {
+  HEIGHT_ASC
+  HEIGHT_DESC
 }
 
 """
@@ -120,7 +129,13 @@ type Transaction {
   quantity: Amount!
   data: MetaData!
   tags: [Tag!]!
+  """
+  Transactions with a null block are recent and unconfirmed, if they aren't mined into a block within 60 minutes they will be removed from results.
+  """
   block: Block
+  """
+  Transactions with parent are Bundled Data Items as defined in the ANS-102 data spec. https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md
+  """
   parent: Parent
 }
 

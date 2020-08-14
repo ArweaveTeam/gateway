@@ -77,6 +77,7 @@ export const resolvers: Resolvers = {
         select: fieldMap,
         minHeight: queryParams.block?.min || undefined,
         maxHeight: queryParams.block?.max || undefined,
+        sortOrder: queryParams.sort || undefined,
       });
 
       console.log(sqlQuery.toSQL());

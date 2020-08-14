@@ -92,7 +92,13 @@ export type QueryTransactionsArgs = {
   first?: Maybe<Scalars['Int']>;
   after?: Maybe<Scalars['String']>;
   block?: Maybe<BlockFilter>;
+  sort?: Maybe<SortOrder>;
 };
+
+export enum SortOrder {
+  HeightAsc = 'HEIGHT_ASC',
+  HeightDesc = 'HEIGHT_DESC'
+}
 
 export type Tag = {
   __typename?: 'Tag';
@@ -134,7 +140,15 @@ export type Transaction = {
   quantity: Amount;
   data: MetaData;
   tags: Array<Tag>;
+  /**
+   * Transactions with a null block are recent and unconfirmed, if they aren't
+   * mined into a block within 60 minutes they will be removed from results.
+   */
   block?: Maybe<Block>;
+  /**
+   * Transactions with parent are Bundled Data Items as defined in the ANS-102 data spec.
+   * https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md
+   */
   parent?: Maybe<Parent>;
 };
 
@@ -253,6 +267,7 @@ export type ResolversTypes = {
   Parent: ResolverTypeWrapper<Parent>;
   TagFilter: TagFilter;
   BlockFilter: BlockFilter;
+  SortOrder: SortOrder;
   TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
