@@ -34,6 +34,7 @@ const redisGet = promisify(client.get).bind(client);
 const redistSet = promisify(client.set).bind(client);
 const redisExpire = promisify(client.expire).bind(client);
 const redisFlushDb = promisify(client.flushdb).bind(client);
+const redisPing = promisify(client.dbsize).bind(client);
 
 export const purge = async () => {
   log.info(`[redis] purging cache`);
@@ -81,4 +82,8 @@ export const set = async (
   if (ttl) {
     await redisExpire(key, ttl);
   }
+};
+
+export const ping = async () => {
+  return redisPing();
 };

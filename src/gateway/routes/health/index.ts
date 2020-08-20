@@ -2,6 +2,8 @@ import fetch from "node-fetch";
 import { RequestHandler } from "express";
 import { getLatestBlock } from "../../../database/block-db";
 import { getConnectionPool } from "../../../database/postgres";
+import { ping } from "../../../lib/redis";
+import log from "../../../lib/log";
 
 const origins = JSON.parse(process.env.ARWEAVE_NODES || "null") as string[];
 
@@ -16,6 +18,7 @@ export const handler: RequestHandler = async (req, res, next) => {
     region: process.env.AWS_REGION,
     origins: await originHealth(),
     database: await databaseHealth(),
+    cache: await cacheHealth(),
   };
   res.send(healthStatus);
 };
@@ -39,7 +42,8 @@ const originHealth = async () => {
       })
     );
   } catch (error) {
-    false;
+    log.error(`[health-check] database error`, { error });
+    return false;
   }
 };
 
@@ -48,7 +52,24 @@ const databaseHealth = async () => {
     const pool = getConnectionPool("read");
     return { block: await getLatestBlock(pool) };
   } catch (error) {
-    console.error(error);
+    log.error(`[health-check] database error`, { error });
+    return false;
+  }
+};
+
+const cacheHealth = async () => {
+  try {
+    const start = new Date();
+    const size = await ping();
+
+    const end = new Date();
+
+    return {
+      size,
+      latency: end.getTime() - start.getTime(),
+    };
+  } catch (error) {
+    log.error(`[health-check] cache health error`, { error });
     return false;
   }
 };
