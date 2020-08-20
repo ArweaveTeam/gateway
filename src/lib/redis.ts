@@ -1,15 +1,20 @@
-import { createClient } from "redis";
+import { createClient, RedisClient } from "redis";
 import { promisify } from "util";
 import log from "./log";
 
 const host = process.env.REDIS_HOST || "localhost";
 const port = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379;
+const enableOfflineQueue = !!process.env.REDIS_OFFLINE_QUEUE;
 
-log.info(`[redis] Redis client connecting...`, { host, port });
+log.info(`[redis] Redis client connecting...`, {
+  host,
+  port,
+  enableOfflineQueue,
+});
 
-const client = createClient(port, host, {
+let client: RedisClient = createClient(port, host, {
   string_numbers: true,
-  enable_offline_queue: false,
+  enable_offline_queue: enableOfflineQueue,
 });
 
 const reportEvent = (event: string, level: string = "info") => {
@@ -33,12 +38,11 @@ client
 const redisGet = promisify(client.get).bind(client);
 const redistSet = promisify(client.set).bind(client);
 const redisExpire = promisify(client.expire).bind(client);
-const redisFlushDb = promisify(client.flushdb).bind(client);
 const redisPing = promisify(client.dbsize).bind(client);
 
 export const purge = async () => {
   log.info(`[redis] purging cache`);
-  await redisFlushDb();
+  client.flushall("ASYNC");
 };
 
 interface GetOptions<T> extends SetOptions {

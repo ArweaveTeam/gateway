@@ -66,6 +66,8 @@ provider:
     ARWEAVE_DB_WRITE_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_WRITE_HOST}
     ARWEAVE_DB_SCHEMA: ${file(serverless.${opt:stage, 'dev'}.yml):ARWEAVE_DB_SCHEMA}
     ARWEAVE_GATEWAY_DOMAIN: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
+    REDIS_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):REDIS_HOST}
+    REDIS_OFFLINE_QUEUE: ${file(serverless.${opt:stage, 'dev'}.yml):REDIS_OFFLINE_QUEUE}
 
 plugins:
   - serverless-stage-manager

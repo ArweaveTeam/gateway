@@ -81,12 +81,12 @@ export const handler = createQueueHandler<ImportBlock>(
     before: async () => {
       log.info(`[import-blocks] handler:before database connection init`);
       initConnectionPool("write");
-      await wait(500);
+      await wait(1000);
     },
     after: async () => {
       log.info(`[import-blocks] handler:after database connection cleanup`);
       await releaseConnectionPool("write");
-      await wait(500);
+      await wait(1000);
     },
   }
 );
