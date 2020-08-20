@@ -60,6 +60,10 @@ export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   });
 };
 
+export const streamToString = async (stream: Readable): Promise<string> => {
+  return (await streamToBuffer(stream)).toString("utf-8");
+};
+
 export const bufferToJson = <T = any | undefined>(input: Buffer): T => {
   return JSON.parse(input.toString("utf8"));
 };

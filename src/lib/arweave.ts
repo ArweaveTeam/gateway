@@ -294,7 +294,10 @@ export const streamRequest = async (
   endpoint: string,
   filter?: FilterFunction
 ): Promise<RequestResponse> => {
-  const endpoints = origins.map((host) => `${host}/${endpoint}`);
+  const endpoints = origins.map(
+    // Replace any starting slashes
+    (host) => `${host}/${endpoint.replace(/^\//, "")}`
+  );
 
   return await getFirstResponse(endpoints, filter, { stream: true });
 };

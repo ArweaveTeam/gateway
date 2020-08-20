@@ -16,6 +16,7 @@ import { Block, fetchBlock } from "../lib/arweave";
 import { sequentialBatch, wait } from "../lib/helpers";
 import { createQueueHandler, enqueueBatch, getQueueUrl } from "../lib/queues";
 import log from "../lib/log";
+import { purge } from "../lib/redis";
 
 export const handler = createQueueHandler<ImportBlock>(
   getQueueUrl("import-blocks"),
@@ -33,6 +34,8 @@ export const handler = createQueueHandler<ImportBlock>(
         if (block.previous_block == latestBlock.id) {
           log.info(`[import-blocks] block accepted`, { id: block.indep_hash });
           await saveBlocks(knexTransaction, [fullBlockToDbBlock(block)]);
+
+          await enqueueTxImports(txImportQueueUrl, block.txs);
         } else {
           // If they don't match up, then we need to start fork recovering.
           // We'll fetch the previous blocks in this fork from arweave nodes
@@ -66,6 +69,8 @@ export const handler = createQueueHandler<ImportBlock>(
           // reimport everything to make sure there are no gaps.
           await enqueueTxImports(txImportQueueUrl, txIds);
         }
+
+        await purge();
       } catch (error) {
         console.error(block.indep_hash, error);
         console.log(await knexTransaction.rollback(error));
