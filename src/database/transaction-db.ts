@@ -13,6 +13,15 @@ import {
   ISO8601DateTimeString,
 } from "../lib/encoding";
 import { pick } from "lodash";
+import moment from "moment";
+
+interface DatabaseTag {
+  tx_id: string;
+  index: number;
+  name: string | undefined;
+  value: string | undefined;
+  // value_numeric: string | undefined;
+}
 
 const txFields = [
   "format",
@@ -113,7 +122,7 @@ export const query = (
       .orWhere(
         "transactions.created_at",
         ">",
-        connection.raw(`NOW() - INTERVAL '${pendingMinutes} minutes'`)
+        moment().subtract(pendingMinutes, "minutes").toISOString()
       );
   });
 
@@ -142,14 +151,13 @@ export const query = (
   }
 
   if (tags) {
-    tags.forEach((tag) => {
-      query.whereIn("transactions.id", (query) => {
-        query.select("tx_id").from("tags");
-        query.where({
-          "tags.name": tag.name,
-        });
+    tags.forEach((tag, index) => {
+      const tagAlias = `${index}_${index}`;
+      query.join(`tags as ${tagAlias}`, (join) => {
+        join.on("transactions.id", `${tagAlias}.tx_id`);
 
-        query.whereIn("tags.value", tag.values);
+        join.andOnIn(`${tagAlias}.name`, [tag.name]);
+        join.andOnIn(`${tagAlias}.value`, tag.values);
       });
     });
   }
@@ -265,14 +273,19 @@ const txToRow = ({ tx }: { tx: TransactionHeader | DataBundleItem }) => {
   );
 };
 
-const txTagsToRows = (tx_id: string, tags: Tag[]) => {
+const txTagsToRows = (tx_id: string, tags: Tag[]): DatabaseTag[] => {
   return tags.map((tag, index) => {
     const { name, value } = utf8DecodeTag(tag);
     return {
       tx_id,
       index,
-      name: name,
-      value: value,
+      name,
+      value,
+      // value_numeric:
+      //   value && value.match(/^-?\d{1,20}$/) == null ? undefined : value,
+      // For now we're just filtering for numeric looking values, as JS ints
+      // and postgres ints have different max safe values we don't want to parse it in JS
+      // This needs more work in future to align the two.
     };
   });
 };

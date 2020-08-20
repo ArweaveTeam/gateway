@@ -160,7 +160,7 @@ export const resolvers: Resolvers = {
 };
 
 const newCursor = (): string => {
-  return encodeCursor({ timestamp: moment().format(), offset: 0 });
+  return encodeCursor({ timestamp: moment().toISOString(), offset: 0 });
 };
 
 const encodeCursor = ({
