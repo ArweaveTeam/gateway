@@ -98,6 +98,10 @@
       {
         "name": "ARWEAVE_SQS_EXPORT_CHUNKS_URL",
         "value": "https://sqs.eu-west-2.amazonaws.com/384386061638/arweave-gateway-dev-export-chunks"
+      },
+      {
+        "name": "REDIS_HOST",
+        "value": "arweave-gateway-dev.uan4d8.0001.euw2.cache.amazonaws.com"
       }
     ]
   }

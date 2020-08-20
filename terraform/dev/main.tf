@@ -77,7 +77,7 @@ module "postgres_cluster_eu_west_2" {
   subnet_ids        = data.aws_subnet_ids.all.ids
   whitelist_sources = var.db_whitelist_sources
   environment       = "dev"
-  instance_class    = "db.t3.medium"
+  instance_class    = "db.r5.large"
   # security_group_ids
   name = "arweave-gateway-dev"
   providers = {
@@ -85,6 +85,17 @@ module "postgres_cluster_eu_west_2" {
   }
 }
 
+module "elasticache" {
+  source                = "../modules/elasticache"
+  name                  = "arweave-gateway-dev"
+  subnet_ids            = data.aws_subnet_ids.all.ids
+  security_group_ids  = ["sg-0f1e7b5995149213f"]# allow everything, elasticache can't be accessed from outside of a VPC at all
+  instance_class        = "cache.r4.large"
+  environment           = "dev"
+  providers = {
+    aws = aws.eu-west-2
+  }
+}
 
 module "ecs" {
   source                = "../modules/ecs"
