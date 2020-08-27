@@ -31,6 +31,7 @@ resource "aws_elasticache_cluster" "redis_cluster" {
     Environment = var.environment
     Terraform   = "true"
   }
+  depends_on = [aws_elasticache_subnet_group.elasticache_subnet_group]
 }
 
 resource "aws_elasticache_subnet_group" "elasticache_subnet_group" {

@@ -92,11 +92,15 @@
       },
       {
         "name": "ARWEAVE_SQS_IMPORT_CHUNKS_URL",
-        "value": "https://sqs.eu-west-2.amazonaws.com/384386061638/arweave-gateway-dev-import-chunks"
+        "value": "https://sqs.eu-west-2.amazonaws.com/384386061638/arweave-gateway-prod-import-chunks"
       },
       {
         "name": "ARWEAVE_SQS_EXPORT_CHUNKS_URL",
-        "value": "https://sqs.eu-west-2.amazonaws.com/384386061638/arweave-gateway-dev-export-chunks"
+        "value": "https://sqs.eu-west-2.amazonaws.com/384386061638/arweave-gateway-prod-export-chunks"
+      },
+      {
+        "name": "REDIS_HOST",
+        "value": "arweave-gateway-prod.uan4d8.0001.euw2.cache.amazonaws.com"
       }
     ]
   }

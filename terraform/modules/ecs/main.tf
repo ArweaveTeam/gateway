@@ -60,6 +60,11 @@ resource "aws_ecs_cluster" "ecs_cluster" {
     name  = "containerInsights"
     value = "enabled"
   }
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "logs" {
@@ -96,6 +101,11 @@ resource "aws_security_group" "ecs_alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 # Traffic to the ECS Cluster should only come from the ALB
@@ -116,6 +126,12 @@ resource "aws_security_group" "ecs_tasks" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
   }
 }
 
@@ -175,6 +191,11 @@ resource "aws_alb" "ecs_alb" {
   #   prefix  = var.environment
   #   enabled = true
   # }
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_alb_target_group" "gateway" {
@@ -184,6 +205,11 @@ resource "aws_alb_target_group" "gateway" {
   vpc_id               = var.vpc_id
   target_type          = "ip"
   deregistration_delay = 60
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 
@@ -228,6 +254,11 @@ resource "aws_ecs_task_definition" "gateway" {
   task_role_arn            = "arn:aws:iam::384386061638:role/ecsTaskExecutionRole"
 
   container_definitions = var.container_definitions
+  tags = {
+    Service = var.name
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_ecs_service" "service" {

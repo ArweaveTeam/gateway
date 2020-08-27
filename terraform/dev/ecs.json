@@ -1,8 +1,8 @@
 [
   {
-    "cpu": 512,
+    "cpu": 1024,
     "image": "384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-dev:latest",
-    "memory": 1024,
+    "memory": 2048,
     "name": "gateway-dev",
     "networkMode": "awsvpc",
     "essential": true,
@@ -101,7 +101,7 @@
       },
       {
         "name": "REDIS_HOST",
-        "value": "arweave-gateway-dev.uan4d8.0001.euw2.cache.amazonaws.com"
+        "value": "arweave-gateway-dev.uan4d8.ng.0001.euw2.cache.amazonaws.com"
       }
     ]
   }

@@ -12,6 +12,10 @@ export type WinstonString = string;
 export type ArString = string;
 export type ISO8601DateTimeString = string;
 
+export const sha256 = (buffer: Buffer): Buffer => {
+  return createHash("sha256").update(buffer).digest();
+};
+
 export function toB64url(buffer: Buffer): Base64UrlEncodedString {
   return buffer
     .toString("base64")

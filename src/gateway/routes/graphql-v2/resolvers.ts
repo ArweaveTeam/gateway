@@ -2,10 +2,15 @@ import { TransactionHeader, utf8DecodeTag } from "../../../lib/arweave";
 import { IResolvers } from "apollo-server-express";
 import { query } from "../../../database/transaction-db";
 import moment from "moment";
-import { ISO8601DateTimeString, winstonToAr } from "../../../lib/encoding";
+import {
+  ISO8601DateTimeString,
+  winstonToAr,
+  sha256,
+} from "../../../lib/encoding";
 import { BadRequest } from "http-errors";
 import graphqlFields from "graphql-fields";
 import { QueryTransactionsArgs } from "./schema/types";
+import { get } from "../../../lib/redis";
 
 type Resolvers = IResolvers;
 
@@ -63,26 +68,38 @@ export const resolvers: Resolvers = {
         MAX_PAGE_SIZE
       );
 
-      const sqlQuery = query(connection, {
-        // Add one to the limit, we'll remove this result but it tells
-        // us if there's another page of data to fetch.
-        limit: pageSize + 1,
-        offset: offset,
-        ids: queryParams.ids || undefined,
-        to: queryParams.recipients || undefined,
-        from: queryParams.owners || undefined,
-        tags: queryParams.tags || undefined,
-        blocks: true,
-        since: timestamp,
-        select: fieldMap,
-        minHeight: queryParams.block?.min || undefined,
-        maxHeight: queryParams.block?.max || undefined,
-        sortOrder: queryParams.sort || undefined,
-      });
+      const runQuery = async () => {
+        const sqlQuery = query(connection, {
+          // Add one to the limit, we'll remove this result but it tells
+          // us if there's another page of data to fetch.
+          limit: pageSize + 1,
+          offset: offset,
+          ids: queryParams.ids || undefined,
+          to: queryParams.recipients || undefined,
+          from: queryParams.owners || undefined,
+          tags: queryParams.tags || undefined,
+          blocks: true,
+          since: timestamp,
+          select: fieldMap,
+          minHeight: queryParams.block?.min || undefined,
+          maxHeight: queryParams.block?.max || undefined,
+          sortOrder: queryParams.sort || undefined,
+        });
 
-      console.log(sqlQuery.toSQL());
+        console.log(sqlQuery.toSQL());
 
-      const results = (await sqlQuery) as TransactionHeader[];
+        return (await sqlQuery) as TransactionHeader[];
+      };
+
+      const results = await get(
+        `gql/query/${sha256(
+          Buffer.from(JSON.stringify(queryParams), "utf8")
+        ).toString("hex")}`,
+        {
+          ttl: 15,
+          fetch: runQuery,
+        }
+      );
 
       req.log.info("[grqphql/v2] transactions/response", {
         queryParams,

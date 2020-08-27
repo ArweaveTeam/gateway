@@ -2,5 +2,5 @@ domain: arweave.dev
 ARWEAVE_DB_READ_HOST: arweave-gateway-dev.cluster-ro-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
 ARWEAVE_DB_WRITE_HOST: arweave-gateway-dev.cluster-cxjgmvwj8379.eu-west-2.rds.amazonaws.com
 ARWEAVE_DB_SCHEMA: arweave
-REDIS_HOST: arweave-gateway-dev.uan4d8.0001.euw2.cache.amazonaws.com
+REDIS_HOST: arweave-gateway-dev.uan4d8.ng.0001.euw2.cache.amazonaws.com
 REDIS_OFFLINE_QUEUE: true

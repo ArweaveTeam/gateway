@@ -92,6 +92,7 @@ export type QueryTransactionsArgs = {
   first?: Maybe<Scalars['Int']>;
   after?: Maybe<Scalars['String']>;
   block?: Maybe<BlockFilter>;
+  pending?: Maybe<Scalars['Boolean']>;
   sort?: Maybe<SortOrder>;
 };
 
@@ -277,10 +278,10 @@ export type ResolversTypes = {
   Parent: ResolverTypeWrapper<Parent>;
   TagFilter: TagFilter;
   BlockFilter: BlockFilter;
+  Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
   SortOrder: SortOrder;
   TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
-  Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
   TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
 };
 
@@ -299,9 +300,9 @@ export type ResolversParentTypes = {
   Parent: Parent;
   TagFilter: TagFilter;
   BlockFilter: BlockFilter;
+  Boolean: Scalars['Boolean'];
   TransactionConnection: TransactionConnection;
   PageInfo: PageInfo;
-  Boolean: Scalars['Boolean'];
   TransactionEdge: TransactionEdge;
 };
 

@@ -106,8 +106,8 @@ module "ecs" {
   app_port              = 3000
   app_count             = 2
   az_count              = 2
-  fargate_cpu           = 512
-  fargate_memory        = 1024
+  fargate_cpu           = 1024
+  fargate_memory        = 2048
   certificate_arn       = module.acm_region_eu_west_2.arn
   app_image             = "384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-dev:latest"
   ecs_task_log_group    = "/ecs/gateway-dev"
