@@ -77,6 +77,11 @@ input TagFilter {
   Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
   """
   values: [String!]!
+
+  """
+  The operator to apply to to the tag filter. Defaults to EQ (equal).
+  """
+  op: TagOperator = EQ
 }
 
 """
@@ -217,23 +222,19 @@ type Tag {
   value: String!
 }
 
-# """
-# The operator to apply to a tag value.
-# """
-# enum TagOperator {
-#   """
-#   Equals
-#   """
-#   EQ
-#   """
-#   Greater than
-#   """
-#   GT
-#   """
-#   Less than
-#   """
-#   LT
-# }
+"""
+The operator to apply to a tag value.
+"""
+enum TagOperator {
+  """
+  Equal
+  """
+  EQ
+  """
+  Not equal
+  """
+  NEQ
+}
 
 # """
 # Transaction statuses

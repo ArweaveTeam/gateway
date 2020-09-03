@@ -92,7 +92,6 @@ export type QueryTransactionsArgs = {
   first?: Maybe<Scalars['Int']>;
   after?: Maybe<Scalars['String']>;
   block?: Maybe<BlockFilter>;
-  pending?: Maybe<Scalars['Boolean']>;
   sort?: Maybe<SortOrder>;
 };
 
@@ -138,7 +137,17 @@ export type TagFilter = {
    * Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
    */
   values: Array<Scalars['String']>;
+  /** The operator to apply to to the tag filter. Defaults to EQ (equal). */
+  op?: Maybe<TagOperator>;
 };
+
+/** The operator to apply to a tag value. */
+export enum TagOperator {
+  /** Equal */
+  Eq = 'EQ',
+  /** Not equal */
+  Neq = 'NEQ'
+}
 
 export type Transaction = {
   __typename?: 'Transaction';
@@ -277,11 +286,12 @@ export type ResolversTypes = {
   Block: ResolverTypeWrapper<Block>;
   Parent: ResolverTypeWrapper<Parent>;
   TagFilter: TagFilter;
+  TagOperator: TagOperator;
   BlockFilter: BlockFilter;
-  Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
   SortOrder: SortOrder;
   TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
+  Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
   TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
 };
 
@@ -300,9 +310,9 @@ export type ResolversParentTypes = {
   Parent: Parent;
   TagFilter: TagFilter;
   BlockFilter: BlockFilter;
-  Boolean: Scalars['Boolean'];
   TransactionConnection: TransactionConnection;
   PageInfo: PageInfo;
+  Boolean: Scalars['Boolean'];
   TransactionEdge: TransactionEdge;
 };
 

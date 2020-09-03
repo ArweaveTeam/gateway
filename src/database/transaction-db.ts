@@ -14,6 +14,7 @@ import {
 } from "../lib/encoding";
 import { pick } from "lodash";
 import moment from "moment";
+import { TagFilter } from "../gateway/routes/graphql-v2/schema/types";
 
 interface DatabaseTag {
   tx_id: string;
@@ -66,7 +67,7 @@ interface TxQuery {
   from?: string[];
   id?: string;
   ids?: string[];
-  tags?: { name: string; values: string[] }[];
+  tags?: TagFilter[];
   limit?: number;
   offset?: number;
   select?: any;
@@ -153,11 +154,19 @@ export const query = (
   if (tags) {
     tags.forEach((tag, index) => {
       const tagAlias = `${index}_${index}`;
+
       query.join(`tags as ${tagAlias}`, (join) => {
         join.on("transactions.id", `${tagAlias}.tx_id`);
 
         join.andOnIn(`${tagAlias}.name`, [tag.name]);
-        join.andOnIn(`${tagAlias}.value`, tag.values);
+
+        if (tag.op == "EQ") {
+          join.andOnIn(`${tagAlias}.value`, tag.values);
+        }
+
+        if (tag.op == "NEQ") {
+          join.andOnNotIn(`${tagAlias}.value`, tag.values);
+        }
       });
     });
   }
