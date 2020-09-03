@@ -28,7 +28,7 @@ export const chunkSchema: Schema = Joi.object({
   data_path: Joi.string().required(),
 });
 
-export const handler: RequestHandler = async (req, res, next) => {
+export const handler: RequestHandler = async (req, res) => {
   const chunk = parseInput<Chunk>(chunkSchema, req.body, {
     transform: (validatedPayload) => {
       return {
@@ -80,7 +80,7 @@ export const handler: RequestHandler = async (req, res, next) => {
     enqueue<ExportChunk>(getQueueUrl("export-chunks"), queueItem),
   ]);
 
-  res.sendStatus(200);
+  res.sendStatus(200).end();
 };
 
 const parseB64UrlOrThrow = (b64urlString: string, fieldName: string) => {

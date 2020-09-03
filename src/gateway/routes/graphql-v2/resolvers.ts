@@ -10,7 +10,6 @@ import {
 import { BadRequest } from "http-errors";
 import graphqlFields from "graphql-fields";
 import { QueryTransactionsArgs } from "./schema/types";
-import { get } from "../../../lib/redis";
 
 type Resolvers = IResolvers;
 
@@ -91,15 +90,7 @@ export const resolvers: Resolvers = {
         return (await sqlQuery) as TransactionHeader[];
       };
 
-      const results = await get(
-        `gql/query/${sha256(
-          Buffer.from(JSON.stringify(queryParams), "utf8")
-        ).toString("hex")}`,
-        {
-          ttl: 15,
-          fetch: runQuery,
-        }
-      );
+      const results = await runQuery();
 
       req.log.info("[grqphql/v2] transactions/response", {
         queryParams,

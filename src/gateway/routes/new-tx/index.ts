@@ -54,8 +54,7 @@ const importQueueUrl = getQueueUrl("import-txs");
 
 export const handler: RequestHandler<{}, {}, Transaction> = async (
   req,
-  res,
-  next
+  res
 ) => {
   const tx = parseInput<Transaction>(txSchema, req.body);
 
@@ -124,7 +123,7 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
     ]),
   });
 
-  res.sendStatus(200);
+  res.sendStatus(200).end();
 };
 
 const getDataSize = (tx: Transaction) => {

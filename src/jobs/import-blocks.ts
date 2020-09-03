@@ -16,7 +16,6 @@ import { Block, fetchBlock } from "../lib/arweave";
 import { sequentialBatch, wait } from "../lib/helpers";
 import { createQueueHandler, enqueueBatch, getQueueUrl } from "../lib/queues";
 import log from "../lib/log";
-import { purge } from "../lib/redis";
 
 export const handler = createQueueHandler<ImportBlock>(
   getQueueUrl("import-blocks"),
@@ -69,8 +68,6 @@ export const handler = createQueueHandler<ImportBlock>(
           // reimport everything to make sure there are no gaps.
           await enqueueTxImports(txImportQueueUrl, txIds);
         }
-
-        await purge();
       } catch (error) {
         console.error(block.indep_hash, error);
         console.log(await knexTransaction.rollback(error));

@@ -13,14 +13,14 @@ if (!Array.isArray(origins)) {
   );
 }
 
-export const handler: RequestHandler = async (req, res, next) => {
+export const handler: RequestHandler = async (req, res) => {
   const healthStatus = {
     region: process.env.AWS_REGION,
     origins: await originHealth(),
     database: await databaseHealth(),
     cache: await cacheHealth(),
   };
-  res.send(healthStatus);
+  res.send(healthStatus).end();
 };
 
 const originHealth = async () => {

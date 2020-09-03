@@ -168,6 +168,7 @@ const sendAndCache = async ({
         console.log("rejecting...");
         reject(err);
       }
+      res.end();
     });
   });
   req.log.info("[get-data] streaming handler complete");

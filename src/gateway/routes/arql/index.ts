@@ -69,6 +69,8 @@ export const handler: RequestHandler = async (req, res, next: Function) => {
   req.log.info(`[arql] results: ${results.length}`);
 
   res.send(results);
+
+  res.end();
 };
 
 const executeQuery = async (

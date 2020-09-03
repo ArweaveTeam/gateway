@@ -1,5 +1,3 @@
-// We must invoke config() this first to load environment variables
-// before importing any other modules.
 import express from "express";
 import helmet from "helmet";
 import {
@@ -59,12 +57,11 @@ app.use(sandboxMiddleware);
 // Route handlers
 
 app.get("/favicon.ico", (req, res) => {
-  res.status(204);
-  res.end();
+  res.status(204).end();
 });
 
 app.options("/tx", (req, res) => {
-  res.send("OK");
+  res.send("OK").end();
 });
 
 app.post("/tx", jsonBodyMiddleware, newTxHandler);
@@ -72,7 +69,7 @@ app.post("/tx", jsonBodyMiddleware, newTxHandler);
 app.post("/chunk", jsonBodyMiddleware, newChunkHandler);
 
 app.options("/chunk", (req, res) => {
-  res.send("OK");
+  res.send("OK").end();
 });
 
 app.post("/webhook", jsonBodyMiddleware, webhookHandler);
@@ -105,9 +102,14 @@ app.use(sentryReportErrorHandler);
 
 app.use(errorResponseHandler);
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   log.info(`[app] Started on http://localhost:${port}`);
 });
+
+server.keepAliveTimeout = 120 * 1000;
+server.headersTimeout = 120 * 1000;
+
+// console.log([server.headersTimeout]);
 
 process.on("SIGINT", function () {
   log.info("\nGracefully shutting down from SIGINT");

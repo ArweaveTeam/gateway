@@ -28,7 +28,7 @@ export const handler: RequestHandler = async (req, res, next) => {
       id: transaction.id,
     });
     await importTx(transaction);
-    return res.sendStatus(200);
+    return res.sendStatus(200).end();
   }
 
   if (block) {
@@ -39,7 +39,7 @@ export const handler: RequestHandler = async (req, res, next) => {
         ? req.headers["x-forwarded-for"][0]
         : "0.0.0.0",
     });
-    return res.sendStatus(200);
+    return res.sendStatus(200).end();
   }
   req.log.info(`[webhook] no valid payload provided`);
   throw new BadRequest();

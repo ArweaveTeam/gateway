@@ -46,8 +46,8 @@ export const errorResponseHandler: ErrorRequestHandler = (
 
   if (!res.finished) {
     res.write(Buffer.from(JSON.stringify(response), "utf8"));
-    res.end();
   }
+  res.end();
 };
 
 export const notFoundHandler: RequestHandler = (req, res, next) => {

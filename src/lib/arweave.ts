@@ -377,6 +377,8 @@ const getFirstResponse = async <T = any>(
           return;
         }
 
+        log.info(`[proxy] requesting`, { url });
+
         const controller = new AbortController();
         controllers.push(controller);
 
