@@ -37,6 +37,12 @@ export const handler: RequestHandler = async (req, res) => {
       tags,
     });
 
+    if (contentLength == 0) {
+      setDataHeaders({ contentType, etag: txid, res });
+
+      res.end();
+    }
+
     if (stream && contentLength) {
       if (contentType == "application/x.arweave-manifest+json") {
         req.log.info("[get-data] manifest content-type detected", { txid });

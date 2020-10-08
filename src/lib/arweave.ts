@@ -176,8 +176,8 @@ export const fetchTransactionData = async (
   try {
     const [tagsResponse, dataResponse] = await Promise.all([
       fetchRequest(`tx/${txid}/tags`, ({ status }) => status == 200),
-      fetchRequest(`tx/${txid}/data`, ({ status, headers }) => {
-        return [200, 400].includes(status) && getContentLength(headers) > 0;
+      fetchRequest(`tx/${txid}/data`, ({ status }) => {
+        return [200, 400].includes(status);
       }),
     ]);
 
