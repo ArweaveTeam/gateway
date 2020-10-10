@@ -16,6 +16,7 @@ export const createQueue = async function (
   } catch (error) {
     if (error.name == "queueExists") {
       log.info(`Queue already exists: ${name}`);
+      return;
     }
     throw error;
   }

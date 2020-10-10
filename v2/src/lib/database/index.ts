@@ -4,7 +4,9 @@ import {
   createConnectionPool,
   ConnectionMode,
   ConnectionPoolConfig,
-} from "./postgres-connection";
+} from "./postgres";
+
+import { upsert as postgresUpsert } from "./postgres/upsert";
 
 const poolCache: {
   read?: knex;
@@ -23,3 +25,5 @@ export const getConnectionPool = (
 
   return (poolCache[mode] = createConnectionPool(mode, options));
 };
+
+export const upsert = postgresUpsert;

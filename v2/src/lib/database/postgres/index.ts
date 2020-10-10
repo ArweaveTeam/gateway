@@ -1,6 +1,6 @@
 import { parse } from "pg-connection-string";
 import knex from "knex";
-import { useRdsIamAuth, getRdsIamAuthToken } from "./rds/iam-auth";
+import { useRdsIamAuth, getRdsIamAuthToken } from "../rds/iam-auth";
 
 type Connection = (
   mode: ConnectionMode,
