@@ -8,15 +8,11 @@ import { request, Response } from "./peers";
 import { getTagValue } from "./utils";
 import createHttpError from "http-errors";
 
-export async function getTransactionHeader(
-  txid: string
-): Promise<TransactionHeader> {
+export async function getTransactionHeader(txid: string) {
   log.info(`[arweave] fetching transaction header`, { txid });
 
   try {
-    const response = await request(`tx/${txid}`);
-
-    return streamToJson<TransactionHeader>(response.data);
+    return request(`tx/${txid}`);
   } catch (error) {
     if (isHttpError(error)) {
       if (error.statusCode == 502) {
