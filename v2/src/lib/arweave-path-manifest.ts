@@ -1,20 +1,31 @@
+import createHttpError from "http-errors";
+
 export const resolveManifestPathId = (
-  { index, paths }: PathManifest,
-  relativePathToResolve: string
-): string | undefined => {
-  if (relativePathToResolve && paths[relativePathToResolve]) {
-    return paths[relativePathToResolve]?.id;
+  manifest: PathManifest,
+  relativePathToResolve?: string
+): string => {
+  if (relativePathToResolve) {
+    if (manifest.paths[relativePathToResolve]) {
+      return manifest.paths[relativePathToResolve].id;
+    }
+
+    throw createHttpError(404);
   }
+
+  return resolveManifestIndex(manifest);
 };
 
-export const resolveManifestIndex = (
-  { index, paths }: PathManifest,
-  relativePathToResolve: string
-): string | undefined => {
-  const indexPath = index?.path;
-  if (indexPath) {
-    return paths[indexPath]?.id;
+export const resolveManifestIndex = ({
+  index,
+  paths,
+}: PathManifest): string => {
+  if (index && index.path) {
+    if (paths[index.path]) {
+      return paths[index.path].id;
+    }
   }
+
+  throw createHttpError(400);
 };
 
 export interface PathManifest {

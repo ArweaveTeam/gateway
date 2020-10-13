@@ -38,22 +38,22 @@ export const streamToJson = async <T = any>(stream: Readable): Promise<T> => {
   return JSON.parse(await streamToString(stream)) as T;
 };
 
-export const streamDecoderb64url = (readable: Readable): Readable => {
+export const b64UrlDecodeStream = (readable: Readable): Readable => {
   const outputStream = new PassThrough({ objectMode: false });
 
-  const decoder = new Base64DUrlecode();
+  const decoder = new Base64UrlStreamDecoder();
 
   readable.pipe(decoder).pipe(outputStream);
 
   return outputStream;
 };
 
-export class Base64DUrlecode extends Transform {
+export class Base64UrlStreamDecoder extends Transform {
   protected extra: string;
   protected bytesProcessed: number;
 
   constructor() {
-    super({ decodeStrings: false, objectMode: false });
+    super({ decodeStrings: true, objectMode: false });
     this.extra = "";
     this.bytesProcessed = 0;
   }
@@ -62,7 +62,7 @@ export class Base64DUrlecode extends Transform {
     let conbinedChunk =
       this.extra +
       chunk
-        .toString("base64")
+        .toString("utf8")
         .replace(/\-/g, "+")
         .replace(/\_/g, "/")
         .replace(/(\r\n|\n|\r)/gm, "");
@@ -77,6 +77,7 @@ export class Base64DUrlecode extends Transform {
       conbinedChunk.slice(0, chunk.length - remaining),
       "base64"
     );
+
     this.push(buf);
     cb();
   }

@@ -19,6 +19,3 @@ export const getTagValue = (tags: Tag[], name: string): string | undefined => {
     return undefined;
   }
 };
-
-export const isAxiosError = (error: any): error is AxiosError =>
-  error && error.isAxiosError;

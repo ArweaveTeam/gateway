@@ -18,9 +18,8 @@ export interface Transaction {
   last_tx: string;
   tags: Tag[];
   quantity: WinstonString;
-  data_size: number;
+  data_size: string;
   data_root: string;
-  data_tree: string[];
 }
 
 export interface DataBundleWrapper {

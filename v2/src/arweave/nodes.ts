@@ -13,6 +13,7 @@ interface NodeMonitoringConfig {
   enabled?: boolean;
   interval?: number;
   timeout?: number;
+  log?: boolean;
 }
 
 const state: {
@@ -24,6 +25,7 @@ const state: {
     enabled: false,
     interval: 30000,
     timeout: 20000,
+    log: false,
   },
   timer: null,
   nodes: [],
@@ -33,6 +35,7 @@ export function configureMonitoring({
   enabled = true,
   interval = 30000,
   timeout = 20000,
+  log = false,
 }: NodeMonitoringConfig = {}) {
   state.config.enabled = enabled;
 
@@ -49,16 +52,16 @@ export function configureMonitoring({
   }
 
   if (enabled && interval > 0) {
-    refreshStatus();
-    state.timer = setInterval(refreshStatus, interval);
+    automaticCheck();
+    state.timer = setInterval(automaticCheck, interval);
   }
 }
 
-export function getNodes() {
+export function getNodes(): NodeStatus[] {
   return state.nodes;
 }
 
-export function getOnlineHosts() {
+export function getOnlineHosts(count?: number): string[] {
   const onlineHosts = state.nodes
     .filter((node) => node.online)
     .map((node) => node.host);
@@ -66,10 +69,10 @@ export function getOnlineHosts() {
   // In case there is ever an issue with all hosts appearing offline
   // then simply return all known hosts as a fail-safe.
   if (onlineHosts.length > 0) {
-    return onlineHosts;
+    return onlineHosts.slice(0, count);
   }
 
-  state.nodes.map((node) => node.host);
+  return state.nodes.map((node) => node.host).slice(0, count);
 }
 
 export function setHosts(hosts: string[]) {
@@ -83,14 +86,36 @@ export function setHosts(hosts: string[]) {
   });
 }
 
-const refreshStatus = async () => {
-  state.nodes = orderBy(
+const automaticCheck = async () => {
+  await pingAndRank();
+
+  if (state.config.log) {
+    console.log(
+      `${getOnlineHosts().length}/${
+        getNodes().length
+      } nodes online\n${getNodes()
+        .map((node) =>
+          !node.online
+            ? ""
+            : `${node.host} - ${Math.round(node.responseTime)} - ${
+                node.response?.height
+              } - ${node.response.queue_length} - ${
+                node.response?.node_state_latency
+              }`
+        )
+        .join(`\n`)}`
+    );
+  }
+};
+
+export const pingAndRank = async () => {
+  return (state.nodes = orderBy(
     await pingStatus(state.nodes.map((node) => node.host)),
     // Order by all online hosts first, then the highest blocks first,
     // and then sort by fastest (lowest) response time.
     ["online", "status.height", "responseTime"],
     ["desc", "desc", "asc"]
-  );
+  ));
 };
 
 const pingStatus = (hosts: string[]): Promise<NodeStatus[]> => {

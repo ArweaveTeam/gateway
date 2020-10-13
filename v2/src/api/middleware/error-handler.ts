@@ -14,5 +14,7 @@ export const handler: ErrorRequestHandler = (error, req, res, next) => {
   res.status(500);
   res.write(Buffer.from(JSON.stringify({ error: "unknown" }), "utf8"));
 
+  res.end();
+
   return next();
 };

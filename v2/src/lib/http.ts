@@ -1,11 +1,10 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse, AxiosError } from "axios";
 import plimit from "p-limit";
 import Bluebird from "bluebird";
 import { Readable } from "stream";
 import { performance } from "perf_hooks";
-import { isAxiosError } from "../network/utils";
 
-interface RequestOptions {
+export interface RequestOptions {
   method?: "GET" | "POST";
   endpoint: string;
   headers?: { [key: string]: string | number };
@@ -13,16 +12,17 @@ interface RequestOptions {
   timeout?: number;
   validateStatus?: (status: number) => boolean;
 }
-
-interface BatchRequestOptions {
+export interface BatchRequestOptions {
   hosts: string[];
   concurrency?: number;
 }
 
-interface Response extends AxiosResponse<Readable> {
+export interface Response extends AxiosResponse<Readable> {
   duration: number;
   contentType: string;
 }
+
+export type HttpError = AxiosError;
 
 export const request = async ({
   method = "GET",
@@ -32,6 +32,7 @@ export const request = async ({
   validateStatus,
   data,
 }: RequestOptions): Promise<Response> => {
+  console.log(`Requesting: ${endpoint}`);
   const start = performance.now();
 
   const response = await axios.request<any, AxiosResponse<Readable>>({
@@ -57,15 +58,16 @@ export const batchRequest = async (
   requestOptions: RequestOptions,
   { hosts, concurrency = 2 }: BatchRequestOptions
 ): Promise<Response> => {
-  const nodes = hosts;
-
   const defer = plimit(concurrency);
 
   return await Bluebird.any(
-    nodes.map((host) =>
+    hosts.map((host) =>
       defer(async () => {
         try {
-          return request(requestOptions).then((response) => {
+          return request({
+            ...requestOptions,
+            endpoint: `${host}/${requestOptions.endpoint}`,
+          }).then((response) => {
             // If we have a valid response we must clear the queue to
             // prevent other queued requests from executing.
             defer.clearQueue();
@@ -75,9 +77,11 @@ export const batchRequest = async (
           // We just want to log errors and not suppress them, otherwise
           // Bluebird.any will think the request was successful and resolve to an empty response.
           // Bluebird.any will catch errors and push them into an AggregateError which will
-          // be throw if *all* requets fail.
-          if (isAxiosError(error) && !(error.response?.status == 404)) {
-            console.error(`${host} - ${error.message}`);
+          // be thrown for us, ths only triggers if *all* requets fail.
+          if (isApiError(error) && !(error.response?.status == 404)) {
+            console.error(
+              `${host} - ${error.response?.status} - ${error.message}`
+            );
           }
 
           throw error;
@@ -86,3 +90,6 @@ export const batchRequest = async (
     )
   );
 };
+
+export const isApiError = (error: any): error is HttpError =>
+  error && error.isAxiosError;
