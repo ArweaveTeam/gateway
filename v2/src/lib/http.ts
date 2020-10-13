@@ -1,11 +1,12 @@
-import axios, { AxiosResponse, AxiosError } from "axios";
+import axios, { AxiosResponse, AxiosError, Method } from "axios";
 import plimit from "p-limit";
 import Bluebird from "bluebird";
 import { Readable } from "stream";
 import { performance } from "perf_hooks";
 
+export type RequestMethod = Method;
 export interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: RequestMethod;
   endpoint: string;
   headers?: { [key: string]: string | number };
   data?: any;

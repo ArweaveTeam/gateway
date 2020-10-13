@@ -6,7 +6,12 @@ import { Tag, TransactionHeader } from "./interfaces";
 import { Readable } from "stream";
 import { getTagValue } from "./utils";
 import createHttpError from "http-errors";
-import { batchRequest, RequestOptions, BatchRequestOptions } from "../lib/http";
+import {
+  batchRequest,
+  RequestOptions,
+  BatchRequestOptions,
+  Response,
+} from "../lib/http";
 import { getOnlineHosts } from "./nodes";
 import { omit } from "lodash";
 
@@ -16,7 +21,7 @@ const DEFAULT_REQUEST_CONCURRENCY = 2;
 export async function apiRequest(
   options: RequestOptions,
   batchOptions?: Partial<BatchRequestOptions>
-) {
+): Promise<Response> {
   const flags: { [key: number]: boolean } = {
     202: false,
     404: false,

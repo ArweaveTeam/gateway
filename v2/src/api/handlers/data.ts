@@ -10,10 +10,6 @@ import { pipelineAsync, streamToJson } from "../../lib/streams";
 
 const DEFAULT_TYPE = "text/html";
 
-interface Bundle {
-  items: { id: string; data: string; tags: Tag[] }[];
-}
-
 function getTxIdFromPath(path: string): string | undefined {
   const matches = path.match(/^\/?([a-z0-9-_]{43})/i) || [];
   return matches[1];

@@ -2,7 +2,7 @@ require("express-async-errors");
 import express from "express";
 import { setHosts, configureMonitoring } from "../arweave/nodes";
 
-// import { handler as proxyHandler } from "./handlers/proxy";
+import { handler as proxyHandler } from "./handlers/proxy";
 import { handler as dataHandler } from "./handlers/data";
 import { handler as errorHandler } from "./middleware/error-handler";
 
