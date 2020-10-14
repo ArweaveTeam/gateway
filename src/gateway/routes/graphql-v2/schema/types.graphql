@@ -40,6 +40,37 @@ type Query {
     """
     sort: SortOrder = HEIGHT_DESC
   ): TransactionConnection!
+
+  block(id: String): Block
+
+  blocks(
+    """
+    Find blocks from a list of ids.
+    """
+    ids: [ID!]
+    """
+    Find blocks from a list of block heights.
+    """
+    ids: [ID!]
+
+    height: BlockFilter
+
+    # timestamp: BlockFilter
+
+    """
+    Only match the first n blocks.
+    """
+    first: Int = 10
+    """
+    A pagination cursor value, for fetching subsequent pages from a result set.
+    """
+    after: String
+
+    """
+    Optionally specify the result sort order.
+    """
+    sort: SortOrder = HEIGHT_DESC
+  ): TransactionConnection!
 }
 """
 Optionally reverse the result sort order from `HEIGHT_DESC` (default) to `HEIGHT_ASC`.
@@ -96,6 +127,8 @@ input BlockFilter {
   Maximum block height to filter to
   """
   max: Int
+
+  in: [Int]
 }
 
 """

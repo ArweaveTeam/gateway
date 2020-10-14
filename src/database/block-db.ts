@@ -5,6 +5,7 @@ import moment from "moment";
 import { pick, transform } from "lodash";
 import { sequentialBatch } from "../lib/helpers";
 import log from "../lib/log";
+import { ISO8601DateTimeString } from "../lib/encoding";
 
 export interface DatabaseBlock {
   id: string;
@@ -159,4 +160,78 @@ const serialize = (row: DatabaseBlock): object => {
     result[key] =
       value && typeof value == "object" ? JSON.stringify(value) : value;
   });
+};
+
+type BlockSortOrder = "HEIGHT_ASC" | "HEIGHT_DESC";
+
+const orderByClauses: { [key in BlockSortOrder]: string } = {
+  HEIGHT_ASC: "blocks.height ASC NULLS LAST, id ASC",
+  HEIGHT_DESC: "blocks.height DESC NULLS FIRST, id ASC",
+};
+interface BlockQuery {
+  id?: string;
+  ids?: string[];
+  limit?: number;
+  offset?: number;
+  select?: any;
+  since?: ISO8601DateTimeString;
+
+  sortOrder?: BlockSortOrder;
+  minHeight?: number;
+  maxHeight?: number;
+}
+
+export const queryBlocks = (
+  connection: knex,
+  {
+    limit = 100000,
+    offset = 0,
+    id,
+    ids,
+    select,
+    since,
+    sortOrder = "HEIGHT_DESC",
+    minHeight = -1,
+    maxHeight = -1,
+  }: BlockQuery
+): knex.QueryBuilder => {
+  const query = connection
+    .queryBuilder()
+    .select(
+      select || {
+        id: "blocks.id",
+        timestamp: "blocks.timestamp",
+        height: "blocks.height",
+        previous: "blocks.previous",
+      }
+    )
+    .from("blocks");
+
+  if (since) {
+    query.where("blocks.created_at", "<", since);
+  }
+
+  if (id) {
+    query.where("blocks.id", id);
+  }
+
+  if (ids) {
+    query.whereIn("blocks.id", ids);
+  }
+
+  if (minHeight >= 0) {
+    query.where("blocks.height", ">=", minHeight);
+  }
+
+  if (maxHeight >= 0) {
+    query.where("blocks.height", "<=", maxHeight);
+  }
+
+  query.limit(limit).offset(offset);
+
+  if (Object.keys(orderByClauses).includes(sortOrder)) {
+    query.orderByRaw(orderByClauses[sortOrder]);
+  }
+
+  return query;
 };

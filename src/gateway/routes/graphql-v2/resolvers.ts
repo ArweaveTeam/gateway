@@ -10,6 +10,7 @@ import {
 import { BadRequest } from "http-errors";
 import graphqlFields from "graphql-fields";
 import { QueryTransactionsArgs } from "./schema/types";
+import { queryBlocks } from "../../../database/block-db";
 
 type Resolvers = IResolvers;
 
@@ -114,6 +115,14 @@ export const resolvers: Resolvers = {
           });
         },
       };
+    },
+    block: async (parent, queryParams, { req, connection }) => {
+      req.log.info("[grqphql/v2] transaction/request", queryParams);
+      const sqlQuery = queryBlocks(connection, {
+        id: queryParams.id,
+      }).first();
+
+      return (await sqlQuery) as any;
     },
   },
   Transaction: {
