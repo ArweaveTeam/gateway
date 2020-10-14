@@ -2,7 +2,7 @@ import { Readable, Writable } from "stream";
 import { LocalStorageDriver } from "./driver/local-driver";
 
 const driver = new LocalStorageDriver({
-  basePath: "/Users/kyle/repos/gateway/v2",
+  basePath: "/Users/kyle/repos/gateway/v2/test/temp",
 });
 
 export type GetObjectStream = (key: string) => Promise<GetObjectStreamResponse>;

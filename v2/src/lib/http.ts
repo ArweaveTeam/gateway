@@ -78,12 +78,10 @@ export const batchRequest = async (
           // We just want to log errors and not suppress them, otherwise
           // Bluebird.any will think the request was successful and resolve to an empty response.
           // Bluebird.any will catch errors and push them into an AggregateError which will
-          // be thrown for us, ths only triggers if *all* requets fail.
-          if (isApiError(error) && !(error.response?.status == 404)) {
-            console.error(
-              `${host} - ${error.response?.status} - ${error.message}`
-            );
-          }
+          // be thrown for us only if *all* requets fail.
+          console.error(
+            `${host} - ${error.response?.status} - ${error.message}`
+          );
 
           throw error;
         }

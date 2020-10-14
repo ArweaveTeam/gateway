@@ -1,4 +1,4 @@
-import { TransactionHeader, Block, ChunkHeader } from "../network/interfaces";
+import { TransactionHeader, Block, ChunkHeader } from "../arweave/interfaces";
 
 export type DataFormatVersion = 1.0 | 2.0 | 2.1;
 export interface DispatchTx {
@@ -23,7 +23,6 @@ export interface ImportTx {
 }
 
 export interface ImportBlock {
-  source: string;
   block: Block;
 }
 
