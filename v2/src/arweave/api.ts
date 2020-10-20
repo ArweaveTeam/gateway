@@ -1,25 +1,19 @@
-import createError, { isHttpError } from "http-errors";
-import { fromB64Url } from "../lib/encoding";
-import { log } from "../lib/log";
-import { b64UrlDecodeStream, streamToJson } from "../lib/streams";
-import { TransactionHeader } from "./interfaces";
+import createHttpError, { isHttpError } from "http-errors";
+import { omit } from "lodash";
 import { Readable } from "stream";
-import { getUtf8TagValue } from "./utils";
-import createHttpError from "http-errors";
+import { fromB64Url } from "../lib/encoding";
 import {
   batchRequest,
-  RequestOptions,
   BatchRequestOptions,
+  RequestOptions,
   Response,
 } from "../lib/http";
+import { log } from "../lib/log";
+import { b64UrlDecodeStream, streamToJson } from "../lib/streams";
+import { getCachedTransactionData, streamToCache } from "./cache";
+import { TransactionHeader } from "./interfaces";
 import { getOnlineHosts } from "./nodes";
-import { omit } from "lodash";
-import {
-  getCachedTransactionData,
-  putCachedTransactionData,
-  putObjectStream,
-  streamToCache,
-} from "./cache";
+import { getUtf8TagValue } from "./utils";
 
 const DEFAULT_HOSTS_REQUEST_COUNT = 4;
 const DEFAULT_REQUEST_CONCURRENCY = 2;
@@ -65,11 +59,11 @@ export async function apiRequest(
   } catch (error) {
     flagPriority.forEach((status) => {
       if (flags.includes(status)) {
-        throw createError(status);
+        throw createHttpError(status);
       }
     });
 
-    throw createError(502);
+    throw createHttpError(502);
   }
 }
 
@@ -95,13 +89,13 @@ export async function getTransactionHeader(
 
 const parseDataSize = (header: any): string => {
   // For v2 txs
-  if (typeof header?.data_size == "string") {
+  if (typeof header.data_size == "string") {
     return header.data_size;
   }
 
   // For v1 txs
-  if (typeof header?.data == "string" && header?.data?.length > 0) {
-    return fromB64Url((header as any).data).byteLength.toFixed();
+  if (typeof header.data == "string" && header.data?.length > 0) {
+    return fromB64Url(header.data).byteLength.toFixed();
   }
 
   return "0";
@@ -137,8 +131,7 @@ export async function getTransactionData(
 }
 
 const fetchTransactionData = async (
-  txid: string,
-  { useCache = true }: { useCache?: boolean } = {}
+  txid: string
 ): Promise<{
   contentType?: string;
   contentLength: number;

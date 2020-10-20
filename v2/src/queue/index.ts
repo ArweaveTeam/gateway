@@ -1,4 +1,4 @@
-import { CreateQueue, Enqueue, QueueDriver } from "../lib/queue";
+import { QueueDriver } from "../lib/queue";
 
 const config: {
   driver?: QueueDriver;
@@ -13,10 +13,12 @@ export type QueueName =
   | "export-chunk";
 
 export const createQueue = (key: QueueName) => {
+  console.log(`[queue] create-queue: ${key}`);
   return getQueueDriver().createQueue(key);
 };
 
 export const enqueue = <T = any>(key: QueueName, message: T) => {
+  console.log(`[queue] enqueue: ${key}`, message);
   return getQueueDriver().enqueue(key, message);
 };
 

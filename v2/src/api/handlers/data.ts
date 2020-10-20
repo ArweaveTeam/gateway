@@ -15,22 +15,24 @@ export const matchAnyDataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-
 export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
-  if (txid) {
-    const {
-      id: resolvedId,
-      data,
-      contentType,
-      contentLength,
-    } = await resolveContent(txid, req.path);
-
-    res.header("content-type", contentType || DEFAULT_TYPE);
-
-    res.header("content-length", contentLength.toFixed());
-
-    res.header("etag", resolvedId);
-
-    return await pipelineAsync(data, res);
+  if (!txid) {
+    throw createHttpError(404);
   }
+
+  const {
+    id: resolvedId,
+    data,
+    contentType,
+    contentLength,
+  } = await resolveContent(txid, req.path);
+
+  res.header("content-type", contentType || DEFAULT_TYPE);
+
+  res.header("content-length", contentLength.toFixed());
+
+  res.header("etag", resolvedId);
+
+  return await pipelineAsync(data, res);
 };
 
 const resolveContent = async (
@@ -46,7 +48,7 @@ const resolveContent = async (
 
   const { data, contentType, contentLength } = await getTransactionData(id);
 
-  console.log(`${id} ${contentLength} bytes`);
+  // console.log(`[get-data] ${id} ${contentLength} bytes`);
 
   if (contentType == "application/x.arweave-manifest+json") {
     // console.log(`[get-data] manifest content-type detected: ${id}`);

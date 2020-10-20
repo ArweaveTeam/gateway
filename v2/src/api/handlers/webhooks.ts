@@ -37,7 +37,7 @@ const enqueueTx = async (tx: TransactionHeader): Promise<void> => {
     tx: pick(
       {
         ...tx,
-        data_size: tx.data_size || tx.data_size || "0",
+        data_size: tx.data_size || "0",
         data_root: tx.data_root || "",
         format: tx.format || 1,
       },
@@ -56,7 +56,6 @@ const enqueueTx = async (tx: TransactionHeader): Promise<void> => {
       ]
     ),
   });
-
   console.log(`Queued: ${messageId}`);
 };
 

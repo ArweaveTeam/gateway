@@ -1,7 +1,7 @@
 import { createReadStream, createWriteStream, ReadStream } from "fs";
 import { dirname, resolve } from "path";
 import { access, ensureDir, readJson, writeJson, stat, unlink } from "fs-extra";
-import { StorageDriver, PutObjectStream, GetObjectStream } from "../interface";
+import { StorageDriver, PutObjectStream, GetObjectStream } from "..";
 import createHttpError from "http-errors";
 
 export class LocalStorageDriver implements StorageDriver {
