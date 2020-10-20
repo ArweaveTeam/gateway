@@ -1,11 +1,10 @@
 import createError, { isHttpError } from "http-errors";
 import { fromB64Url } from "../lib/encoding";
 import { log } from "../lib/log";
-import { Transform } from "stream";
 import { b64UrlDecodeStream, streamToJson } from "../lib/streams";
-import { Tag, TransactionHeader } from "./interfaces";
+import { TransactionHeader } from "./interfaces";
 import { Readable } from "stream";
-import { getTagValue } from "./utils";
+import { getUtf8TagValue } from "./utils";
 import createHttpError from "http-errors";
 import {
   batchRequest,
@@ -15,7 +14,12 @@ import {
 } from "../lib/http";
 import { getOnlineHosts } from "./nodes";
 import { omit } from "lodash";
-import { getCachedTransactionData, putCachedTransactionData } from "./cache";
+import {
+  getCachedTransactionData,
+  putCachedTransactionData,
+  putObjectStream,
+  streamToCache,
+} from "./cache";
 
 const DEFAULT_HOSTS_REQUEST_COUNT = 4;
 const DEFAULT_REQUEST_CONCURRENCY = 2;
@@ -104,12 +108,17 @@ const parseDataSize = (header: any): string => {
 };
 
 export async function getTransactionData(
-  txid: string
+  txid: string,
+  { useCache = true }: { useCache?: boolean } = {}
 ): Promise<{
   contentType?: string;
   contentLength: number;
   data: Readable;
 }> {
+  if (!useCache) {
+    return fetchTransactionData(txid);
+  }
+
   try {
     const {
       stream,
@@ -120,39 +129,7 @@ export async function getTransactionData(
     return { data: stream, contentType, contentLength };
   } catch (error) {
     if (isHttpError(error) && error.status == 404) {
-      const { data, contentType, contentLength } = await fetchTransactionData(
-        txid
-      );
-
-      const { stream: cacheStream } = await putCachedTransactionData(txid, {
-        contentType,
-      });
-
-      const responseStream = new Readable({
-        autoDestroy: true,
-        read() {},
-      });
-
-      data
-        .on("data", (chunk) => {
-          cacheStream.write(chunk, () => {
-            responseStream.push(chunk);
-          });
-        })
-        .on("end", () => {
-          cacheStream.end(() => {
-            responseStream.push(null);
-          });
-        })
-        .on("error", (error) => {
-          data.destroy();
-          cacheStream.end(() => {
-            responseStream.push(null);
-          });
-        })
-        .resume();
-
-      return { data: responseStream, contentType, contentLength };
+      return streamToCache(`tx/${txid}`, () => fetchTransactionData(txid));
     } else {
       throw error;
     }
@@ -178,7 +155,7 @@ const fetchTransactionData = async (
 
   const { tags } = header;
 
-  const contentType = getTagValue(tags, "content-type");
+  const contentType = getUtf8TagValue(tags, "content-type");
   const contentLength = parseInt(header.data_size);
 
   if (status == 200) {

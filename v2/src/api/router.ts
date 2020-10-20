@@ -1,6 +1,7 @@
 import { Express } from "express";
 import { handler as dataHandler, matchAnyDataPathRegex } from "./handlers/data";
 import { handler as proxyHandler } from "./handlers/proxy";
+import { handler as webhookHandler } from "./handlers/webhooks";
 import { corsHandler } from "./middleware/cors";
 import { errorHandler } from "./middleware/error";
 import { jsonHandler } from "./middleware/json";
@@ -10,6 +11,7 @@ import {
   sentryRequestHandler,
   sentryTraceHandler,
 } from "./middleware/sentry";
+import { webhookAuthHandler } from "./middleware/webhook-token-auth";
 
 export const router = (app: Express): Express => {
   middleware(app);
@@ -30,7 +32,10 @@ const middleware = (app: Express) => {
 };
 
 const routes = (app: Express) => {
-  app.get(/^\/?favicon/, (req, res) => res.status(204).send());
+  app.get(/^\/?favicon/, (req, res) => res.sendStatus(204));
+
+  app.post("/webhook", webhookAuthHandler, webhookHandler);
+
   app.get(matchAnyDataPathRegex, dataHandler);
   app.get("*", proxyHandler);
 };

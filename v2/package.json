@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --require dotenv/config && ts-node",
+    "dev": "ts-node-dev --respawn --transpile-only --require dotenv/config ./src/api/app.ts",
     "start": "ts-node --require dotenv/config ./src/api/app.ts",
     "build": "tsc",
+    "run": "node --require dotenv/config ./dist/api/app.js",
     "migrate:up": "source .env && knex migrate:up",
     "migrate:down": "source .env && knex migrate:down",
     "test": "mocha --require ts-node/register --require dotenv/config test/*.ts",
@@ -32,6 +33,7 @@
     "lodash": "^4.17.20",
     "mime": "^2.4.6",
     "moment": "^2.29.1",
+    "morgan": "^1.10.0",
     "node-fetch": "^2.6.1",
     "p-limit": "^3.0.2",
     "pg": "^8.4.0",
@@ -41,6 +43,7 @@
     "rfc4648": "^1.4.0",
     "rsmq": "^0.12.2",
     "sqs-consumer": "^5.4.0",
+    "tmp": "^0.2.1",
     "winston": "^3.3.3"
   },
   "devDependencies": {

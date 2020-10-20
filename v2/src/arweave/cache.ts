@@ -1,18 +1,14 @@
+import { Readable } from "stream";
 import {
   GetObjectStream,
   PutObjectStream,
   PutObjectStreamOptions,
   StorageDriver,
-} from "../lib/storage/interface";
+} from "../lib/storage";
 
 const config: {
   prefix?: string;
   driver?: StorageDriver;
-} = {};
-
-export const configureCache: {
-  driver?: StorageDriver;
-  prefix: string;
 } = { prefix: process.env.STORAGE_KEY_PREFIX! };
 
 export async function getCachedTransactionData(txid: string) {
@@ -40,6 +36,51 @@ export const getStorageDriver = (): StorageDriver => {
   }
 
   throw new Error(`arweave/cache storage driver not configured`);
+};
+
+export const streamToCache = async (
+  cacheKey: string,
+  streamLoader: () => Promise<{
+    contentType?: string;
+    contentLength: number;
+    data: Readable;
+  }>
+): Promise<{
+  contentType?: string;
+  contentLength: number;
+  data: Readable;
+}> => {
+  const { data, contentType, contentLength } = await streamLoader();
+
+  const { stream: cacheStream } = await putObjectStream(cacheKey, {
+    contentType,
+  });
+
+  const responseStream = new Readable({
+    autoDestroy: true,
+    read() {},
+  });
+
+  data
+    .on("data", (chunk) => {
+      cacheStream.write(chunk, () => {
+        responseStream.push(chunk);
+      });
+    })
+    .on("end", () => {
+      cacheStream.end(() => {
+        responseStream.push(null);
+      });
+    })
+    .on("error", (error) => {
+      data.destroy();
+      cacheStream.end(() => {
+        responseStream.push(null);
+      });
+    })
+    .resume();
+
+  return { data: responseStream, contentType, contentLength };
 };
 
 export const setStorageDriver = (driver: StorageDriver): void => {

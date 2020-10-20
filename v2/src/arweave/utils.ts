@@ -1,7 +1,10 @@
 import { fromB64Url } from "../lib/encoding";
 import { Tag } from "./interfaces";
-import { AxiosError } from "axios";
-export const getTagValue = (tags: Tag[], name: string): string | undefined => {
+
+export const getUtf8TagValue = (
+  tags: Tag[],
+  name: string
+): string | undefined => {
   const contentTypeTag = tags.find((tag) => {
     try {
       return (

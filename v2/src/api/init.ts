@@ -1,8 +1,9 @@
 import express, { Express } from "express";
 import { setStorageDriver } from "../arweave/cache";
 import { configureMonitoring, setHosts } from "../arweave/nodes";
-import { createQueue } from "../lib/redis/queue";
+import { createQueue, setQueueDriver } from "../queue";
 import { LocalStorageDriver } from "../lib/storage/driver/local-driver";
+import { RedisQueueDriver } from "../lib/queue/driver/redis";
 
 export const init = async (): Promise<Express> => {
   setHosts([
@@ -22,6 +23,7 @@ export const init = async (): Promise<Express> => {
   });
 
   setStorageDriver(new LocalStorageDriver());
+  setQueueDriver(new RedisQueueDriver());
 
   await Promise.all([
     createQueue("dispatch-tx"),
