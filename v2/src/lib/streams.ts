@@ -3,7 +3,9 @@ import { promisify } from "util";
 
 export const pipelineAsync = promisify(pipeline);
 
-export const bufferToStream = (buffer: Buffer) => {
+export const clone = () => {};
+
+export const bufferToStream = (buffer: Buffer): Readable => {
   return new Readable({
     objectMode: false,
     read() {
@@ -16,16 +18,20 @@ export const bufferToStream = (buffer: Buffer) => {
 export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   let buffer = Buffer.alloc(0);
   return new Promise((resolve, reject) => {
-    stream.on("end", () => {
+    stream.once("end", () => {
       resolve(buffer);
     });
 
-    stream.on("error", (error) => {
+    stream.once("error", (error) => {
       reject(error);
     });
 
     stream.on("data", (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk]);
+    });
+
+    stream.once("readable", () => {
+      stream.resume();
     });
   });
 };

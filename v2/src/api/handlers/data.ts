@@ -3,9 +3,10 @@ import {
   resolveManifestPathId,
   PathManifest,
 } from "../../arweave/path-manifest";
-import { putObjectStream } from "../../lib/storage/index";
 import { RequestHandler } from "express";
 import { pipelineAsync, streamToJson } from "../../lib/streams";
+import { Readable } from "stream";
+import createHttpError from "http-errors";
 
 const DEFAULT_TYPE = "text/html";
 
@@ -15,37 +16,54 @@ export const handler: RequestHandler = async (req, res) => {
   const txid = getTxIdFromPath(req.path);
 
   if (txid) {
-    const { data, contentType } = await resolveContent(txid, req.path);
-
-    const { stream: cacheStream } = await putObjectStream(`tx/${txid}`, {
+    const {
+      id: resolvedId,
+      data,
       contentType,
-    });
+      contentLength,
+    } = await resolveContent(txid, req.path);
 
     res.header("content-type", contentType || DEFAULT_TYPE);
 
-    return await Promise.all([
-      pipelineAsync(data, cacheStream),
-      pipelineAsync(data, res),
-    ]);
+    res.header("content-length", contentLength.toFixed());
+
+    res.header("etag", resolvedId);
+
+    return await pipelineAsync(data, res);
   }
 };
 
-const resolveContent = async (id: string, path: string) => {
-  const { data, tags, contentType, contentLength } = await getTransactionData(
-    id
-  );
+const resolveContent = async (
+  id: string,
+  path: string
+): Promise<{
+  id: string;
+  data: Readable;
+  contentType?: string;
+  contentLength: number;
+}> => {
+  // console.log(`[get-data] resolving: ${id} => ${path}`);
+
+  const { data, contentType, contentLength } = await getTransactionData(id);
+
+  console.log(`${id} ${contentLength} bytes`);
 
   if (contentType == "application/x.arweave-manifest+json") {
-    console.log("[get-data] manifest content-type detected", { id });
+    // console.log(`[get-data] manifest content-type detected: ${id}`);
 
     const manifest = await streamToJson<PathManifest>(data);
 
-    return getTransactionData(
-      resolveManifestPathId(manifest, getManifestSubpath(path))
+    const resolvedId = resolveManifestPathId(
+      manifest,
+      getManifestSubpath(path)
     );
+
+    // console.log(`[get-data] resolved path: ${id} => ${path} => ${resolvedId}`);
+
+    return resolveContent(resolvedId, path);
   }
 
-  return { data, tags, contentType, contentLength };
+  return { id, data, contentType, contentLength };
 };
 
 function getTxIdFromPath(path: string): string | undefined {

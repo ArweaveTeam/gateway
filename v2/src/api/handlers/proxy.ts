@@ -10,7 +10,8 @@ export const handler: RequestHandler = async (req, res) => {
 
   const { status, contentType, data } = await apiRequest({
     method: method as RequestMethod,
-    endpoint: path.replace(/^\//, ""), // Remove slash prefix for node.net/info rather than node.net//info
+    // Remove slash prefix for node.net/info rather than node.net//info
+    endpoint: path.replace(/^\//, ""),
   });
 
   if (status) {
