@@ -23,11 +23,11 @@ export async function putCachedTransactionData(
 }
 
 export const getObjectStream: GetObjectStream = (key) => {
-  return getStorageDriver().getObjectStream(normalizeKey(key));
+  return getStorageDriver().getObjectStream(key);
 };
 
 export const putObjectStream: PutObjectStream = (key, options) => {
-  return getStorageDriver().putObjectStream(normalizeKey(key), options);
+  return getStorageDriver().putObjectStream(key, options);
 };
 
 export const getStorageDriver = (): StorageDriver => {
@@ -85,9 +85,4 @@ export const streamToCache = async (
 
 export const setStorageDriver = (driver: StorageDriver): void => {
   config.driver = driver;
-};
-
-const normalizeKey = (key: string): string => {
-  const prefix = config.prefix;
-  return `${prefix}/${key}`;
 };

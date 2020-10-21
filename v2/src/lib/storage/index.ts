@@ -23,4 +23,5 @@ export interface PutObjectStreamOptions {
 
 export interface PutObjectStreamResponse {
   stream: Writable;
+  onUploadComplete?: Promise<void>;
 }

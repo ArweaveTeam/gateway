@@ -4,6 +4,7 @@ import {
   pingAndRank,
   getOnlineHosts,
   getNodes,
+  configureMonitoring,
 } from "../src/arweave/nodes";
 
 const expect = chai.expect;
@@ -18,6 +19,13 @@ describe("Node monitor", function () {
     "http://lon-6.eu-west-1.arweave.net:1984",
     "http://test.test",
   ]);
+  configureMonitoring({
+    enabled: true,
+    interval: 5000,
+    timeout: 2000,
+    log: false,
+  });
+
   it("should refresh node status and rank", async function () {
     const rankedNodes = await pingAndRank();
 

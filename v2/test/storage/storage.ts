@@ -1,22 +1,24 @@
 import * as chai from "chai";
-import { getObjectStream, putObjectStream } from "../src/lib/storage";
-import { streamToBuffer } from "../src/lib/streams";
+import { LocalStorageDriver } from "../../src/lib/storage/driver/local-driver";
+import { streamToBuffer } from "../../src/lib/streams";
 
 const expect = chai.expect;
 
 describe("Local storage", function () {
+  const driver = new LocalStorageDriver();
+
   it("should read and write using local storage driver", async function () {
     const testData = "test-string";
 
     const testKey = "test/temp/data.bin";
 
-    const { stream: writeStream } = await putObjectStream(testKey);
+    const { stream: writeStream } = await driver.putObjectStream(testKey);
 
     writeStream.write(Buffer.from(testData));
 
     writeStream.end();
 
-    const { stream: readStream } = await getObjectStream(testKey);
+    const { stream: readStream } = await driver.getObjectStream(testKey);
 
     const buffer = await streamToBuffer(readStream);
 

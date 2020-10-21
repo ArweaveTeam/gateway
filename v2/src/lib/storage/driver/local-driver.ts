@@ -5,73 +5,89 @@ import { StorageDriver, PutObjectStream, GetObjectStream } from "..";
 import createHttpError from "http-errors";
 
 export class LocalStorageDriver implements StorageDriver {
-  getObjectStream = getObjectStream;
-  putObjectStream = putObjectStream;
-}
-
-const getObjectStream: GetObjectStream = async (key: string) => {
-  const path = resolve(key);
-
-  return new Promise(async (resolve, reject) => {
-    const stream = createReadStream(path);
-
-    stream.once("readable", async () => {
-      try {
-        const { contentType, contentLength } = await getMeta(path);
-
-        resolve({ stream, contentType, contentLength });
-      } catch (error) {
-        stream.destroy();
-        throw normalizeError(error);
-      }
-    });
-
-    stream.once("error", (error: any) => {
-      reject(normalizeError(error));
-    });
-  });
-};
-
-const putObjectStream: PutObjectStream = async (
-  key,
-  { contentType, contentLength } = {}
-) => {
-  const path = resolve(key);
-
-  await ensureDir(dirname(path));
-
-  const stream = createWriteStream(path, { flags: "w" });
-
-  console.log(`Writing: ${key}`);
-
-  const cancel = () => {
-    console.log(
-      `Removing incomplete file: ${key}, expected ${contentLength} bytes, received ${stream.bytesWritten} bytes`
-    );
-    return unlink(path);
+  config = {
+    log: false,
+    storagePath: process.env.LOCAL_STORAGE_PATH!,
   };
 
-  stream.once("finish", () => {
-    console.log(`Writing: ${key}.meta.json`);
+  getObjectStream: GetObjectStream = async (key: string) => {
+    const path = resolve(this.normalizeKey(key));
 
-    if (contentLength && contentLength != stream.bytesWritten) {
-      cancel();
-    }
+    return new Promise(async (resolve, reject) => {
+      const stream = createReadStream(path);
 
-    writeJson(`${path}.meta.json`, {
-      "content-type": contentType,
+      stream.once("readable", async () => {
+        try {
+          const { contentType, contentLength } = await getMeta(path);
+
+          resolve({ stream, contentType, contentLength });
+        } catch (error) {
+          stream.destroy();
+          throw normalizeError(error);
+        }
+      });
+
+      stream.once("error", (error: any) => {
+        reject(normalizeError(error));
+      });
     });
-  });
+  };
 
-  // If there's an error on the write stream we don't want to leave
-  // the incomplete file on disk, so simply remove it.
-  stream.once("error", (error) => {
-    stream.destroy(error);
-    cancel();
-  });
+  putObjectStream: PutObjectStream = async (
+    key,
+    { contentType, contentLength } = {}
+  ) => {
+    const path = resolve(this.normalizeKey(key));
 
-  return { stream };
-};
+    await ensureDir(dirname(path));
+
+    const stream = createWriteStream(path, { flags: "w" });
+
+    console.log(`Writing: ${key}`);
+
+    const cancel = () => {
+      console.log(
+        `Removing incomplete file: ${key}, expected ${contentLength} bytes, received ${stream.bytesWritten} bytes`
+      );
+      return unlink(path);
+    };
+
+    stream.once("finish", () => {
+      console.log(`Writing: ${key}.meta.json`);
+
+      if (contentLength && contentLength != stream.bytesWritten) {
+        return cancel();
+      }
+
+      writeJson(`${path}.meta.json`, {
+        "content-type": contentType,
+      });
+    });
+
+    // If there's an error on the write stream we don't want to leave
+    // the incomplete file on disk, so simply remove it.
+    stream.once("error", (error) => {
+      stream.destroy(error);
+      cancel();
+    });
+
+    return { stream };
+  };
+
+  log(line: string) {
+    if (this.config.log) {
+      console.log(line);
+    }
+  }
+
+  error(line: string) {
+    console.error(line);
+  }
+
+  normalizeKey(key: string): string {
+    return `${this.config.storagePath}/${key}`;
+  }
+}
 
 const getMeta = async (
   path: string
