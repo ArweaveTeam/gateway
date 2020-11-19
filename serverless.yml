@@ -151,6 +151,7 @@ package:
     - terraform/**
     - test/**
     - tls/**
+    - V2/**
     - /*
   include:
     - dist/**

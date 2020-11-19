@@ -28,11 +28,11 @@ export const handler = createQueueHandler<ImportTx>(
 
     if (tx) {
       log.info(`[import-txs] importing tx header`, { id });
-      return await save(pool, tx);
+      await save(pool, tx);
     }
 
     if (id) {
-      return await save(pool, await fetchTransactionHeader(id));
+      await save(pool, await fetchTransactionHeader(id));
     }
 
     await handleBundle(pool, header);
