@@ -68,11 +68,12 @@ interface TxQuery {
   id?: string;
   ids?: string[];
   tags?: TagFilter[];
+  parents?: string[];
   limit?: number;
   offset?: number;
   select?: any;
   blocks?: boolean;
-  since?: ISO8601DateTimeString;
+  before?: ISO8601DateTimeString;
   sortOrder?: TxSortOrder;
   status?: "any" | "confirmed" | "pending";
   pendingMinutes?: number;
@@ -86,13 +87,14 @@ export const query = (
     to,
     from,
     tags,
+    parents,
     limit = 100000,
     offset = 0,
     id,
     ids,
     status,
     select,
-    since,
+    before,
     blocks = false,
     sortOrder = "HEIGHT_DESC",
     pendingMinutes = 60,
@@ -105,7 +107,7 @@ export const query = (
     .select(
       select || {
         id: "transactions.id",
-        heihgt: "transactions.height",
+        height: "transactions.height",
         tags: "transactions.tags",
       }
     )
@@ -131,8 +133,8 @@ export const query = (
     query.whereNotNull("transactions.height");
   }
 
-  if (since) {
-    query.where("transactions.created_at", "<", since);
+  if (before) {
+    query.where("transactions.created_at", "<", before);
   }
 
   if (id) {
@@ -141,6 +143,10 @@ export const query = (
 
   if (ids) {
     query.whereIn("transactions.id", ids);
+  }
+
+  if (parents) {
+    query.whereIn("transactions.parent", parents);
   }
 
   if (to) {

@@ -174,8 +174,7 @@ interface BlockQuery {
   limit?: number;
   offset?: number;
   select?: any;
-  since?: ISO8601DateTimeString;
-
+  before?: ISO8601DateTimeString;
   sortOrder?: BlockSortOrder;
   minHeight?: number;
   maxHeight?: number;
@@ -185,31 +184,17 @@ export const queryBlocks = (
   connection: knex,
   {
     limit = 100000,
+    select,
     offset = 0,
+    before,
     id,
     ids,
-    select,
-    since,
     sortOrder = "HEIGHT_DESC",
     minHeight = -1,
     maxHeight = -1,
   }: BlockQuery
 ): knex.QueryBuilder => {
-  const query = connection
-    .queryBuilder()
-    .select(
-      select || {
-        id: "blocks.id",
-        timestamp: "blocks.timestamp",
-        height: "blocks.height",
-        previous: "blocks.previous",
-      }
-    )
-    .from("blocks");
-
-  if (since) {
-    query.where("blocks.created_at", "<", since);
-  }
+  const query = connection.queryBuilder().select(select).from("blocks");
 
   if (id) {
     query.where("blocks.id", id);
@@ -217,6 +202,10 @@ export const queryBlocks = (
 
   if (ids) {
     query.whereIn("blocks.id", ids);
+  }
+
+  if (before) {
+    query.where("blocks.created_at", "<", before);
   }
 
   if (minHeight >= 0) {
