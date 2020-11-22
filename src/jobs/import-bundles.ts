@@ -21,11 +21,14 @@ import {
 } from "../database/postgres";
 import { streamToJson, fromB64Url } from "../lib/encoding";
 import { wait, sequentialBatch } from "../lib/helpers";
-import { saveBundleDataItem } from "../database/transaction-db";
+import {
+  saveBundleDataItem,
+  saveBundleDataItems,
+} from "../database/transaction-db";
 import { put } from "../lib/buckets";
 
-const MAX_RETRY = 10;
-const RETRY_BACKOFF_SECONDS = 30;
+const MAX_RETRY = 5;
+const RETRY_BACKOFF_SECONDS = 300;
 
 export const handler = createQueueHandler<ImportBundle>(
   getQueueUrl("import-bundles"),
@@ -58,9 +61,21 @@ export const handler = createQueueHandler<ImportBundle>(
     if (stream) {
       const data = await streamToJson<DataBundleWrapper>(stream);
 
+      data.items.forEach((item) => {
+        const fields = Object.keys(item);
+        const requiredFields = ["id", "owner", "signature", "data"];
+        requiredFields.forEach((requiredField) => {
+          if (!fields.includes(requiredField)) {
+            throw new Error(
+              `Invalid bundle detected, missing required field: ${requiredField}`
+            );
+          }
+        });
+      });
+
       try {
         await Promise.all([
-          sequentialBatch(data.items, 100, async (items: DataBundleItem[]) => {
+          sequentialBatch(data.items, 200, async (items: DataBundleItem[]) => {
             await Promise.all(
               items.map(async (item) => {
                 const contentType = getTagValue(item.tags, "content-type");
@@ -73,28 +88,13 @@ export const handler = createQueueHandler<ImportBundle>(
               })
             );
           }),
-          sequentialBatch(data.items, 5, async (items: DataBundleItem[]) => {
-            await Promise.all(
-              items.map(async (item) => {
-                const contentType = getTagValue(item.tags, "content-type");
-
-                const bundleData = fromB64Url(item.data);
-
-                log.info("[import-bundles] importing tx bundle item", {
-                  attempts,
-                  bundle: tx.id,
-                  item: item.id,
-                  contentType,
-                  contentLength: bundleData.byteLength,
-                });
-                await saveBundleDataItem(pool, item, { parent: tx.id });
-              })
-            );
+          sequentialBatch(data.items, 100, async (items: DataBundleItem[]) => {
+            await saveBundleDataItems(pool, tx.id, items);
           }),
         ]);
-        await complete(pool, tx.id, { attempts });
+        await complete(pool, tx.id, { attempts: incrementedAttempts });
       } catch (error) {
-        log.error("error", error?.message);
+        log.error("error", error);
         await retry(pool, tx, { attempts: incrementedAttempts });
       }
     } else {
@@ -119,7 +119,7 @@ const retry = async (
   header: TransactionHeader,
   { attempts }: { attempts: number }
 ) => {
-  if (attempts && attempts >= MAX_RETRY) {
+  if (attempts && attempts >= MAX_RETRY + 1) {
     return saveBundleStatus(connection, [
       {
         id: header.id,
@@ -128,6 +128,7 @@ const retry = async (
       },
     ]);
   }
+  const delay = attempts * RETRY_BACKOFF_SECONDS;
   return Promise.all([
     saveBundleStatus(connection, [
       {
@@ -139,7 +140,7 @@ const retry = async (
     enqueue<ImportBundle>(
       getQueueUrl("import-bundles"),
       { header },
-      { delaySeconds: attempts * RETRY_BACKOFF_SECONDS }
+      { delaySeconds: Math.min(delay, 900) }
     ),
   ]);
 };

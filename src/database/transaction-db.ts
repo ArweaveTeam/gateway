@@ -12,9 +12,10 @@ import {
   sha256B64Url,
   ISO8601DateTimeString,
 } from "../lib/encoding";
-import { pick } from "lodash";
+import { pick, uniqBy } from "lodash";
 import moment from "moment";
 import { TagFilter } from "../gateway/routes/graphql-v2/schema/types";
+import { sequentialBatch } from "../lib/helpers";
 
 interface DatabaseTag {
   tx_id: string;
@@ -81,7 +82,7 @@ interface TxQuery {
   maxHeight?: number;
 }
 
-export const query = (
+export const query = <T = any[]>(
   connection: knex,
   {
     to,
@@ -101,33 +102,35 @@ export const query = (
     minHeight = -1,
     maxHeight = -1,
   }: TxQuery
-): knex.QueryBuilder => {
+): knex.QueryBuilder<T, T> => {
   const query = connection
-    .queryBuilder()
-    .select(
+    .queryBuilder<T, T>()
+    .select<T, T>(
       select || {
         id: "transactions.id",
         height: "transactions.height",
         tags: "transactions.tags",
       }
     )
-    .from("transactions");
+    .from<T, T>("transactions");
 
   if (blocks) {
     query.leftJoin("blocks", "transactions.height", "blocks.height");
   }
 
-  query.where((query) => {
-    // Include recent pending transactions up to pendingMinutes old.
-    // After this threshold they will be considered orphaned so not included in results.
-    query
-      .whereNotNull("transactions.height")
-      .orWhere(
+  if (pendingMinutes >= 0) {
+    query.where((query) => {
+      // Include recent pending transactions up to pendingMinutes old.
+      // After this threshold they will be considered orphaned so not included in results.
+      query.whereNotNull("transactions.height");
+
+      query.orWhere(
         "transactions.created_at",
         ">",
         moment().subtract(pendingMinutes, "minutes").toISOString()
       );
-  });
+    });
+  }
 
   if (status == "confirmed") {
     query.whereNotNull("transactions.height");
@@ -265,6 +268,61 @@ export const saveBundleDataItem = async (
         table: "tags",
         conflictKeys: ["tx_id", "index"],
         rows: txTagsToRows(tx.id, tx.tags),
+      });
+    }
+  });
+};
+
+export const saveBundleDataItems = async (
+  connection: knex,
+  bundleId: string,
+  items: DataBundleItem[]
+) => {
+  return await connection.transaction(async (knexTransaction) => {
+    console.log(`[import-bundles] importing tx bundle items to gql db`, {
+      bundle: bundleId,
+      batchSize: items.length,
+    });
+
+    const tags: DatabaseTag[] = [];
+
+    const rows = uniqBy(items, "id").map((item) => {
+      if (item.tags.length > 0) {
+        tags.push(...txTagsToRows(item.id, item.tags));
+      }
+      return {
+        parent: bundleId,
+        format: 1,
+        id: item.id,
+        signature: item.signature,
+        owner: item.owner,
+        owner_address: sha256B64Url(fromB64Url(item.owner)),
+        target: item.target || "",
+        reward: 0,
+        last_tx: item.nonce || "",
+        tags: JSON.stringify(item.tags || []),
+        quantity: 0,
+        data_size: fromB64Url((item as any).data).byteLength,
+      };
+    });
+
+    await upsert(knexTransaction, {
+      table: "transactions",
+      conflictKeys: ["id"],
+      rows: rows,
+    });
+
+    if (tags.length > 0) {
+      await sequentialBatch(tags, 500, async (items: DatabaseTag[]) => {
+        console.log(`[import-bundles] importing tx bundle tags to gql db`, {
+          bundle: bundleId,
+          batchSize: items.length,
+        });
+        await upsert(knexTransaction, {
+          table: "tags",
+          conflictKeys: ["tx_id", "index"],
+          rows: tags,
+        });
       });
     }
   });

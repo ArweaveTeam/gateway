@@ -92,7 +92,7 @@ const handleBundle = async (connection: Knex, tx: TransactionHeader) => {
 
 const isBundle = (tx: TransactionHeader): boolean => {
   return (
-    getTagValue(tx.tags, "content-type") == "application/json" &&
+    // getTagValue(tx.tags, "content-type") == "application/json" &&
     getTagValue(tx.tags, "bundle-format") == "json" &&
     getTagValue(tx.tags, "bundle-version") == "1.0.0"
   );
