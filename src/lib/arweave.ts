@@ -371,7 +371,7 @@ const getFirstResponse = async <T = any>(
     [200, 201, 202, 208].includes(status);
 
   return new Promise(async (resolve) => {
-    let isResolved = false;
+    let isResolved: AbortController | null = null;
     await Promise.all(
       shuffle(urls).map(async (url, index) => {
         await new Promise((resolve) => setTimeout(resolve, index * 500));
@@ -383,6 +383,7 @@ const getFirstResponse = async <T = any>(
         log.info(`[proxy] requesting`, { url });
 
         const controller = new AbortController();
+
         controllers.push(controller);
 
         try {
@@ -399,20 +400,25 @@ const getFirstResponse = async <T = any>(
                   headers: response.headers,
                 })
           ) {
-            isResolved = true;
-            controllers.forEach((requestController) => {
-              if (requestController != controller) {
-                requestController.abort();
-              }
-            });
-            resolve({
-              body: response.body as Readable,
-              status: response.status,
-              headers: response.headers,
-            });
+            if (!isResolved) {
+              isResolved = controller;
+              resolve({
+                body: response.body as Readable,
+                status: response.status,
+                headers: response.headers,
+              });
+
+              controllers.forEach((requestController) => {
+                // Don't cancel the successful request
+                if (requestController != controller) {
+                  requestController.abort();
+                }
+              });
+            }
           }
         } catch (error) {
-          if (error.type != "aborted") {
+          console.error(error);
+          if (!error.type || (error.type && error.type != "aborted")) {
             log.warn(`[arweave] request error`, {
               message: error.message,
               url,
