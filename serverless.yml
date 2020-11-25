@@ -80,6 +80,8 @@ functions:
   dispatch-txs:
     handler: dist/jobs/dispatch-txs.handler
     timeout: 25
+    memorySize: 256
+    reservedConcurrency: 20
     events:
       - sqs:
           batchSize: 10
@@ -89,6 +91,8 @@ functions:
   import-txs:
     handler: dist/jobs/import-txs.handler
     timeout: 60
+    memorySize: 256
+    reservedConcurrency: 20
     events:
       - sqs:
           batchSize: 10
@@ -98,6 +102,8 @@ functions:
   import-bundles:
     handler: dist/jobs/import-bundles.handler
     timeout: 180
+    memorySize: 1536
+    reservedConcurrency: 35
     events:
       - sqs:
           batchSize: 1
@@ -106,7 +112,9 @@ functions:
 
   import-blocks:
     handler: dist/jobs/import-blocks.handler
-    timeout: 300
+    timeout: 30
+    memorySize: 512
+    reservedConcurrency: 1
     events:
       - sqs:
           batchSize: 1
@@ -115,7 +123,9 @@ functions:
 
   import-chunks:
     handler: dist/jobs/import-chunks.handler
-    timeout: 120
+    timeout: 30
+    memorySize: 128
+    reservedConcurrency: 20
     events:
       - sqs:
           batchSize: 1
@@ -125,6 +135,8 @@ functions:
   export-chunks:
     handler: dist/jobs/export-chunks.handler
     timeout: 30
+    memorySize: 128
+    reservedConcurrency: 35
     events:
       - sqs:
           batchSize: 10
@@ -309,7 +321,7 @@ resources:
         FifoQueue: true
         MessageRetentionPeriod: 1209600 #14 days in seconds, max supported value
         ReceiveMessageWaitTimeSeconds: 10
-        VisibilityTimeout: 120
+        VisibilityTimeout: 30
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportBlocksDLQ, Arn]
