@@ -106,7 +106,7 @@ functions:
 
   import-blocks:
     handler: dist/jobs/import-blocks.handler
-    timeout: 120
+    timeout: 300
     events:
       - sqs:
           batchSize: 1
@@ -152,6 +152,7 @@ package:
     - test/**
     - tls/**
     - V2/**
+    - v2/**
     - /*
   include:
     - dist/**
@@ -239,7 +240,7 @@ resources:
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportTxsDLQ, Arn]
-          maxReceiveCount: 2
+          maxReceiveCount: 5
 
     SQSImportTxsDLQ:
       Type: AWS::SQS::Queue
@@ -312,7 +313,7 @@ resources:
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [SQSImportBlocksDLQ, Arn]
-          maxReceiveCount: 2
+          maxReceiveCount: 1
 
     SQSImportBlocksDLQ:
       Type: AWS::SQS::Queue

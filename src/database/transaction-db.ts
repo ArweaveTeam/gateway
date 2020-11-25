@@ -347,18 +347,22 @@ const txToRow = ({ tx }: { tx: TransactionHeader | DataBundleItem }) => {
 };
 
 const txTagsToRows = (tx_id: string, tags: Tag[]): DatabaseTag[] => {
-  return tags.map((tag, index) => {
-    const { name, value } = utf8DecodeTag(tag);
-    return {
-      tx_id,
-      index,
-      name,
-      value,
-      // value_numeric:
-      //   value && value.match(/^-?\d{1,20}$/) == null ? undefined : value,
-      // For now we're just filtering for numeric looking values, as JS ints
-      // and postgres ints have different max safe values we don't want to parse it in JS
-      // This needs more work in future to align the two.
-    };
-  });
+  return (
+    tags
+      .map((tag, index) => {
+        const { name, value } = utf8DecodeTag(tag);
+
+        return {
+          tx_id,
+          index,
+          name,
+          value,
+        };
+      })
+      // The name and values columns are indexed, so ignore any values that are too large.
+      // Postgres will throw an error otherwise: index row size 5088 exceeds maximum 2712 for index "tags_name_value"
+      .filter(
+        ({ name, value }) => (name?.length || 0) + (value?.length || 0) < 2712
+      )
+  );
 };

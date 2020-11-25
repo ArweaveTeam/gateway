@@ -80,17 +80,11 @@ export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
       try {
         await retry(
           {
-            retryCount: 3,
-            retryDelay: 500,
-            timeout: 5000,
+            retryCount: 2,
+            retryDelay: 1000,
+            timeout: 10000,
           },
           async (attempt, { reject }) => {
-            log.info(`[broadcast-chunk] sending`, {
-              attempt,
-              host,
-              chunk: chunk.data_root,
-            });
-
             const response = await fetch(`${host}/chunk`, {
               method: "POST",
               body: JSON.stringify({
@@ -102,17 +96,20 @@ export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
               timeout: 10000,
             });
 
-            log.info(`[broadcast-chunk] sent`, {
-              attempt,
-              host,
-              chunk: chunk.data_root,
-              status: response.status,
-              body: await response.text(),
-            });
+            if (!response.ok) {
+              log.warn(`[broadcast-chunk] response`, {
+                attempt,
+                host,
+                chunk: chunk.data_root,
+                status: response.status,
+                body: await response.text(),
+              });
+            }
 
             // Don't even retry on these codes
             if ([400, 410].includes(response.status)) {
               reject(response.status);
+              return false;
             }
 
             return response.ok;
@@ -129,22 +126,21 @@ export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
 
         success++;
       } catch (error) {
-        log.warn(`[broadcast-chunk] failed to broadcast`, {
+        log.warn(`[broadcast-chunk] failed to broadcast: ${host}`, {
           error: error.message,
-          host,
           chunk: chunk.data_root,
         });
       }
     })
   );
 
-  log.warn(`[broadcast-chunk] complete`, {
-    success,
-  });
-
   if (success < 3) {
     throw new Error(`Failed to successfully broadcast to >=3 nodes`);
   }
+
+  log.log(`[broadcast-chunk] complete`, {
+    success,
+  });
 }
 
 const wait = async (timeout: number) =>

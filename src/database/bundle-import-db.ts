@@ -4,7 +4,7 @@ import { String } from "aws-sdk/clients/acm";
 
 export interface DataBundleStatus {
   id: string;
-  status: "pending" | "complete" | "error";
+  status: "pending" | "complete" | "error" | "invalid";
   attempts: number;
   error: string | null;
 }

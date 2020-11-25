@@ -89,14 +89,12 @@ export const saveBlocks = async (
       }),
     });
 
-    const queries = [
-      upsert(knexTransaction, {
-        table: "blocks",
-        conflictKeys: ["height"],
-        rows: blocks.map(serialize),
-        transaction: knexTransaction,
-      }),
-    ];
+    await upsert(knexTransaction, {
+      table: "blocks",
+      conflictKeys: ["height"],
+      rows: blocks.map(serialize),
+      transaction: knexTransaction,
+    });
 
     const blockTxMappings: TxBlockHeight[] = blocks.reduce((map, block) => {
       return map.concat(
@@ -108,25 +106,21 @@ export const saveBlocks = async (
 
     await sequentialBatch(
       blockTxMappings,
-      5000,
+      100,
       async (batch: TxBlockHeight[]) => {
         log.info(`[block-db] setting tx block heights`, {
           txs: batch.map((item) => {
             return { id: item.id, height: item.height };
           }),
         });
-        queries.push(
-          upsert(knexTransaction, {
-            table: "transactions",
-            conflictKeys: ["id"],
-            rows: batch,
-            transaction: knexTransaction,
-          })
-        );
+        await upsert(knexTransaction, {
+          table: "transactions",
+          conflictKeys: ["id"],
+          rows: batch,
+          transaction: knexTransaction,
+        });
       }
     );
-
-    await Promise.all(queries);
   });
 };
 

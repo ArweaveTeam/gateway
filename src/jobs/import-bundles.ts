@@ -20,14 +20,11 @@ import {
   releaseConnectionPool,
 } from "../database/postgres";
 import { streamToJson, fromB64Url } from "../lib/encoding";
-import { wait, sequentialBatch } from "../lib/helpers";
-import {
-  saveBundleDataItem,
-  saveBundleDataItems,
-} from "../database/transaction-db";
+import { sequentialBatch } from "../lib/helpers";
+import { saveBundleDataItems } from "../database/transaction-db";
 import { put } from "../lib/buckets";
 
-const MAX_RETRY = 5;
+const MAX_RETRY = 9;
 const RETRY_BACKOFF_SECONDS = 300;
 
 export const handler = createQueueHandler<ImportBundle>(
@@ -61,17 +58,16 @@ export const handler = createQueueHandler<ImportBundle>(
     if (stream) {
       const data = await streamToJson<DataBundleWrapper>(stream);
 
-      data.items.forEach((item) => {
-        const fields = Object.keys(item);
-        const requiredFields = ["id", "owner", "signature", "data"];
-        requiredFields.forEach((requiredField) => {
-          if (!fields.includes(requiredField)) {
-            throw new Error(
-              `Invalid bundle detected, missing required field: ${requiredField}`
-            );
-          }
+      try {
+        await validate(data);
+      } catch (error) {
+        log.error("error", { id: tx.id, error });
+        await invalid(pool, tx.id, {
+          attempts: incrementedAttempts,
+          error: error.message,
         });
-      });
+        return;
+      }
 
       try {
         await Promise.all([
@@ -95,11 +91,17 @@ export const handler = createQueueHandler<ImportBundle>(
         await complete(pool, tx.id, { attempts: incrementedAttempts });
       } catch (error) {
         log.error("error", error);
-        await retry(pool, tx, { attempts: incrementedAttempts });
+        await retry(pool, tx, {
+          attempts: incrementedAttempts,
+          error: error.message + error.stack || "",
+        });
       }
     } else {
       log.error("Data not available, requeuing");
-      await retry(pool, tx, { attempts: incrementedAttempts });
+      await retry(pool, tx, {
+        attempts: incrementedAttempts,
+        error: "Data not yet available",
+      });
     }
   },
   {
@@ -117,7 +119,7 @@ export const handler = createQueueHandler<ImportBundle>(
 const retry = async (
   connection: Knex,
   header: TransactionHeader,
-  { attempts }: { attempts: number }
+  { attempts, error }: { attempts: number; error?: any }
 ) => {
   if (attempts && attempts >= MAX_RETRY + 1) {
     return saveBundleStatus(connection, [
@@ -125,6 +127,7 @@ const retry = async (
         id: header.id,
         status: "error",
         attempts,
+        error,
       },
     ]);
   }
@@ -135,6 +138,7 @@ const retry = async (
         id: header.id,
         status: "pending",
         attempts,
+        error: error || null,
       },
     ]),
     enqueue<ImportBundle>(
@@ -155,6 +159,36 @@ const complete = async (
       id,
       status: "complete",
       attempts,
+      error: null,
     },
   ]);
+};
+
+const invalid = async (
+  connection: Knex,
+  id: string,
+  { attempts, error }: { attempts: number; error?: string }
+) => {
+  await saveBundleStatus(connection, [
+    {
+      id,
+      status: "invalid",
+      attempts,
+      error: error || null,
+    },
+  ]);
+};
+
+const validate = (bundle: { items: DataBundleItem[] }) => {
+  bundle.items.forEach((item) => {
+    const fields = Object.keys(item);
+    const requiredFields = ["id", "owner", "signature", "data"];
+    requiredFields.forEach((requiredField) => {
+      if (!fields.includes(requiredField)) {
+        throw new Error(
+          `Invalid bundle detected, missing required field: ${requiredField}`
+        );
+      }
+    });
+  });
 };
