@@ -31,7 +31,7 @@ type Query {
     """
     Find transactions within a given block height range.
     """
-    block: BlockHeightFilter
+    block: BlockFilter
     """
     Result page size (max: 100)
     """
@@ -57,7 +57,7 @@ type Query {
     """
     Find blocks within a given block height range.
     """
-    height: BlockHeightFilter
+    height: BlockFilter
 
     """
     Result page size (max: 100)
@@ -119,7 +119,7 @@ input TagFilter {
 """
 Find blocks within a given range
 """
-input BlockHeightFilter {
+input BlockFilter {
   """
   Minimum block height to filter from
   """
