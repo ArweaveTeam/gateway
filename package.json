@@ -1,12 +1,19 @@
 {
-  "name": "gateway-test",
+  "name": "@arweave/gateway",
   "version": "1.0.0",
-  "description": "gateway-test",
-  "main": "index.js",
+  "description": "Arweave Gateway Prototype",
+  "main": "src/gateway/app.ts",
   "scripts": {
+    "build": "tsc && cp ./src/gateway/routes/graphql-v2/schema/types.graphql ./dist/gateway/routes/graphql-v2/schema/types.graphql",
+    "dev": "npm run build && node dist/gateway/app.js",
+    "docker:start": "docker-compose up --build -d",
+    "docker:stop": "docker-compose down -v",
+    "migrate:latest": "knex migrate:latest",
+    "migrate:up": "knex migrate:up",
+    "migrate:down": "knex migrate:down",
+
     "install-dnsmasq": "bash scripts/install-dnsmasq.sh",
     "terraform": "cd terraform/environments/dev && terraform apply",
-    "build": "tsc && cp ./src/gateway/routes/graphql-v2/schema/types.graphql ./dist/gateway/routes/graphql-v2/schema/types.graphql",
     "docker-build-prod": "docker build -t gateway-prod .",
     "docker-build-dev": "docker build -t gateway-dev .",
     "docker-run-prod": "docker run --env-file=.env --env AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY) --env AWS_ACCESS_KEY_ID=$(echo $AWS_ACCESS_KEY_ID) --env AWS_REGION=$(echo $AWS_REGION) --env AWS_SESSION_TOKEN=$(echo $AWS_SESSION_TOKEN) -it -p 3000:3000 gateway-prod",
@@ -32,21 +39,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arweave-kyle/gateway-test.git"
+    "url": "git+https://github.com/ArweaveTeam/gateway.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/arweave-kyle/gateway-test/issues"
-  },
-  "homepage": "https://github.com/arweave-kyle/gateway-test#readme",
+  "keywords": [
+    "arweave",
+    "gateway",
+    "graphql",
+    "typescript"
+  ],
+  "author": "Arweave Team <hello@arweave.org>",
+  "license": "MIT",
+  "bugs": { "url": "https://github.com/ArweaveTeam/gateway/issues" },
+  "homepage": "https://github.com/ArweaveTeam/gateway#README.md",
   "dependencies": {
     "@hapi/joi": "^17.1.1",
     "@sentry/node": "^5.19.0",
     "abort-controller": "^3.0.0",
     "apollo-server-express": "^2.16.0",
-    "arweave": "github:arweaveteam/arweave-js#a6ef78771d43361bfb09c66f252630ce98e21326",
+    "arweave": "^1.10.0",
     "async-retry": "^1.3.1",
     "aws-sdk": "^2.709.0",
     "body-parser": "^1.19.0",

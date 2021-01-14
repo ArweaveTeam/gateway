@@ -1,4 +1,3 @@
-import AWS from "aws-sdk";
 import knex, { StaticConnectionConfig } from "knex";
 import log from "../lib/log";
 import { wait } from "../lib/helpers";
@@ -52,8 +51,6 @@ interface PoolConfig {
   max: number;
 }
 
-const rds = new AWS.RDS();
-
 export const createConnectionPool = (
   mode: ConnectionMode,
   { min, max }: PoolConfig = { min: 1, max: 10 }
@@ -63,7 +60,7 @@ export const createConnectionPool = (
     write: process.env.ARWEAVE_DB_WRITE_HOST,
   }[mode];
 
-  const hostDisplayName = `${process.env.AWS_REGION} ${mode}@${host}:${5432}`;
+  const hostDisplayName = `${process.env.DATABASE_USER}@${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}`;
 
   log.info(`[postgres] connecting to db: ${hostDisplayName}`);
 
@@ -77,38 +74,16 @@ export const createConnectionPool = (
       reapIntervalMillis: 40000,
     },
     connection: async (): Promise<StaticConnectionConfig> => {
-      return new Promise((resolve, reject) => {
-        log.info("[postgres] authenticating new db connection");
-        new AWS.RDS.Signer().getAuthToken(
-          {
-            region: process.env.AWS_REGION,
-            hostname: host,
-            port: 5432,
-            username: mode,
-          },
-          (error, token) => {
-            if (error) {
-              log.error(
-                `[postgres] failed to authenticate  ${hostDisplayName}`,
-                error
-              );
-              reject(error);
-            }
-            log.info(
-              `[postgres] successfully authenticated  ${hostDisplayName}`
-            );
-            resolve({
-              host: host!,
-              user: mode,
-              database: process.env.ARWEAVE_DB_SCHEMA!,
-              ssl: {
-                rejectUnauthorized: false,
-              },
-              password: token,
-              expirationChecker: () => true,
-            });
-          }
-        );
+      return({
+        host: process.env.DATABASE_HOST,
+        port: Number(process.env.DATABASE_PORT),
+        user: process.env.DATABASE_USER,
+        database: process.env.DATABASE_NAME,
+        ssl: {
+          rejectUnauthorized: false,
+        },
+        password: process.env.DATABASE_PASSWORD,
+        expirationChecker: () => true,
       });
     },
   });

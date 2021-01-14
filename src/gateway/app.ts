@@ -1,3 +1,6 @@
+require('dotenv').config();
+require("express-async-errors");
+
 import express from "express";
 import helmet from "helmet";
 import {
@@ -28,15 +31,13 @@ import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 
-require("express-async-errors");
-
 initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
-const port = process.env.APP_PORT;
+const port = process.env.PORT;
 
 app.set("trust proxy", 1);
 

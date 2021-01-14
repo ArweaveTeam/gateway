@@ -1,5 +1,4 @@
 import { config as env } from "dotenv";
-import { RDS } from "aws-sdk";
 import { Config } from "knex";
 
 env();
@@ -9,23 +8,10 @@ module.exports = {
     client: "pg",
     schemaName: process.env.KNEX_ENVIRONMENT,
     connection: {
-      host: process.env.ARWEAVE_DB_WRITE_HOST,
-      database: "arweave",
-      user: "dev",
-      ssl: {
-        rejectUnauthorized: false,
-      },
-      /**
-       * This will generate a database access token for the current IAM user and role,
-       * i.e. your currently active aws-vault profile
-       * https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html
-       */
-      password: new RDS.Signer().getAuthToken({
-        region: process.env.AWS_REGION,
-        hostname: process.env.ARWEAVE_DB_WRITE_HOST,
-        port: 5432,
-        username: "dev",
-      }),
+      host: process.env.DATABASE_HOST,
+      database: process.env.DATABASE_NAME,
+      user: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD
     },
     pool: {
       min: 2,

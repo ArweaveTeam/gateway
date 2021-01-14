@@ -1,4 +1,3 @@
-import { SQS } from "aws-sdk";
 import { readFileSync } from "fs";
 import { sequentialBatch } from "../lib/helpers";
 import { enqueueBatch } from "../lib/queues";
@@ -66,15 +65,6 @@ export async function handler(): Promise<void> {
         })
       ),
     ]);
-
-    // console.log(
-    //   batch.map((id) => {
-    //     return {
-    //       id,
-    //       message: { id },
-    //     };
-    //   })
-    // );
 
     count = count + batch.length;
     console.log(`${count}/${total}`);

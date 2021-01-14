@@ -1,6 +1,5 @@
 import { upsert } from "./postgres";
 import Knex from "knex";
-import { String } from "aws-sdk/clients/acm";
 
 export interface DataBundleStatus {
   id: string;
