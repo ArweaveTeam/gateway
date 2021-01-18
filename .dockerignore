@@ -1,16 +1,19 @@
-# Ignore everything
+# Ignore Everything
 **
 
-# Allow files and directories
+# Include Essential Gateway Files
+!/bin
+!/.env
+!/knexfile.ts
 !/yarn.lock
 !/package.json
 !/package-lock.json
 !/tsconfig.json
 !/src/**
+!/migrations/**
 
 
-# Ignore unnecessary files inside allowed directories
-# This should go after the allowed directories
+# Ignore Unnecessary Files
 **/*.log
 **/.DS_Store
 **/Thumbs.db

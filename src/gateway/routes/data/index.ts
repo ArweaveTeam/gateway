@@ -3,7 +3,6 @@ import {
   resolveManifestPath,
   PathManifest,
 } from "../../../lib/arweave-path-manifest";
-import { getExtension } from "mime";
 import { getStream, putStream, put, get } from "../../../lib/buckets";
 import { RequestHandler, Request, Response } from "express";
 import { streamToJson, jsonToBuffer, fromB64Url } from "../../../lib/encoding";

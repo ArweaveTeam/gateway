@@ -1,9 +1,6 @@
-version: '3.6'
-
 services:
-  
   # Postgres Configuration
-  database:
+  postgres:
     image: postgres:12
     volumes:
       - database:/var/lib/postgresql/data
@@ -13,24 +10,21 @@ services:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
-  
   # Redis Configuration
-  redis:
-    image: redis:5.0.10
+  cache:
+    image: redis:6
     volumes:
       - redis:/var/lib/redis/data
     ports:
       - 6379:6379
-
   # Gateway Configuration
   server:
     build:
       context: .
       dockerfile: ./docker/gateway.dockerfile
     links:
-      - redis
-    environment:
-      REDIS_URL: redis://cache
+      - cache
+      - postgres
     ports: 
       - ${PORT}:${PORT}
     environment:

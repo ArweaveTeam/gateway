@@ -1,18 +1,21 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "target": "es2018",
     "moduleResolution": "node",
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "sourceRoot": "/src",
-    "module": "commonjs",
-    "outDir": "./dist",
+    "target": "ES5",
+    "module": "CommonJS",
+    "lib": ["esnext"],
+    "sourceMap": true,
+    "declaration": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "isolatedModules": false,
+    "downlevelIteration": true,
+    "outDir": "dist"
   },
-  "include": ["src/**/*.ts"]
+  "exclude": ["node_modules"],
+  "include": [
+    "src/**/*.ts",
+  ]
 }

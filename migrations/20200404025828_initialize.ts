@@ -2,37 +2,55 @@ import * as Knex from "knex";
 
 export async function up(knex: Knex): Promise<any> {
   return knex.schema
-    .createSchemaIfNotExists(process.env.KNEX_ENVIRONMENT)
-    .withSchema(process.env.KNEX_ENVIRONMENT)
-    .createTable("transactions", function (table) {
+    .withSchema(process.env.ENVIRONMENT || "public")
+    .createTable("transactions", table => {
       table.string("id", 43).notNullable();
-      table.string("owner", 684).notNullable();
-      table.string("target", 43).notNullable();
-      table.string("content_type", 128).nullable();
-      table.string("quantity").notNullable();
-      table.string("reward").notNullable();
-      table.string("signature", 684).notNullable();
-      table.string("last_tx", 684).notNullable();
-      table.integer("data_size", 8).nullable();
-      table.string("data_root", 8).nullable();
-      table.jsonb("data_tree").nullable();
+      table.string("owner");
+      table.jsonb("tags");
+      table.string("target", 43);
+      table.string("quantity");
+      table.string("reward");
+      table.string("signature");
+      table.string("last_tx");
+      table.integer("data_size", 8);
+      table.string("content_type");
+      table.integer("format", 2);
+      table.timestamp("created_at").defaultTo(knex.fn.now());
+      table.timestamp("deleted_at");
+      table.integer("height", 4);
+      table.string("owner_address", 43);
+      table.string("data_root", 43);
+      table.string("parent", 43);
 
       table.primary(["id"], "pkey_transactions");
     })
-    .createTable("tags", function (table) {
-      table.string("tx", 43).notNullable();
-      table.specificType("index", "smallint").notNullable();
+    .createTable("tags", table => {
+      table.string("tx_id", 43).notNullable();
+      table.integer("index", 4).notNullable();
       table.string("name").notNullable();
       table.string("value").notNullable();
+      table.timestamp("created_at").defaultTo(knex.fn.now());
 
-      table.primary(["tx", "index"], "pkey_tags");
+      table.primary(["tx_id", "index"], "pkey_tags");
       table.index(["name", "value"], "index_name_value", "BTREE");
+    })
+    .createTable("blocks", table => {
+      table.string("id", 43).notNullable();
+      table.integer("height", 4).notNullable();
+      table.timestamp("mined_at").notNullable();
+      table.jsonb("txs").notNullable();
+      table.timestamp("created_at").defaultTo(knex.fn.now());
+      table.jsonb("extended");
+      table.string("previous_block").notNullable();
+
+      table.primary(["id"], "pkey_blocks");
     });
 }
 
 export async function down(knex: Knex): Promise<any> {
   return knex.schema
-    .withSchema(process.env.KNEX_ENVIRONMENT)
+    .withSchema(process.env.ENVIRONMENT || "public")
     .dropTableIfExists("transactions")
-    .dropTableIfExists("tags");
+    .dropTableIfExists("tags")
+    .dropTableIfExists("blocks");
 }

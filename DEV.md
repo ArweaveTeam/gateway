@@ -12,6 +12,17 @@ If you want to develop and contribute to the Gateway source code, use this guide
 
 4. Node.js v12.20.1
 
+## Node Version
+
+*Please note there may be some problems with Node v14 LTS or later. If necessary run*
+
+```bash
+# Install Node.js v12 LTS
+nvm install 12
+# Or just use v12 LTS if already installed
+nvm use 12
+```
+
 ## Configuring Postgres
 
 Before you begin, you'll need to create and configure the Database and User.
@@ -45,16 +56,22 @@ By default, there is a default environment you can use located at `.env.default`
 ```env
 ARWEAVE_NODES=["..."]
 
-DATABASE_HOST=0.0.0.0
+DATABASE_HOST=postgres
 DATABASE_PORT=5432
 DATABASE_USER=arweave
 DATABASE_PASSWORD=arweave
 DATABASE_NAME=arweave
 
+REDIS_HOST=cache
+REDIS_PORT=6379
+
+ENVIRONMENT=public
 PORT=3000
 ```
 
-Make sure you copy this configuration to `.env`
+You will want to change the `DATABASE_HOST` and `REDIS_HOST` to `localhost`.
+
+Make sure you copy this configuration to `.env`.
 
 ```bash
 cp .env.default .env
@@ -62,4 +79,36 @@ cp .env.default .env
 
 ## Deploying Migrations with Knex
 
-TBD...
+For development purposes, you will want to debug Knex migrations.
+
+To spin up the tables for Postgres run:
+
+```bash
+yarn migrate:latest
+```
+
+To drop the tables run:
+
+```bash
+yarn migrate:down
+```
+
+## Developing
+
+Assuming everything was smooth with the above. You can now run.
+
+```bash
+yarn dev
+```
+
+You can now test queries on.
+
+```bash
+http://localhost:3000/graphql
+```
+
+This webpage should look similar to.
+
+```bash
+https://arweave.dev/graphql
+```

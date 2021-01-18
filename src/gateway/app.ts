@@ -12,8 +12,6 @@ import { handler as corsMiddleware } from "./middleware/cors";
 import {
   errorResponseHandler,
   notFoundHandler,
-  sentryCaptureRequestHandler,
-  sentryReportErrorHandler,
 } from "./middleware/error";
 import { handler as jsonBodyMiddleware } from "./middleware/json-body";
 import {
@@ -42,21 +40,13 @@ const port = process.env.PORT;
 app.set("trust proxy", 1);
 
 // Global middleware
-
 app.use(configureRequestLogging);
-
-app.use(sentryCaptureRequestHandler);
-
 app.use(requestLoggingMiddleware);
-
 app.use(helmet.hidePoweredBy());
-
 app.use(corsMiddleware);
-
 app.use(sandboxMiddleware);
 
 // Route handlers
-
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
 });
@@ -96,11 +86,7 @@ app.get(dataPathRegex, dataHandler);
 app.get("*", proxyHandler);
 
 // Error handlers
-
 app.use(notFoundHandler);
-
-app.use(sentryReportErrorHandler);
-
 app.use(errorResponseHandler);
 
 const server = app.listen(port, () => {
