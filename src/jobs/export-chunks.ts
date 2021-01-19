@@ -1,4 +1,4 @@
-import { getQueueUrl, createQueueHandler } from "../lib/queues";
+import { getQueueChannel, createQueueHandler } from "../lib/queues";
 import { get } from "../lib/buckets";
 import { broadcastChunk } from "../lib/broadcast";
 import { ExportChunk } from "../interfaces/messages";
@@ -17,7 +17,7 @@ export const hosts = JSON.parse(
 ) as string[];
 
 export const handler = createQueueHandler<ExportChunk>(
-  getQueueUrl("export-chunks"),
+  getQueueChannel("export-chunks"),
   async (message) => {
     const { header } = message;
 

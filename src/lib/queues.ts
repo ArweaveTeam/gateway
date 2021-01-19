@@ -1,5 +1,4 @@
-import { SQS } from "aws-sdk";
-import { SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
+import { client } from "./redis";
 import log from "../lib/log";
 
 type QueueType =
@@ -9,15 +8,13 @@ type QueueType =
   | "import-bundles"
   | "import-chunks"
   | "export-chunks";
-type SQSQueueUrl = string;
+
+type QueueChannel = string;
 type MessageGroup = string;
 type MessageDeduplicationId = string;
 type DelaySeconds = number;
-interface HandlerContext {
-  sqsMessage?: SQSRecord;
-}
 
-const queues: { [key in QueueType]: SQSQueueUrl } = {
+const queues: { [key in QueueType]: QueueChannel } = {
   "dispatch-txs": process.env.ARWEAVE_SQS_DISPATCH_TXS_URL!,
   "import-chunks": process.env.ARWEAVE_SQS_IMPORT_CHUNKS_URL!,
   "export-chunks": process.env.ARWEAVE_SQS_EXPORT_CHUNKS_URL!,
@@ -26,17 +23,12 @@ const queues: { [key in QueueType]: SQSQueueUrl } = {
   "import-bundles": process.env.ARWEAVE_SQS_IMPORT_BUNDLES_URL!,
 };
 
-const sqs = new SQS({
-  maxRetries: 3,
-  httpOptions: { timeout: 5000, connectTimeout: 5000 },
-});
-
-export const getQueueUrl = (type: QueueType): SQSQueueUrl => {
+export const getQueueChannel = (type: QueueType): QueueChannel => {
   return queues[type];
 };
 
 export const enqueue = async <MessageType extends object>(
-  queueUrl: SQSQueueUrl,
+  queueChannel: QueueChannel,
   message: MessageType,
   options?:
     | {
@@ -46,22 +38,15 @@ export const enqueue = async <MessageType extends object>(
       }
     | undefined
 ) => {
-  if (!queueUrl) {
+  if (!queueChannel) {
     throw new Error(`Queue URL undefined`);
   }
-  await sqs
-    .sendMessage({
-      QueueUrl: queueUrl,
-      MessageBody: JSON.stringify(message),
-      MessageGroupId: options && options.messagegroup,
-      MessageDeduplicationId: options && options.deduplicationId,
-      DelaySeconds: options && options.delaySeconds,
-    })
-    .promise();
+
+  client.publish(queueChannel, JSON.stringify(message));
 };
 
 export const enqueueBatch = async <MessageType extends object>(
-  queueUrl: SQSQueueUrl,
+  queueChannel: QueueChannel,
   messages: {
     id: string;
     message: MessageType;
@@ -69,55 +54,31 @@ export const enqueueBatch = async <MessageType extends object>(
     deduplicationId?: MessageDeduplicationId;
   }[]
 ) => {
-  await sqs
-    .sendMessageBatch({
-      QueueUrl: queueUrl,
-      Entries: messages.map((message) => {
-        return {
-          Id: message.id,
-          MessageBody: JSON.stringify(message),
-          MessageGroupId: message.messagegroup,
-          MessageDeduplicationId: message.deduplicationId,
-        };
-      }),
-    })
-    .promise();
-};
-
-const deleteMessages = async (
-  queueUrl: SQSQueueUrl,
-  receipts: { Id: string; ReceiptHandle: string }[]
-) => {
-  if (!receipts.length) {
-    return;
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    client.publish(queueChannel, JSON.stringify(message));
   }
-  await sqs
-    .deleteMessageBatch({
-      QueueUrl: queueUrl,
-      Entries: receipts,
-    })
-    .promise();
 };
 
 export const createQueueHandler = <MessageType>(
-  queueUrl: SQSQueueUrl,
-  handler: (message: MessageType, sqsMessage: SQSRecord) => Promise<void>,
+  queueChannel: QueueChannel,
+  handler: (message: MessageType, sqsMessage) => Promise<void>,
   hooks?: {
     before?: () => Promise<void>;
     after?: () => Promise<void>;
   }
-): SQSHandler => {
-  return async (event: SQSEvent) => {
+) => {
+  return async (event) => {
     if (hooks && hooks.before) {
       await hooks.before();
     }
     try {
       if (!event) {
-        log.info(`[sqs-handler] invalid SQS messages received`, { event });
-        throw new Error("Queue handler: invalid SQS messages received");
+        log.info(`[queue-handler] invalid Queue messages received`, { event });
+        throw new Error("Queue handler: invalid Queue messages received");
       }
 
-      log.info(`[sqs-handler] received messages`, {
+      log.info(`[queue-handler] received messages`, {
         count: event.Records.length,
         source: event.Records[0].eventSourceARN,
       });
@@ -128,7 +89,7 @@ export const createQueueHandler = <MessageType>(
 
       await Promise.all(
         event.Records.map(async (sqsMessage) => {
-          log.info(`[sqs-handler] processing message`, { sqsMessage });
+          log.info(`[queue-handler] processing message`, { sqsMessage });
           try {
             await handler(
               JSON.parse(sqsMessage.body) as MessageType,
@@ -139,7 +100,7 @@ export const createQueueHandler = <MessageType>(
               ReceiptHandle: sqsMessage.receiptHandle,
             });
           } catch (error) {
-            log.error(`[sqs-handler] error processing message`, {
+            log.error(`[queue-handler] error processing message`, {
               event,
               error,
             });
@@ -148,12 +109,10 @@ export const createQueueHandler = <MessageType>(
         })
       );
 
-      log.info(`[sqs-handler] queue handler complete`, {
+      log.info(`[queue-handler] queue handler complete`, {
         successful: receipts.length,
         failed: event.Records.length - receipts.length,
       });
-
-      await deleteMessages(queueUrl, receipts);
 
       if (receipts.length !== event.Records.length) {
         log.warn(
@@ -163,11 +122,11 @@ export const createQueueHandler = <MessageType>(
         // If all the errors are the same then fail the whole queue with a more specific error mesage
         if (errors.every((error) => error.message == errors[0].message)) {
           throw new Error(
-            `Failed to process SQS messages: ${errors[0].message}`
+            `Failed to process Queue messages: ${errors[0].message}`
           );
         }
 
-        throw new Error(`Failed to process SQS messages`);
+        throw new Error(`Failed to process Queue messages`);
       }
     } finally {
       if (hooks && hooks.after) {

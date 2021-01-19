@@ -1,4 +1,4 @@
-import { getQueueUrl, createQueueHandler } from "../lib/queues";
+import { getQueueChannel, createQueueHandler } from "../lib/queues";
 import { ImportChunk } from "../interfaces/messages";
 import { saveChunk } from "../database/chunk-db";
 import {
@@ -10,7 +10,7 @@ import log from "../lib/log";
 import { wait } from "../lib/helpers";
 
 export const handler = createQueueHandler<ImportChunk>(
-  getQueueUrl("import-chunks"),
+  getQueueChannel("import-chunks"),
   async ({ header, size }) => {
     const pool = getConnectionPool("write");
     log.info(`[import-chunks] importing chunk`, {

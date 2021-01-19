@@ -14,15 +14,15 @@ import {
 import { ImportBlock, ImportTx } from "../interfaces/messages";
 import { Block, fetchBlock } from "../lib/arweave";
 import { sequentialBatch, wait } from "../lib/helpers";
-import { createQueueHandler, enqueueBatch, getQueueUrl } from "../lib/queues";
+import { createQueueHandler, enqueueBatch, getQueueChannel } from "../lib/queues";
 import log from "../lib/log";
 
 export const handler = createQueueHandler<ImportBlock>(
-  getQueueUrl("import-blocks"),
+  getQueueChannel("import-blocks"),
   async ({ block, source }) => {
     log.info(`[import-txs] importing block`, { id: block.indep_hash, source });
 
-    const txImportQueueUrl = await getQueueUrl("import-txs");
+    const txImportQueueUrl = await getQueueChannel("import-txs");
     const pool = getConnectionPool("write");
 
     await pool.transaction(async (knexTransaction) => {

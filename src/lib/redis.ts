@@ -12,7 +12,7 @@ log.info(`[redis] Redis client connecting...`, {
   enableOfflineQueue,
 });
 
-let client: RedisClient = createClient(port, host, {
+export const client: RedisClient = createClient(port, host, {
   string_numbers: true,
   enable_offline_queue: enableOfflineQueue,
 });

@@ -1,6 +1,6 @@
 # Gateway Development Guide
 
-If you want to develop and contribute to the Gateway source code, use this guide as a reference for development and starting a server. If you're looking to deploy a Gateway. We suggest using the normal guide found [here.](./GUIDE.md)
+If you want to develop and contribute to the Gateway source code, use this guide as a reference for development and starting a server. If you're looking to deploy a Gateway. We suggest using the normal guide found [here.](./README.md)
 
 ## Requirements
 

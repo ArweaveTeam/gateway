@@ -1,6 +1,6 @@
 import { fromB64Url } from "../../../lib/encoding";
 import { Chunk } from "../../../lib/arweave";
-import { enqueue, getQueueUrl } from "../../../lib/queues";
+import { enqueue, getQueueChannel } from "../../../lib/queues";
 import { pick } from "lodash";
 import { ImportChunk, ExportChunk } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
@@ -76,8 +76,8 @@ export const handler: RequestHandler = async (req, res) => {
     put("tx-data", `chunks/${chunk.data_root}/${chunk.offset}`, chunkData, {
       contentType: "application/octet-stream",
     }),
-    enqueue<ImportChunk>(getQueueUrl("import-chunks"), queueItem),
-    enqueue<ExportChunk>(getQueueUrl("export-chunks"), queueItem),
+    enqueue<ImportChunk>(getQueueChannel("import-chunks"), queueItem),
+    enqueue<ExportChunk>(getQueueChannel("export-chunks"), queueItem),
   ]);
 
   res.sendStatus(200).end();

@@ -13,14 +13,14 @@ import {
 } from "../lib/arweave";
 import { wait } from "../lib/helpers";
 import log from "../lib/log";
-import { createQueueHandler, getQueueUrl, enqueue } from "../lib/queues";
+import { createQueueHandler, getQueueChannel, enqueue } from "../lib/queues";
 import {
   getBundleImport,
   saveBundleStatus,
 } from "../database/bundle-import-db";
 
 export const handler = createQueueHandler<ImportTx>(
-  getQueueUrl("import-txs"),
+  getQueueChannel("import-txs"),
   async ({ id, tx }) => {
     const pool = getConnectionPool("write");
 
@@ -82,7 +82,7 @@ const handleBundle = async (connection: Knex, tx: TransactionHeader) => {
           attempts: attempts || 0,
         },
       ]),
-      enqueue<ImportBundle>(getQueueUrl("import-bundles"), { header: tx }),
+      enqueue<ImportBundle>(getQueueChannel("import-bundles"), { header: tx }),
     ]);
     log.info(`[import-txs] successfully queued bundle for import`, {
       id: tx.id,

@@ -1,4 +1,4 @@
-# Gateway Guide
+# Arweave Gateway
 
 ## Requirements
 

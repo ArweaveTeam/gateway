@@ -1,13 +1,8 @@
-import { SNS } from "aws-sdk";
-
-const topicArn = process.env.ARWEAVE_SNS_EVENTS_ARN!;
-const sns = new SNS();
+import { client } from './redis';
 
 export const publish = async <T>(message: T) => {
-  await sns
-    .publish({
-      TopicArn: topicArn,
-      Message: JSON.stringify(message)
-    })
-    .promise();
-};
+  client.publish(
+    'message',
+    JSON.stringify(message)
+  );
+}

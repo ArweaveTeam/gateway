@@ -1,5 +1,5 @@
 import { TransactionHeader, Block } from "../../../lib/arweave";
-import { enqueue, getQueueUrl } from "../../../lib/queues";
+import { enqueue, getQueueChannel } from "../../../lib/queues";
 import { pick } from "lodash";
 import { ImportTx, ImportBlock } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
@@ -47,7 +47,7 @@ export const handler: RequestHandler = async (req, res, next) => {
 
 const importTx = async (tx: TransactionHeader): Promise<void> => {
   let dataSize = tx.data_size || 0;
-  return enqueue<ImportTx>(getQueueUrl("import-txs"), {
+  return enqueue<ImportTx>(getQueueChannel("import-txs"), {
     tx: pick(
       {
         ...tx,
@@ -76,7 +76,7 @@ const importTx = async (tx: TransactionHeader): Promise<void> => {
 
 const importBlock = async ({ source, block }: ImportBlock): Promise<void> => {
   await enqueue<ImportBlock>(
-    getQueueUrl("import-blocks"),
+    getQueueChannel("import-blocks"),
     {
       source: source,
       block: pick(block, [

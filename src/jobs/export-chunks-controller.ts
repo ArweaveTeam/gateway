@@ -1,24 +1,14 @@
-import { getPendingExports, startedExport } from "../database/chunk-db";
-import {
-  getConnectionPool,
-  initConnectionPool,
-  releaseConnectionPool,
-} from "../database/postgres";
-
 import knex from "knex";
-import { wait } from "../lib/helpers";
-import { ScheduledEvent, ScheduledHandler, Context } from "aws-lambda";
-import log from "../lib/log";
-import { enqueue, getQueueUrl } from "../lib/queues";
 import { pick } from "lodash";
+
+import log from "../lib/log";
+import { getPendingExports, startedExport } from "../database/chunk-db";
+import { getConnectionPool, initConnectionPool, releaseConnectionPool } from "../database/postgres";
+import { wait } from "../lib/helpers";
+import { enqueue, getQueueChannel } from "../lib/queues";
 import { ExportChunk } from "../interfaces/messages";
 
-let pool: knex;
-
-export const handler: ScheduledHandler = async (
-  event: ScheduledEvent,
-  context: Context
-) => {
+export const handler = async (event, context) => {
   initConnectionPool("write");
 
   log.info(`[export-chunk-controller] creating db connection`);
@@ -31,13 +21,13 @@ export const handler: ScheduledHandler = async (
   await wait(100);
 
   try {
-    pool = getConnectionPool("write");
+    const pool: knex = getConnectionPool("write");
 
     log.info(`[export-chunk-controller] getting pooled connection`);
 
     const pending = await getPendingExports(pool, { limit: 100 });
 
-    const queueUrl = getQueueUrl("export-chunks");
+    const queueUrl = getQueueChannel("export-chunks");
 
     log.info(
       `[export-chunk-controller] queuing ${pending.length} chunks for export`,

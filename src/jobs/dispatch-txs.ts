@@ -1,4 +1,4 @@
-import { getQueueUrl, createQueueHandler } from "../lib/queues";
+import { getQueueChannel, createQueueHandler } from "../lib/queues";
 import { publish } from "../lib/pub-sub";
 import { get } from "../lib/buckets";
 import { broadcastTx } from "../lib/broadcast";
@@ -7,7 +7,7 @@ import { toB64url } from "../lib/encoding";
 import { Transaction } from "../lib/arweave";
 
 export const handler = createQueueHandler<DispatchTx>(
-  getQueueUrl("dispatch-txs"),
+  getQueueChannel("dispatch-txs"),
   async (message) => {
     console.log(message);
     const { tx, data_size: dataSize, data_format } = message;

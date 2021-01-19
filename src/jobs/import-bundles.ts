@@ -12,7 +12,7 @@ import {
   saveBundleStatus,
   getBundleImport,
 } from "../database/bundle-import-db";
-import { createQueueHandler, getQueueUrl, enqueue } from "../lib/queues";
+import { createQueueHandler, getQueueChannel, enqueue } from "../lib/queues";
 import { ImportBundle } from "../interfaces/messages";
 import {
   getConnectionPool,
@@ -28,7 +28,7 @@ const MAX_RETRY = 10;
 const RETRY_BACKOFF_SECONDS = 30;
 
 export const handler = createQueueHandler<ImportBundle>(
-  getQueueUrl("import-bundles"),
+  getQueueChannel("import-bundles"),
   async ({ header, id }) => {
     log.info({ header, id });
     log.info("[import-bundles] importing tx bundle", {
@@ -137,7 +137,7 @@ const retry = async (
       },
     ]),
     enqueue<ImportBundle>(
-      getQueueUrl("import-bundles"),
+      getQueueChannel("import-bundles"),
       { header },
       { delaySeconds: attempts * RETRY_BACKOFF_SECONDS }
     ),

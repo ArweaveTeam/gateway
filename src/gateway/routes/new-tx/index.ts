@@ -1,7 +1,7 @@
 import { put } from "../../../lib/buckets";
 import { fromB64Url } from "../../../lib/encoding";
 import { Transaction, getTagValue } from "../../../lib/arweave";
-import { enqueue, getQueueUrl } from "../../../lib/queues";
+import { enqueue, getQueueChannel } from "../../../lib/queues";
 import { pick } from "lodash";
 import {
   ImportTx,
@@ -49,8 +49,8 @@ export const txSchema: Schema = Joi.object({
   data_tree: Joi.array().items(Joi.string()).optional().default([]),
 });
 
-const dispatchQueueUrl = getQueueUrl("dispatch-txs");
-const importQueueUrl = getQueueUrl("import-txs");
+const dispatchQueueUrl = getQueueChannel("dispatch-txs");
+const importQueueUrl = getQueueChannel("import-txs");
 
 export const handler: RequestHandler<{}, {}, Transaction> = async (
   req,
