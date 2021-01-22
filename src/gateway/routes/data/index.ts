@@ -8,7 +8,7 @@ import { RequestHandler, Request, Response } from "express";
 import { streamToJson, jsonToBuffer, fromB64Url } from "../../../lib/encoding";
 import { Readable } from "stream";
 import { NotFound } from "http-errors";
-import { query } from "../../../database/transaction-db";
+import { query } from "../../../database/transaction.query";
 import { StreamTap } from "../../../lib/stream-tap";
 import pump from "pump";
 import { getData } from "../../../data/transactions";

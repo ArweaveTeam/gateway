@@ -1,6 +1,6 @@
 import { getConnectionPool } from "../../../database/postgres";
 import knex from "knex";
-import { query as txQuery } from "../../../database/transaction-db";
+import { query as txQuery } from "../../../database/transaction.query";
 import { RequestHandler } from "express";
 import createError from "http-errors";
 import { Logger } from "winston";
@@ -82,7 +82,7 @@ const executeQuery = async (
     log = undefined,
   }: { limit?: number; offset?: number; log?: Logger }
 ): Promise<ArqlResultSet> => {
-  const sqlQuery = arqlToSqlQuery(txQuery(connection, {}), arqlQuery)
+  const sqlQuery = arqlToSqlQuery(await txQuery(connection, {}), arqlQuery)
     .limit(limit)
     .offset(offset);
 

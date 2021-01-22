@@ -17,6 +17,8 @@ import {
   WinstonString,
 } from "./encoding";
 
+import { Tag as ArTag } from './arweave.query';
+
 export type TransactionHeader = Omit<Transaction, "data">;
 
 export type TransactionData = {
@@ -302,7 +304,7 @@ export const streamRequest = async (
   return await getFirstResponse(endpoints, filter, { stream: true });
 };
 
-export const getTagValue = (tags: Tag[], name: string): string | undefined => {
+export const getTagValue = (tags: Tag[] | Array<ArTag>, name: string): string | undefined => {
   const contentTypeTag = tags.find((tag) => {
     try {
       return (

@@ -1,14 +1,8 @@
-import { TransactionHeader, utf8DecodeTag, Tag } from "../../../lib/arweave";
-import { query } from "../../../database/transaction-db";
 import { IResolvers } from "apollo-server-express";
+import { TransactionHeader, utf8DecodeTag, Tag } from "../../../lib/arweave";
+import { query } from "../../../database/transaction.query";
 
-type Resolvers = IResolvers;
-
-type ResolverFn = (parent: any, args: any, ctx: any) => Promise<any>;
-interface ResolverMap {
-  [field: string]: ResolverFn;
-}
-
+export type Resolvers = IResolvers;
 export const defaultMaxResults = 5000;
 
 export const resolvers: Resolvers = {
@@ -30,8 +24,6 @@ export const resolvers: Resolvers = {
           };
         }),
       });
-
-      // console.log(sqlQuery.toSQL());
 
       const results = (await sqlQuery) as TransactionHeader[];
 
@@ -59,8 +51,6 @@ export const resolvers: Resolvers = {
         }),
       });
 
-      // console.log(sqlQuery.toSQL());
-
       const results = (await sqlQuery) as TransactionHeader[];
 
       return results.map(({ id, tags = [] }: Partial<TransactionHeader>) => {
@@ -75,7 +65,7 @@ export const resolvers: Resolvers = {
       { byForeignTag, to, from, tags },
       context
     ) => {
-      const sqlQuery = query(context.connection, {
+      const sqlQuery = await query(context.connection, {
         limit: defaultMaxResults,
         to,
         from,
@@ -84,9 +74,9 @@ export const resolvers: Resolvers = {
           values: [parent.id],
         }),
         select: [],
-      }).count();
-
-      // console.log(sqlQuery.toSQL());
+      })
+      
+      sqlQuery.count();
 
       return (await sqlQuery.first()).count;
     },

@@ -1,6 +1,6 @@
 import { TransactionHeader, utf8DecodeTag } from "../../../lib/arweave";
 import { IResolvers } from "apollo-server-express";
-import { query } from "../../../database/transaction-db";
+import { query } from "../../../database/transaction.query";
 import moment from "moment";
 import {
   ISO8601DateTimeString,
@@ -39,11 +39,13 @@ export const resolvers: Resolvers = {
   Query: {
     transaction: async (parent, queryParams, { req, connection }) => {
       req.log.info("[grqphql/v2] transaction/request", queryParams);
-      const sqlQuery = query(connection, {
+      const sqlQuery = await query(connection, {
         id: queryParams.id,
         blocks: true,
         select: fieldMap,
-      }).first();
+      })
+      
+      sqlQuery.first();
 
       return (await sqlQuery) as TransactionHeader;
     },
@@ -68,7 +70,7 @@ export const resolvers: Resolvers = {
       );
 
       const runQuery = async () => {
-        const sqlQuery = query(connection, {
+        const sqlQuery = await query(connection, {
           // Add one to the limit, we'll remove this result but it tells
           // us if there's another page of data to fetch.
           limit: pageSize + 1,
@@ -84,8 +86,6 @@ export const resolvers: Resolvers = {
           maxHeight: queryParams.block?.max || undefined,
           sortOrder: queryParams.sort || undefined,
         });
-
-        console.log(sqlQuery.toSQL());
 
         return (await sqlQuery) as TransactionHeader[];
       };

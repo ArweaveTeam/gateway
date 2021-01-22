@@ -5,10 +5,7 @@ export type ConnectionMode = "read" | "write";
 
 export type DBConnection = knex | knex.Transaction;
 
-let poolCache: {
-  read: null | knex;
-  write: null | knex;
-} = {
+export let poolCache: { read: null | knex; write: null | knex; } = {
   read: null,
   write: null,
 };
@@ -24,7 +21,6 @@ export const initConnectionPool = (
 };
 
 export const getConnectionPool = (mode: ConnectionMode): knex => {
-  log.info(`[Postgres] reusing connection: ${mode}`);
   return poolCache[mode]!;
 };
 

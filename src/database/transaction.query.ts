@@ -1,19 +1,11 @@
-import { upsert } from "./postgres";
-import knex from "knex";
-import {
-  TransactionHeader,
-  getTagValue,
-  Tag,
-  utf8DecodeTag,
-  DataBundleItem,
-} from "../lib/arweave";
-import {
-  fromB64Url,
-  sha256B64Url,
-  ISO8601DateTimeString,
-} from "../lib/encoding";
-import { pick } from "lodash";
 import moment from "moment";
+import knex from "knex";
+import { pick } from "lodash";
+
+import { upsert } from "./postgres";
+import { Transaction, TransactionType, TagValue } from '../lib/arweave.query';
+import { TransactionHeader, getTagValue, Tag, utf8DecodeTag, DataBundleItem } from "../lib/arweave";
+import { fromB64Url, sha256B64Url, ISO8601DateTimeString } from "../lib/encoding";
 import { TagFilter } from "../gateway/routes/graphql-v2/schema/types";
 
 interface DatabaseTag {
@@ -80,36 +72,32 @@ interface TxQuery {
   maxHeight?: number;
 }
 
-export const query = (
-  connection: knex,
-  {
-    to,
-    from,
-    tags,
-    limit = 100000,
-    offset = 0,
-    id,
-    ids,
-    status,
-    select,
-    since,
-    blocks = false,
-    sortOrder = "HEIGHT_DESC",
-    pendingMinutes = 60,
-    minHeight = -1,
-    maxHeight = -1,
-  }: TxQuery
-): knex.QueryBuilder => {
+export async function query(connection: knex, params: TxQuery): Promise<knex.QueryBuilder> {
+  const { to, from, tags, ids, status, select, since } = params;
+  const { limit = 100000, blocks = false, sortOrder = "HEIGHT_DESC", pendingMinutes = 60 } = params;
+  const { offset = 0, minHeight = -1, maxHeight = -1 } = params;
+
   const query = connection
     .queryBuilder()
-    .select(
-      select || {
-        id: "transactions.id",
-        heihgt: "transactions.height",
-        tags: "transactions.tags",
-      }
-    )
+    .select(select || { id: "transactions.id", height: "transactions.height", tags: "transactions.tags" })
     .from("transactions");
+
+  if (ids) {
+    query.whereIn("transactions.id", ids);
+
+    for (let i = 0; i < ids.length; i++) {
+      const item = ids[i];
+
+      if (await hasTx(connection, item) === false) {
+        try {
+          const tx = await Transaction(item);
+          await saveTx(connection, tx);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+  }
 
   if (blocks) {
     query.leftJoin("blocks", "transactions.height", "blocks.height");
@@ -133,14 +121,6 @@ export const query = (
 
   if (since) {
     query.where("transactions.created_at", "<", since);
-  }
-
-  if (id) {
-    query.where("transactions.id", id);
-  }
-
-  if (ids) {
-    query.whereIn("transactions.id", ids);
   }
 
   if (to) {
@@ -198,34 +178,32 @@ export const hasTx = async (connection: knex, id: string): Promise<boolean> => {
   return !!(result && result.id);
 };
 
-export const hasTxs = async (
-  connection: knex,
-  ids: string[]
-): Promise<string[]> => {
-  return await connection.pluck("id").from("transactions").whereIn("id", ids);
+export const hasTxs = async (connection: knex, ids: string[]): Promise<string[]> => {
+  return await connection
+    .pluck("id")
+    .from("transactions")
+    .whereIn("id", ids);
 };
 
-export const saveTx = async (connection: knex, tx: TransactionHeader) => {
-  return await connection.transaction(async (knexTransaction) => {
-    await upsert(knexTransaction, {
+export const saveTx = async (connection: knex, tx: TransactionType | TransactionHeader): Promise<boolean> => {
+  return new Promise(async resolve => {
+    await upsert(connection, {
       table: "transactions",
       conflictKeys: ["id"],
-      rows: [
-        txToRow({
-          tx,
-        }),
-      ],
+      rows: [txToRow({ tx })],
     });
 
     if (tx.tags.length > 0) {
-      await upsert(knexTransaction, {
+      await upsert(connection, {
         table: "tags",
         conflictKeys: ["tx_id", "index"],
         rows: txTagsToRows(tx.id, tx.tags),
       });
     }
+
+    return resolve(true);
   });
-};
+}
 
 export const saveBundleDataItem = async (
   connection: knex,
@@ -264,11 +242,13 @@ export const saveBundleDataItem = async (
   });
 };
 
-const txToRow = ({ tx }: { tx: TransactionHeader | DataBundleItem }) => {
+const txToRow = ({ tx }: { tx: TransactionType | TransactionHeader | DataBundleItem }) => {
+  console.log(tx);
+
   return pick(
     {
       ...tx,
-      content_type: getTagValue(tx.tags, "content-type"),
+      content_type: TagValue(tx.tags, "content-type"),
       format: (tx as any).format || 0,
       data_size:
         (tx as any).data_size ||

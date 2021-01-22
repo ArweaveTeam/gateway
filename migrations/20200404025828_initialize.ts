@@ -4,23 +4,23 @@ export async function up(knex: Knex): Promise<any> {
   return knex.schema
     .withSchema(process.env.ENVIRONMENT || "public")
     .createTable("transactions", table => {
-      table.string("id", 43).notNullable();
-      table.string("owner");
+      table.string("id", 64).notNullable();
+      table.text("owner");
       table.jsonb("tags");
-      table.string("target", 43);
+      table.string("target", 64);
       table.string("quantity");
       table.string("reward");
-      table.string("signature");
-      table.string("last_tx");
+      table.text("signature");
+      table.string("last_tx", 64);
       table.integer("data_size", 8);
       table.string("content_type");
       table.integer("format", 2);
       table.timestamp("created_at").defaultTo(knex.fn.now());
       table.timestamp("deleted_at");
       table.integer("height", 4);
-      table.string("owner_address", 43);
-      table.string("data_root", 43);
-      table.string("parent", 43);
+      table.string("owner_address");
+      table.string("data_root", 64);
+      table.string("parent", 64);
 
       table.primary(["id"], "pkey_transactions");
     })

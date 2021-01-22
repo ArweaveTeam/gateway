@@ -4,7 +4,7 @@ import {
   initConnectionPool,
   releaseConnectionPool,
 } from "../database/postgres";
-import { getTx, saveTx } from "../database/transaction-db";
+import { getTx, saveTx } from "../database/transaction.query";
 import { ImportTx, ImportBundle } from "../interfaces/messages";
 import {
   fetchTransactionHeader,
