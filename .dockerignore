@@ -12,7 +12,6 @@
 !/src/**
 !/migrations/**
 
-
 # Ignore Unnecessary Files
 **/*.log
 **/.DS_Store

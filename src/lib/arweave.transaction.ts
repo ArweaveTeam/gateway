@@ -1,11 +1,6 @@
 import { get } from 'superagent';
 import { Base64UrlEncodedString, WinstonString, fromB64Url } from "./encoding";
-
-export const NODES = process.env.ARWEAVE_NODES ? JSON.parse(process.env.ARWEAVE_NODES) : ['http://lon-1.eu-west-1.arweave.net:1984'];
-
-export function GrabNode() {
-    return NODES[Math.floor(Math.random() * NODES.length)];
-}
+import { GrabNode } from './arweave.node';
 
 export interface Tag {
     name: Base64UrlEncodedString;
@@ -15,6 +10,7 @@ export interface Tag {
 export interface TransactionType {
     format: number;
     id: string;
+    height?: number;
     last_tx: string;
     owner: string;
     tags: Array<Tag>;

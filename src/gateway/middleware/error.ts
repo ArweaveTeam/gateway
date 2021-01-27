@@ -11,16 +11,11 @@ export const errorResponseHandler: ErrorRequestHandler = (
   const response = {
     status: error.expose ? error.status : 500,
     error: error.expose ? error.message : "unknown",
-    ...(res.sentry && { id: res.sentry }),
   };
 
   if (!res.headersSent) {
     res.status(response.status);
     res.contentType("application/json");
-
-    if (res.sentry) {
-      res.header("X-Sentry", res.sentry);
-    }
   }
 
   if (!res.finished) {

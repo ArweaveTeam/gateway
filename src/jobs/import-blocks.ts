@@ -5,7 +5,7 @@ import {
   getLatestBlock,
   getRecentBlocks,
   saveBlocks,
-} from "../database/block-db";
+} from "../database/block.database";
 import {
   getConnectionPool,
   releaseConnectionPool,

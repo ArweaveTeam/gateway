@@ -4,7 +4,7 @@ import {
   initConnectionPool,
   releaseConnectionPool,
 } from "../database/postgres";
-import { getTx, saveTx } from "../database/transaction.query";
+import { saveTx } from "../database/transaction.database";
 import { ImportTx, ImportBundle } from "../interfaces/messages";
 import {
   fetchTransactionHeader,
@@ -17,7 +17,7 @@ import { createQueueHandler, getQueueChannel, enqueue } from "../lib/queues";
 import {
   getBundleImport,
   saveBundleStatus,
-} from "../database/bundle-import-db";
+} from "../database/bundle.database";
 
 export const handler = createQueueHandler<ImportTx>(
   getQueueChannel("import-txs"),

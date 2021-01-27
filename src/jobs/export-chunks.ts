@@ -3,7 +3,7 @@ import { get } from "../lib/buckets";
 import { broadcastChunk } from "../lib/broadcast";
 import { ExportChunk } from "../interfaces/messages";
 import { toB64url } from "../lib/encoding";
-import { completedExport } from "../database/chunk-db";
+import { completedExport } from "../database/chunk.database";
 import {
   getConnectionPool,
   releaseConnectionPool,

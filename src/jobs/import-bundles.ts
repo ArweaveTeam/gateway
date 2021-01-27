@@ -1,27 +1,14 @@
 import Knex from "knex";
-import {
-  TransactionHeader,
-  fetchTransactionData,
-  DataBundleWrapper,
-  getTagValue,
-  DataBundleItem,
-  fetchTransactionHeader,
-} from "../lib/arweave";
+
 import log from "../lib/log";
-import {
-  saveBundleStatus,
-  getBundleImport,
-} from "../database/bundle-import-db";
+import { TransactionHeader, fetchTransactionData, DataBundleWrapper, getTagValue, DataBundleItem, fetchTransactionHeader } from "../lib/arweave";
+import { saveBundleStatus, getBundleImport } from "../database/bundle.database";
 import { createQueueHandler, getQueueChannel, enqueue } from "../lib/queues";
 import { ImportBundle } from "../interfaces/messages";
-import {
-  getConnectionPool,
-  initConnectionPool,
-  releaseConnectionPool,
-} from "../database/postgres";
+import { getConnectionPool, initConnectionPool, releaseConnectionPool } from "../database/postgres";
 import { streamToJson, fromB64Url } from "../lib/encoding";
-import { wait, sequentialBatch } from "../lib/helpers";
-import { saveBundleDataItem } from "../database/transaction.query";
+import { sequentialBatch } from "../lib/helpers";
+import { saveBundleDataItem } from "../database/bundle.database";
 import { put } from "../lib/buckets";
 
 const MAX_RETRY = 10;

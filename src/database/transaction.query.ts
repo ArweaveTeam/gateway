@@ -1,51 +1,12 @@
 import moment from "moment";
 import knex from "knex";
-import { pick } from "lodash";
 
-import { upsert } from "./postgres";
-import { Transaction, TransactionType, TagValue } from '../lib/arweave.query';
-import { TransactionHeader, getTagValue, Tag, utf8DecodeTag, DataBundleItem } from "../lib/arweave";
-import { fromB64Url, sha256B64Url, ISO8601DateTimeString } from "../lib/encoding";
+import log from '../lib/log';
+import { getConnectionPool } from "./postgres";
+import { Transaction } from '../lib/arweave.transaction';
+import { ISO8601DateTimeString } from "../lib/encoding";
 import { TagFilter } from "../gateway/routes/graphql-v2/schema/types";
-
-interface DatabaseTag {
-  tx_id: string;
-  index: number;
-  name: string | undefined;
-  value: string | undefined;
-  // value_numeric: string | undefined;
-}
-
-const txFields = [
-  "format",
-  "id",
-  "signature",
-  "owner",
-  "owner_address",
-  "target",
-  "reward",
-  "last_tx",
-  "tags",
-  "quantity",
-  "quantity",
-  "content_type",
-  "data_size",
-  "data_root",
-];
-
-export const getTxIds = async (
-  connection: knex,
-  predicates: object
-): Promise<string[]> => {
-  return await connection.pluck("id").from("transactions").where(predicates);
-};
-
-export const getTx = async (
-  connection: knex,
-  predicates: object
-): Promise<any | undefined> => {
-  return connection.select().from("transactions").where(predicates).first();
-};
+import { saveTx } from './transaction.database';
 
 type TxSortOrder = "HEIGHT_ASC" | "HEIGHT_DESC";
 
@@ -73,8 +34,8 @@ interface TxQuery {
 }
 
 export async function query(connection: knex, params: TxQuery): Promise<knex.QueryBuilder> {
-  const { to, from, tags, ids, status, select, since } = params;
-  const { limit = 100000, blocks = false, sortOrder = "HEIGHT_DESC", pendingMinutes = 60 } = params;
+  const { to, from, tags, id, ids, status, select, since } = params;
+  const { limit = 10, blocks = false, sortOrder = "HEIGHT_DESC", pendingMinutes = 60 } = params;
   const { offset = 0, minHeight = -1, maxHeight = -1 } = params;
 
   const query = connection
@@ -82,19 +43,30 @@ export async function query(connection: knex, params: TxQuery): Promise<knex.Que
     .select(select || { id: "transactions.id", height: "transactions.height", tags: "transactions.tags" })
     .from("transactions");
 
+  if (id) {
+    query.where("transactions.id", id);
+
+    try {
+      const writeConnection = getConnectionPool("write");
+      const tx = await Transaction(id);
+      await saveTx(writeConnection, tx);
+    } catch (error) {
+      log.error(error);
+    }
+  }
+
   if (ids) {
     query.whereIn("transactions.id", ids);
 
     for (let i = 0; i < ids.length; i++) {
       const item = ids[i];
+      const writeConnection = getConnectionPool("write");
 
-      if (await hasTx(connection, item) === false) {
-        try {
-          const tx = await Transaction(item);
-          await saveTx(connection, tx);
-        } catch (error) {
-          console.error(error);
-        }
+      try {
+        const tx = await Transaction(item);
+        await saveTx(writeConnection, tx);
+      } catch (error) {
+        log.error(error);
       }
     }
   }
@@ -103,16 +75,10 @@ export async function query(connection: knex, params: TxQuery): Promise<knex.Que
     query.leftJoin("blocks", "transactions.height", "blocks.height");
   }
 
-  query.where((query) => {
-    // Include recent pending transactions up to pendingMinutes old.
-    // After this threshold they will be considered orphaned so not included in results.
+  query.where(query => {
     query
       .whereNotNull("transactions.height")
-      .orWhere(
-        "transactions.created_at",
-        ">",
-        moment().subtract(pendingMinutes, "minutes").toISOString()
-      );
+      .orWhere("transactions.created_at", ">", moment().subtract(pendingMinutes, "minutes").toISOString());
   });
 
   if (status == "confirmed") {
@@ -166,115 +132,4 @@ export async function query(connection: knex, params: TxQuery): Promise<knex.Que
   }
 
   return query;
-};
-
-export const hasTx = async (connection: knex, id: string): Promise<boolean> => {
-  const result = await connection
-    .first("id")
-    .from("transactions")
-    .where({ id })
-    .whereNotNull("owner");
-
-  return !!(result && result.id);
-};
-
-export const hasTxs = async (connection: knex, ids: string[]): Promise<string[]> => {
-  return await connection
-    .pluck("id")
-    .from("transactions")
-    .whereIn("id", ids);
-};
-
-export const saveTx = async (connection: knex, tx: TransactionType | TransactionHeader): Promise<boolean> => {
-  return new Promise(async resolve => {
-    await upsert(connection, {
-      table: "transactions",
-      conflictKeys: ["id"],
-      rows: [txToRow({ tx })],
-    });
-
-    if (tx.tags.length > 0) {
-      await upsert(connection, {
-        table: "tags",
-        conflictKeys: ["tx_id", "index"],
-        rows: txTagsToRows(tx.id, tx.tags),
-      });
-    }
-
-    return resolve(true);
-  });
-}
-
-export const saveBundleDataItem = async (
-  connection: knex,
-  tx: DataBundleItem,
-  { parent }: { parent: string }
-) => {
-  return await connection.transaction(async (knexTransaction) => {
-    await upsert(knexTransaction, {
-      table: "transactions",
-      conflictKeys: ["id"],
-      rows: [
-        {
-          parent,
-          format: 1,
-          id: tx.id,
-          signature: tx.signature,
-          owner: tx.owner,
-          owner_address: sha256B64Url(fromB64Url(tx.owner)),
-          target: tx.target,
-          reward: 0,
-          last_tx: tx.nonce,
-          tags: JSON.stringify(tx.tags),
-          quantity: 0,
-          data_size: fromB64Url((tx as any).data).byteLength,
-        },
-      ],
-    });
-
-    if (tx.tags.length > 0) {
-      await upsert(knexTransaction, {
-        table: "tags",
-        conflictKeys: ["tx_id", "index"],
-        rows: txTagsToRows(tx.id, tx.tags),
-      });
-    }
-  });
-};
-
-const txToRow = ({ tx }: { tx: TransactionType | TransactionHeader | DataBundleItem }) => {
-  console.log(tx);
-
-  return pick(
-    {
-      ...tx,
-      content_type: TagValue(tx.tags, "content-type"),
-      format: (tx as any).format || 0,
-      data_size:
-        (tx as any).data_size ||
-        ((tx as any).data
-          ? fromB64Url((tx as any).data).byteLength
-          : undefined),
-      tags: JSON.stringify(tx.tags),
-      owner_address: sha256B64Url(fromB64Url(tx.owner)),
-    },
-    txFields
-  );
-};
-
-const txTagsToRows = (tx_id: string, tags: Tag[]): DatabaseTag[] => {
-  return tags.map((tag, index) => {
-    const { name, value } = utf8DecodeTag(tag);
-    return {
-      tx_id,
-      index,
-      name,
-      value,
-      // value_numeric:
-      //   value && value.match(/^-?\d{1,20}$/) == null ? undefined : value,
-      // For now we're just filtering for numeric looking values, as JS ints
-      // and postgres ints have different max safe values we don't want to parse it in JS
-      // This needs more work in future to align the two.
-    };
-  });
 };

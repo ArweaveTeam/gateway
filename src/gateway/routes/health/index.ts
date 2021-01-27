@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { RequestHandler } from "express";
-import { getLatestBlock } from "../../../database/block-db";
+import { getLatestBlock } from "../../../database/block.database";
 import { getConnectionPool } from "../../../database/postgres";
 import { ping } from "../../../lib/redis";
 import log from "../../../lib/log";

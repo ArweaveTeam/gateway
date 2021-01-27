@@ -1,6 +1,8 @@
-import { upsert } from "./postgres";
 import knex from "knex";
 import moment from "moment";
+
+import { upsert } from "./postgres";
+
 export interface DatabaseChunk {
   data_root: string;
   data_size: number;

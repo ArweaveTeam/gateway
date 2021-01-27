@@ -17,7 +17,7 @@ import {
   WinstonString,
 } from "./encoding";
 
-import { Tag as ArTag } from './arweave.query';
+import { Tag as ArTag } from './arweave.transaction';
 
 export type TransactionHeader = Omit<Transaction, "data">;
 

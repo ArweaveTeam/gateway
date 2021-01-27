@@ -51,30 +51,28 @@ docker run -it -p 6379:6379 redis:6.0
 
 ## Environment
 
-By default, there is a default environment you can use located at `.env.default` in the repository.
+By default, there is a development environment you can use located at `.env.dev` in the repository. This `.dev` environment is different to the `.default` environment which is designed for `docker` usage.
 
 ```env
 ARWEAVE_NODES=["..."]
 
-DATABASE_HOST=postgres
+DATABASE_HOST=0.0.0.0
 DATABASE_PORT=5432
 DATABASE_USER=arweave
 DATABASE_PASSWORD=arweave
 DATABASE_NAME=arweave
 
-REDIS_HOST=cache
+REDIS_HOST=0.0.0.0
 REDIS_PORT=6379
 
 ENVIRONMENT=public
 PORT=3000
 ```
 
-You will want to change the `DATABASE_HOST` and `REDIS_HOST` to `localhost`.
-
 Make sure you copy this configuration to `.env`.
 
 ```bash
-cp .env.default .env
+cp .env.dev .env
 ```
 
 ## Deploying Migrations with Knex

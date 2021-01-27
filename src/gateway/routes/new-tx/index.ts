@@ -12,7 +12,7 @@ import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
 
 import Joi, { Schema } from "@hapi/joi";
-import { parseInput } from "../../middleware/validate-body";
+import { parseInput } from "../../middleware/validate.body";
 
 export const txSchema: Schema = Joi.object({
   id: Joi.string()

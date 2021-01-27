@@ -2,7 +2,7 @@ import knex from "knex";
 import { pick } from "lodash";
 
 import log from "../lib/log";
-import { getPendingExports, startedExport } from "../database/chunk-db";
+import { getPendingExports, startedExport } from "../database/chunk.database";
 import { getConnectionPool, initConnectionPool, releaseConnectionPool } from "../database/postgres";
 import { wait } from "../lib/helpers";
 import { enqueue, getQueueChannel } from "../lib/queues";

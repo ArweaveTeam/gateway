@@ -3,25 +3,18 @@ require("express-async-errors");
 
 import express from "express";
 import helmet from "helmet";
-import {
-  initConnectionPool,
-  releaseConnectionPool,
-} from "../database/postgres";
+
 import log from "../lib/log";
+import { ImportData } from '../data/import.data';
+import { initConnectionPool, releaseConnectionPool } from "../database/postgres";
+import { apolloServer } from "./routes/graphql";
+import { errorResponseHandler, notFoundHandler } from "./middleware/error";
+import { configureRequestLogging, handler as requestLoggingMiddleware } from "./middleware/request.log";
 import { handler as corsMiddleware } from "./middleware/cors";
-import {
-  errorResponseHandler,
-  notFoundHandler,
-} from "./middleware/error";
-import { handler as jsonBodyMiddleware } from "./middleware/json-body";
-import {
-  configureRequestLogging,
-  handler as requestLoggingMiddleware,
-} from "./middleware/request-log";
+import { handler as jsonBodyMiddleware } from "./middleware/json.body";
 import { handler as sandboxMiddleware } from "./middleware/sandbox";
 import { handler as arqlHandler } from "./routes/arql";
 import { handler as dataHandler } from "./routes/data";
-import { apolloServer } from "./routes/graphql";
 import { apolloServer as apolloServerV2 } from "./routes/graphql-v2";
 import { handler as healthHandler } from "./routes/health";
 import { handler as newTxHandler } from "./routes/new-tx";
@@ -30,6 +23,8 @@ import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 
 initConnectionPool("read", { min: 1, max: 100 });
+initConnectionPool("write", { min: 1, max: 100 });
+ImportData();
 
 const app = express();
 
@@ -40,9 +35,9 @@ const port = process.env.PORT;
 app.set("trust proxy", 1);
 
 // Global middleware
+app.use(helmet.hidePoweredBy());
 app.use(configureRequestLogging);
 app.use(requestLoggingMiddleware);
-app.use(helmet.hidePoweredBy());
 app.use(corsMiddleware);
 app.use(sandboxMiddleware);
 
@@ -85,7 +80,6 @@ app.get(dataPathRegex, dataHandler);
 
 app.get("*", proxyHandler);
 
-// Error handlers
 app.use(notFoundHandler);
 app.use(errorResponseHandler);
 
@@ -96,12 +90,9 @@ const server = app.listen(port, () => {
 server.keepAliveTimeout = 120 * 1000;
 server.headersTimeout = 120 * 1000;
 
-// console.log([server.headersTimeout]);
-
-process.on("SIGINT", function () {
-  log.info("\nGracefully shutting down from SIGINT");
-  releaseConnectionPool().then(() => {
-    log.info("[app] DB connections closed");
-    process.exit(1);
-  });
+process.on("SIGINT", async () => {
+  log.info("[app] Shutting down from SIGINT");
+  await releaseConnectionPool();
+  log.info("[app] DB connections closed");
+  process.exit(1);
 });

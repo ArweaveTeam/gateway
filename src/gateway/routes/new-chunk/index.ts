@@ -12,7 +12,7 @@ Arweave.crypto = new NodeCryptoDriver();
 import { validatePath } from "arweave/node/lib/merkle";
 import { BadRequest } from "http-errors";
 import Joi, { Schema, ValidationError } from "@hapi/joi";
-import { parseInput } from "../../middleware/validate-body";
+import { parseInput } from "../../middleware/validate.body";
 
 // the API defintion uses numeric string instead of numbers,
 // Joi.number will accept either number or string and coerce it.

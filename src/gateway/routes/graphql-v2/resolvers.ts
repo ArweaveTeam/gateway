@@ -1,14 +1,13 @@
+import moment from "moment";
+import graphqlFields from "graphql-fields";
+import { BadRequest } from "http-errors";
+
+import log from '../../../lib/log';
 import { TransactionHeader, utf8DecodeTag } from "../../../lib/arweave";
 import { IResolvers } from "apollo-server-express";
 import { query } from "../../../database/transaction.query";
-import moment from "moment";
-import {
-  ISO8601DateTimeString,
-  winstonToAr,
-  sha256,
-} from "../../../lib/encoding";
-import { BadRequest } from "http-errors";
-import graphqlFields from "graphql-fields";
+import { ISO8601DateTimeString, winstonToAr } from "../../../lib/encoding";
+
 import { QueryTransactionsArgs } from "./schema/types";
 
 type Resolvers = IResolvers;
@@ -38,7 +37,7 @@ const fieldMap = {
 export const resolvers: Resolvers = {
   Query: {
     transaction: async (parent, queryParams, { req, connection }) => {
-      req.log.info("[grqphql/v2] transaction/request", queryParams);
+      req.log.info("[graphql/v2] transaction/request", queryParams);
       const sqlQuery = await query(connection, {
         id: queryParams.id,
         blocks: true,
@@ -49,25 +48,11 @@ export const resolvers: Resolvers = {
 
       return (await sqlQuery) as TransactionHeader;
     },
-    transactions: async (
-      parent,
-      queryParams: QueryTransactionsArgs,
-      { req, connection },
-      info
-    ) => {
-      req.log.info("[grqphql/v2] transactions/request", {
-        queryParams,
-        fields: graphqlFields(info as any),
-      });
+    transactions: async (parent, queryParams: QueryTransactionsArgs, { req, connection }, info) => {
+      req.log.info("[graphql/v2] transactions/request", { queryParams, fields: graphqlFields(info as any)});
 
-      const { timestamp, offset } = parseCursor(
-        queryParams.after || newCursor()
-      );
-
-      const pageSize = Math.min(
-        queryParams.first || DEFAULT_PAGE_SIZE,
-        MAX_PAGE_SIZE
-      );
+      const { timestamp, offset } = parseCursor(queryParams.after || newCursor());
+      const pageSize = Math.min(queryParams.first || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
       const runQuery = async () => {
         const sqlQuery = await query(connection, {
@@ -90,9 +75,11 @@ export const resolvers: Resolvers = {
         return (await sqlQuery) as TransactionHeader[];
       };
 
+      console.log(runQuery);
+
       const results = await runQuery();
 
-      req.log.info("[grqphql/v2] transactions/response", {
+      req.log.info("[graphql/v2] transactions/response", {
         queryParams,
         results: results.length,
         pageSize,
@@ -167,32 +154,24 @@ export const resolvers: Resolvers = {
   },
 };
 
-const newCursor = (): string => {
-  return encodeCursor({ timestamp: moment().toISOString(), offset: 0 });
-};
-
-const encodeCursor = ({
-  timestamp,
-  offset,
-}: {
+export interface Cursor {
   timestamp: ISO8601DateTimeString;
   offset: number;
-}): string => {
+}
+
+export const newCursor = (): string =>  encodeCursor({ timestamp: moment().toISOString(), offset: 0 });
+
+export const encodeCursor = ({ timestamp, offset }: Cursor): string => {
   const string = JSON.stringify([timestamp, offset]);
   return Buffer.from(string).toString("base64");
 };
 
-const parseCursor = (
-  cursor: string
-): { timestamp: ISO8601DateTimeString; offset: number } => {
+export const parseCursor = (cursor: string): Cursor => {
   try {
-    const [timestamp, offset] = JSON.parse(
-      Buffer.from(cursor, "base64").toString()
-    ) as [ISO8601DateTimeString, number];
-
+    const [timestamp, offset] = JSON.parse(Buffer.from(cursor, "base64").toString()) as [ISO8601DateTimeString, number];
     return { timestamp, offset };
   } catch (error) {
-    console.error(error);
+    log.error(error);
     throw new BadRequest("invalid cursor");
   }
 };

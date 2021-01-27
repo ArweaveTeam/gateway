@@ -25,17 +25,17 @@ export async function up(knex: Knex): Promise<any> {
       table.primary(["id"], "pkey_transactions");
     })
     .createTable("tags", table => {
-      table.string("tx_id", 43).notNullable();
-      table.integer("index", 4).notNullable();
+      table.string("tx_id", 64).notNullable();
+      table.integer("index").notNullable();
       table.string("name").notNullable();
-      table.string("value").notNullable();
+      table.text("value").notNullable();
       table.timestamp("created_at").defaultTo(knex.fn.now());
 
       table.primary(["tx_id", "index"], "pkey_tags");
       table.index(["name", "value"], "index_name_value", "BTREE");
     })
     .createTable("blocks", table => {
-      table.string("id", 43).notNullable();
+      table.string("id", 64).notNullable();
       table.integer("height", 4).notNullable();
       table.timestamp("mined_at").notNullable();
       table.jsonb("txs").notNullable();

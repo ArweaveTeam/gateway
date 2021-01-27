@@ -5,11 +5,12 @@
   "main": "src/gateway/app.ts",
   "scripts": {
     "graphql-types": "graphql-codegen --config codegen.yml",
+    "dev": "npm run build && node dist/gateway/app.js",
+    "refresh": "npm run migrate:down && npm run migrate:latest && npm run dev",
     "build": "tsc && cp ./src/gateway/routes/graphql-v2/schema/types.graphql ./dist/gateway/routes/graphql-v2/schema/types.graphql",
     "migrate:latest": "knex migrate:latest",
     "migrate:up": "knex migrate:up",
     "migrate:down": "knex migrate:down",
-    "dev": "npm run build && node dist/gateway/app.js",
     "docker:start": "docker-compose up --build -d",
     "docker:stop": "docker-compose down -v",
     "start": "npm run migrate:latest && node dist/gateway/app.js"
@@ -32,7 +33,6 @@
   "homepage": "https://github.com/ArweaveTeam/gateway#README.md",
   "dependencies": {
     "@hapi/joi": "^17.1.1",
-    "@sentry/node": "^5.19.0",
     "abort-controller": "^3.0.0",
     "apollo-server-express": "^2.16.0",
     "arweave": "^1.10.0",

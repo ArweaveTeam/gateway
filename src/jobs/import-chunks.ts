@@ -1,6 +1,6 @@
 import { getQueueChannel, createQueueHandler } from "../lib/queues";
 import { ImportChunk } from "../interfaces/messages";
-import { saveChunk } from "../database/chunk-db";
+import { saveChunk } from "../database/chunk.database";
 import {
   getConnectionPool,
   initConnectionPool,

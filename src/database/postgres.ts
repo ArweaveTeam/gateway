@@ -1,8 +1,8 @@
 import knex, { StaticConnectionConfig } from "knex";
 import log from "../lib/log";
 import { wait } from "../lib/helpers";
-export type ConnectionMode = "read" | "write";
 
+export type ConnectionMode = "read" | "write";
 export type DBConnection = knex | knex.Transaction;
 
 export let poolCache: { read: null | knex; write: null | knex; } = {
@@ -10,12 +10,9 @@ export let poolCache: { read: null | knex; write: null | knex; } = {
   write: null,
 };
 
-export const initConnectionPool = (
-  mode: ConnectionMode,
-  config?: PoolConfig
-) => {
+export const initConnectionPool = (mode: ConnectionMode, config?: PoolConfig) => {
   if (!poolCache[mode]) {
-    log.info(`[Postgres] creating connection: ${mode}`);
+    log.info(`[postgres] creating connection: ${mode}`);
     poolCache[mode] = createConnectionPool(mode, config);
   }
 };
@@ -29,7 +26,7 @@ export const releaseConnectionPool = async (
 ): Promise<void> => {
   if (mode) {
     if (poolCache[mode]) {
-      log.info(`[Postgres] destroying connection: ${mode}`);
+      log.info(`[postgres] destroying connection: ${mode}`);
       await poolCache[mode]!.destroy();
       poolCache[mode] = null;
     }
@@ -47,17 +44,9 @@ interface PoolConfig {
   max: number;
 }
 
-export const createConnectionPool = (
-  mode: ConnectionMode,
-  { min, max }: PoolConfig = { min: 1, max: 10 }
-): knex => {
-  const host = {
-    read: process.env.ARWEAVE_DB_READ_HOST,
-    write: process.env.ARWEAVE_DB_WRITE_HOST,
-  }[mode];
-
+export const createConnectionPool = (mode: ConnectionMode, { min, max }: PoolConfig = { min: 1, max: 10 }): knex => {
   const hostDisplayName = `${process.env.DATABASE_USER}@${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}`;
-
+  
   log.info(`[postgres] connecting to db: ${hostDisplayName}`);
 
   const client = knex({
@@ -91,15 +80,7 @@ interface UpsertOptions<T = object[]> {
   transaction?: knex.Transaction;
 }
 
-/**
- * Generate a postgres upsert statement. This manually appends a raw section to the query.
- *
- * INSERT (col, col, col) VALUES (val, val, val) ON CONFLICT (id,index) SO UPDATE SET x = excluded.x...
- */
-export const upsert = (
-  connection: DBConnection,
-  { table, conflictKeys, rows, transaction }: UpsertOptions
-) => {
+export const upsert = (connection: DBConnection, { table, conflictKeys, rows, transaction }: UpsertOptions) => {
   const updateFields = Object.keys(rows[0])
     .filter((field) => !conflictKeys.includes(field))
     .map((field) => `${field} = excluded.${field}`)
@@ -112,12 +93,7 @@ export const upsert = (
   }
 
   const { sql, bindings } = query.toSQL();
-
-  const upsertSql = sql.concat(
-    ` ON CONFLICT (${conflictKeys
-      .map((key) => `"${key}"`)
-      .join(",")}) DO UPDATE SET ${updateFields};`
-  );
+  const upsertSql = sql.concat(` ON CONFLICT (${conflictKeys.map((key) => `"${key}"`).join(",")}) DO UPDATE SET ${updateFields};`);
 
   return connection.raw(upsertSql, bindings);
 };

@@ -1,21 +1,17 @@
 import morgan from "morgan";
-import { RequestHandler } from "express";
 import shortId from "shortid";
+import { RequestHandler } from "express";
+
 import log from "../../lib/log";
-import * as Sentry from "@sentry/node";
 
 export const configureRequestLogging: RequestHandler = (req, res, next) => {
   const traceId = shortId.generate();
+  
   req.id = traceId;
   res.header("X-Trace", traceId);
-  req.log = log.child({
-    trace: traceId,
-  });
-  req.sentry = { captureEvent: Sentry.captureEvent };
-  Sentry.configureScope(function (scope) {
-    scope.setTag("trace", traceId);
-  });
-  next();
+  req.log = log.child({ trace: traceId });
+  
+  return next();
 };
 
 morgan.token("trace", (req) => {

@@ -7,7 +7,7 @@ import {
 } from "../lib/arweave";
 import { Readable } from "stream";
 import { getStream, putStream, put, get, objectHeader } from "../lib/buckets";
-import { query as queryChunks } from "../database/chunk-db";
+import { query as queryChunks } from "../database/chunk.database";
 import { query as transactionsQuery } from "../database/transaction.query";
 import { getConnectionPool } from "../database/postgres";
 import { NotFound } from "http-errors";
