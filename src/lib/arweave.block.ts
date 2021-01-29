@@ -1,5 +1,5 @@
-import { get } from 'superagent';
-import { GrabNode } from './arweave.node';
+import { get } from 'superagent'
+import { GrabNode } from './arweave.node'
 
 export interface BlockType {
     nonce: string;
@@ -29,65 +29,65 @@ export interface BlockType {
 }
 
 export async function Block(height: number): Promise<BlockType> {
-    const payload = await get(`${GrabNode()}/block/height/${height}`);
-    const body = JSON.parse(payload.text);
+  const payload = await get(`${GrabNode()}/block/height/${height}`)
+  const body = JSON.parse(payload.text)
 
-    return {
-        nonce: body.nonce,
-        previous_block: body.previous_block,
-        timestamp: body.timestamp,
-        last_retarget: body.last_retarget,
-        diff: body.diff,
-        height: body.height,
-        hash: body.hash,
-        indep_hash: body.indep_hash,
-        txs: body.txs,
-        tx_root: body.tx_root,
-        tx_tree: body.tx_tree,
-        wallet_list: body.wallet_list,
-        reward_addr: body.reward_addr,
-        tags: body.tags,
-        reward_pool: body.reward_pool,
-        weave_size: body.weave_size,
-        block_size: body.block_size,
-        cumulative_diff: body.cumulative_diff,
-        hash_list_merkle: body.hash_list_merkle,
-        poa: {
-            option: body.poa.option,
-            tx_path: body.poa.tx_path,
-            chunk: body.poa.chunk,
-        },
-    }
+  return {
+    nonce: body.nonce,
+    previous_block: body.previous_block,
+    timestamp: body.timestamp,
+    last_retarget: body.last_retarget,
+    diff: body.diff,
+    height: body.height,
+    hash: body.hash,
+    indep_hash: body.indep_hash,
+    txs: body.txs,
+    tx_root: body.tx_root,
+    tx_tree: body.tx_tree,
+    wallet_list: body.wallet_list,
+    reward_addr: body.reward_addr,
+    tags: body.tags,
+    reward_pool: body.reward_pool,
+    weave_size: body.weave_size,
+    block_size: body.block_size,
+    cumulative_diff: body.cumulative_diff,
+    hash_list_merkle: body.hash_list_merkle,
+    poa: {
+      option: body.poa.option,
+      tx_path: body.poa.tx_path,
+      chunk: body.poa.chunk,
+    },
+  }
 }
 
 export async function CurrentBlock(): Promise<BlockType> {
-    const payload = await get(`${GrabNode()}/block/current`);
-    const body = JSON.parse(payload.text);
+  const payload = await get(`${GrabNode()}/block/current`)
+  const body = JSON.parse(payload.text)
 
-    return {
-        nonce: body.nonce,
-        previous_block: body.previous_block,
-        timestamp: body.timestamp,
-        last_retarget: body.last_retarget,
-        diff: body.diff,
-        height: body.height,
-        hash: body.hash,
-        indep_hash: body.indep_hash,
-        txs: body.txs,
-        tx_root: body.tx_root,
-        tx_tree: body.tx_tree,
-        wallet_list: body.wallet_list,
-        reward_addr: body.reward_addr,
-        tags: body.tags,
-        reward_pool: body.reward_pool,
-        weave_size: body.weave_size,
-        block_size: body.block_size,
-        cumulative_diff: body.cumulative_diff,
-        hash_list_merkle: body.hash_list_merkle,
-        poa: {
-            option: body.poa.option,
-            tx_path: body.poa.tx_path,
-            chunk: body.poa.chunk,
-        },
-    }
+  return {
+    nonce: body.nonce,
+    previous_block: body.previous_block,
+    timestamp: body.timestamp,
+    last_retarget: body.last_retarget,
+    diff: body.diff,
+    height: body.height,
+    hash: body.hash,
+    indep_hash: body.indep_hash,
+    txs: body.txs,
+    tx_root: body.tx_root,
+    tx_tree: body.tx_tree,
+    wallet_list: body.wallet_list,
+    reward_addr: body.reward_addr,
+    tags: body.tags,
+    reward_pool: body.reward_pool,
+    weave_size: body.weave_size,
+    block_size: body.block_size,
+    cumulative_diff: body.cumulative_diff,
+    hash_list_merkle: body.hash_list_merkle,
+    poa: {
+      option: body.poa.option,
+      tx_path: body.poa.tx_path,
+      chunk: body.poa.chunk,
+    },
+  }
 }

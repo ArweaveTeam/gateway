@@ -1,4 +1,4 @@
-import { TransactionHeader, Block, ChunkHeader } from "../lib/arweave";
+import { TransactionHeader, Block, ChunkHeader } from '../lib/arweave'
 
 export type DataFormatVersion = 1.0 | 2.0 | 2.1;
 

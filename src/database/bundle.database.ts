@@ -1,35 +1,35 @@
-import { upsert } from "./postgres";
-import knex from "knex";
+import { upsert } from './postgres'
+import knex from 'knex'
 
-import { DataBundleItem } from "../lib/arweave";
-import { fromB64Url, sha256B64Url } from "../lib/encoding";
-import { txTagsToRows } from './transaction.database';
+import { DataBundleItem } from '../lib/arweave'
+import { fromB64Url, sha256B64Url } from '../lib/encoding'
+import { txTagsToRows } from './transaction.database'
 
 export interface DataBundleStatus {
   id: string;
-  status: "pending" | "complete" | "error";
+  status: 'pending' | 'complete' | 'error';
   attempts: number;
   error: string | null;
 }
 
-const table = "bundle_status";
+const table = 'bundle_status'
 
-const fields = ["id", "status", "attempts", "error"];
+const fields = ['id', 'status', 'attempts', 'error']
 
 export async function saveBundleStatus(connection: knex, rows: Partial<DataBundleStatus>[]) {
   return upsert(connection, {
     table,
-    conflictKeys: ["id"],
+    conflictKeys: ['id'],
     rows,
-  });
+  })
 };
 
 export async function getBundleImport(connection: knex, id: string): Promise<Partial<DataBundleStatus>> {
   const result = await connection
-    .select<DataBundleStatus[]>(fields)
-    .from("bundle_status")
-    .where({ id })
-    .first();
+      .select<DataBundleStatus[]>(fields)
+      .from('bundle_status')
+      .where({ id })
+      .first()
 
   if (result) {
     return {
@@ -37,19 +37,19 @@ export async function getBundleImport(connection: knex, id: string): Promise<Par
       status: result.status,
       attempts: result.attempts,
       error: result.error,
-    };
+    }
   }
 
-  return {};
+  return {}
 };
 
 export async function saveBundleDataItem(connection: knex, tx: DataBundleItem, { parent } : { parent: string }) {
   return await connection.transaction(async (knexTransaction) => {
-      await upsert(knexTransaction, {
-      table: "transactions",
-      conflictKeys: ["id"],
+    await upsert(knexTransaction, {
+      table: 'transactions',
+      conflictKeys: ['id'],
       rows: [
-          {
+        {
           parent,
           format: 1,
           id: tx.id,
@@ -62,16 +62,16 @@ export async function saveBundleDataItem(connection: knex, tx: DataBundleItem, {
           tags: JSON.stringify(tx.tags),
           quantity: 0,
           data_size: fromB64Url((tx as any).data).byteLength,
-          },
+        },
       ],
-      });
+    })
 
-      if (tx.tags.length > 0) {
-        await upsert(knexTransaction, {
-            table: "tags",
-            conflictKeys: ["tx_id", "index"],
-            rows: txTagsToRows(tx.id, tx.tags),
-        });
-      }
-  });
+    if (tx.tags.length > 0) {
+      await upsert(knexTransaction, {
+        table: 'tags',
+        conflictKeys: ['tx_id', 'index'],
+        rows: txTagsToRows(tx.id, tx.tags),
+      })
+    }
+  })
 };

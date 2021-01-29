@@ -1,6 +1,6 @@
-import { get } from 'superagent';
-import { Base64UrlEncodedString, WinstonString, fromB64Url } from "./encoding";
-import { GrabNode } from './arweave.node';
+import { get } from 'superagent'
+import { Base64UrlEncodedString, WinstonString, fromB64Url } from './encoding'
+import { GrabNode } from './arweave.node'
 
 export interface Tag {
     name: Base64UrlEncodedString;
@@ -25,33 +25,33 @@ export interface TransactionType {
 }
 
 export async function Transaction(id: string): Promise<TransactionType> {
-    const payload = await get(`${GrabNode()}/tx/${id}`);
-    const body = JSON.parse(payload.text);
+  const payload = await get(`${GrabNode()}/tx/${id}`)
+  const body = JSON.parse(payload.text)
 
-    return {
-        format: body.format,
-        id: body.id,
-        last_tx: body.last_tx,
-        owner: body.owner,
-        tags: body.tags,
-        target: body.target,
-        quantity: body.quantity,
-        data: body.data,
-        data_size: body.data_size,
-        data_tree: body.data_tree,
-        data_root: body.data_root,
-        reward: body.reward,
-        signature: body.signature,
-    }
+  return {
+    format: body.format,
+    id: body.id,
+    last_tx: body.last_tx,
+    owner: body.owner,
+    tags: body.tags,
+    target: body.target,
+    quantity: body.quantity,
+    data: body.data,
+    data_size: body.data_size,
+    data_tree: body.data_tree,
+    data_root: body.data_root,
+    reward: body.reward,
+    signature: body.signature,
+  }
 }
 
 export function TagValue(tags: Array<Tag>, name: string): string {
-    for (let i = 0; i < tags.length; i++) {
-        const tag = tags[i];
-        if (fromB64Url(tag.name).toString().toLowerCase() === name.toLowerCase()) {
-            return fromB64Url(tag.value).toString();
-        }
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i]
+    if (fromB64Url(tag.name).toString().toLowerCase() === name.toLowerCase()) {
+      return fromB64Url(tag.value).toString()
     }
+  }
 
-    return '';
+  return ''
 }

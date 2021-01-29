@@ -1,4 +1,4 @@
-import { chunk } from "lodash";
+import { chunk } from 'lodash'
 
 /**
  * Split a large array into batches and process each batch sequentially,
@@ -8,20 +8,20 @@ import { chunk } from "lodash";
  * @param func
  */
 export const sequentialBatch = async (
-  items: any[],
-  batchSize = 10,
-  func: Function
+    items: any[],
+    batchSize = 10,
+    func: Function,
 ) => {
-  const batches = chunk(items, batchSize);
+  const batches = chunk(items, batchSize)
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    await func(batch);
+    const batch = batches[batchIndex]
+    await func(batch)
   }
-};
+}
 
 export const wait = async (ms: number) => {
   return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-};
+    setTimeout(resolve, ms)
+  })
+}
