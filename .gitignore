@@ -1,12 +1,5 @@
-dist 
-# package directories
+dist
 node_modules
-jspm_packages
-
-# Serverless directories
-.serverless
-.terraform
-
 .env
 
 **/*.log

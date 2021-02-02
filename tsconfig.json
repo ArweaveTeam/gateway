@@ -1,22 +1,30 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
-    "target": "ES5",
+    "target": "es5",
     "module": "CommonJS",
-    "lib": ["esnext"],
-    "sourceMap": true,
+    "moduleResolution": "node",
+    "lib": ["ESNext"],
     "declaration": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "isolatedModules": false,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "composite": true,
+    "removeComments": true,
+    "importHelpers": true,
     "downlevelIteration": true,
-    "outDir": "dist"
+    "isolatedModules": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "preserveSymlinks": true,
+    "allowUmdGlobalAccess": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["node_modules"],
   "include": [
     "src/**/*.ts",
     "test/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

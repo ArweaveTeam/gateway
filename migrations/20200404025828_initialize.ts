@@ -1,6 +1,6 @@
 import * as Knex from "knex";
 
-export async function up(knex: Knex): Promise<any> {
+export async function up(knex: Knex) {
   return knex.schema
     .withSchema(process.env.ENVIRONMENT || "public")
     .createTable("transactions", table => {
@@ -24,33 +24,22 @@ export async function up(knex: Knex): Promise<any> {
 
       table.primary(["id"], "pkey_transactions");
     })
-    .createTable("tags", table => {
-      table.string("tx_id", 64).notNullable();
-      table.integer("index").notNullable();
-      table.string("name").notNullable();
-      table.text("value").notNullable();
-      table.timestamp("created_at").defaultTo(knex.fn.now());
-
-      table.primary(["tx_id", "index"], "pkey_tags");
-      table.index(["name", "value"], "index_name_value", "BTREE");
-    })
     .createTable("blocks", table => {
       table.string("id", 64).notNullable();
       table.integer("height", 4).notNullable();
       table.timestamp("mined_at").notNullable();
       table.jsonb("txs").notNullable();
       table.timestamp("created_at").defaultTo(knex.fn.now());
-      table.jsonb("extended");
       table.string("previous_block").notNullable();
+      table.jsonb("extended");
 
       table.primary(["id"], "pkey_blocks");
     });
 }
 
-export async function down(knex: Knex): Promise<any> {
+export async function down(knex: Knex){
   return knex.schema
     .withSchema(process.env.ENVIRONMENT || "public")
     .dropTableIfExists("transactions")
-    .dropTableIfExists("tags")
     .dropTableIfExists("blocks");
 }

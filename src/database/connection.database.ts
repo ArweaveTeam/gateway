@@ -1,0 +1,13 @@
+import knex from 'knex';
+
+export const connection: knex = knex({
+  client: 'pg',
+  pool: {min: 10, max: 100},
+  connection: {
+    host: process.env.DATABASE_HOST,
+    port: parseInt(process.env.DATABASE_PORT || '5432'),
+    database: process.env.DATABASE_NAME,
+    user: process.env.DATABASE_USER,
+    password: process.env.DATABASE_PASSWORD,
+  },
+});

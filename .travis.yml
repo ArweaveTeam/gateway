@@ -10,6 +10,6 @@ services:
   - docker
 
 script:
-  - yarn lint
+  - yarn dev:lint
   - yarn docker:start
   - yarn docker:stop
