@@ -1,4 +1,4 @@
-import { GraphQLResolveInfo } from 'graphql';
+import {GraphQLResolveInfo} from 'graphql';
 export type Maybe<T> = T | null;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type RequireFields<T, K extends keyof T> = { [X in Exclude<keyof T, K>]?: T[X] } & { [P in K]-?: NonNullable<T[P]> };
@@ -50,15 +50,15 @@ export type TagFilter = {
   name: Scalars['String'];
   /**
    * An array of values to match against. If multiple values are passed then transactions with _any_ matching tag value from the set will be returned.
-   * 
+   *
    * e.g.
-   * 
+   *
    * \`{name: "app-name", values: ["app-1"]}\`
-   * 
+   *
    * Returns all transactions where the \`app-name\` tag has a value of \`app-1\`.
-   * 
+   *
    * \`{name: "app-name", values: ["app-1", "app-2", "app-3"]}\`
-   * 
+   *
    * Returns all transactions where the \`app-name\` tag has a value of either \`app-1\` _or_ \`app-2\` _or_ \`app-3\`.
    */
   values: Array<Scalars['String']>;
@@ -89,7 +89,7 @@ export type TransactionEdge = {
   __typename?: 'TransactionEdge';
   /**
    * The cursor value for fetching the next page.
-   * 
+   *
    * Pass this to the \`after\` parameter in \`transactions(after: $cursor)\`, the next page will start from the next item after this.
    */
   cursor: Scalars['String'];
@@ -180,7 +180,6 @@ export enum TagOperator {
   /** Not equal */
   Neq = 'NEQ'
 }
-
 
 
 export type ResolverTypeWrapper<T> = Promise<T> | T;

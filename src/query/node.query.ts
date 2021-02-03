@@ -32,7 +32,7 @@ export async function getNodeInfo(): Promise<InfoType> {
     peers: body.peers,
     queue_length: body.queue_length,
     node_state_latency: body.node_state_latency,
-  }
+  };
 }
 
 export async function getData(id: string): Promise<any> {

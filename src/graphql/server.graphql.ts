@@ -5,7 +5,7 @@ import {resolvers} from './resolver.graphql';
 
 const typeDefs = gql(readFileSync(`${process.cwd()}/types.graphql`, 'utf8'));
 
-export function GraphQLServer(opts: ApolloServerExpressConfig = {}) {
+export function graphServer(opts: ApolloServerExpressConfig = {}) {
   return new ApolloServer({
     typeDefs,
     resolvers,
