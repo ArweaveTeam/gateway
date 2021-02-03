@@ -1,4 +1,3 @@
-
 import {get} from 'superagent';
 import {grabNode} from './node.query';
 

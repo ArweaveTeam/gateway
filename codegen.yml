@@ -4,7 +4,3 @@ generates:
     plugins:
       - typescript
       - typescript-resolvers
-  ./dist/src/graphql/types.ts:
-    plugins:
-      - typescript
-      - typescript-resolvers
