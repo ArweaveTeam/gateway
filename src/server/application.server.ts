@@ -6,6 +6,7 @@ import {log} from '../utility/log.utility';
 import {graphServer} from '../graphql/server.graphql';
 import {proxyRoute} from '../route/proxy.route';
 import {dataRouteRegex, dataRoute} from '../route/data.route';
+import {startSync} from '../database/sync.database';
 
 export const app: Express = express();
 
@@ -23,5 +24,6 @@ export function start() {
 
   app.listen(process.env.PORT || 3000, () => {
     log.info(`[app] started on http://localhost:${process.env.PORT || 3000}`);
+    startSync();
   });
 }
