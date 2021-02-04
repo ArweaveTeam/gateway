@@ -5,8 +5,13 @@ import {transaction, TransactionType} from '../query/transaction.query';
 import {formatBlock} from './block.database';
 import {formatTransaction} from './transaction.database';
 
-export function createBatchItem(batchScope: Transaction, table: string, rows: object): Sql {
-  return batchScope.insert(rows).into(table).toSQL();
+export function createBatchItem(batchScope: Transaction, table: string, rows: object, conflictKey: string = `id`): Sql {
+  return batchScope
+    .table(table)
+    .insert(rows)
+    .onConflict(conflictKey as any)
+    .ignore()
+    .toSQL();
 }
 
 export function createBlockBatchItem(batchScope: Transaction, block: BlockType): Sql {

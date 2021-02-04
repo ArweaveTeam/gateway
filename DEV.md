@@ -54,6 +54,8 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
+PARALLEL=8
+
 INDICES=["app-name", "domain", "namespace"]
 ```
 
@@ -61,6 +63,22 @@ Make sure you copy this configuration to `.env`.
 
 ```bash
 cp .env.dev .env
+```
+
+## Block Synchronization
+
+If at any point or time you want to increase the parallelization level of block synchronization. You should change the `PARALLEL` variable.
+
+This variable indicates how many blocks to query concurrently. You can change it to any amount of blocks you please.
+
+```env
+PARALLEL=16
+```
+
+If you want to disable block synchronization. Simply set `PARALLEL` to `0`.
+
+```env
+PARALLEL=0
 ```
 
 ## Deploying Migrations with Knex
