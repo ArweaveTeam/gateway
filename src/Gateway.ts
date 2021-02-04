@@ -1,22 +1,36 @@
 import 'colors';
+import express, {Express} from 'express';
 import {config} from 'dotenv';
-import {program} from 'commander';
-import {start} from './server/application.server';
+import {corsMiddleware} from './middleware/cors.middleware';
+import {jsonMiddleware} from './middleware/json.middleware';
+import {logConfigurationMiddleware, logMiddleware} from './middleware/log.middleware';
+import {log} from './utility/log.utility';
+import {graphServer} from './graphql/server.graphql';
+import {proxyRoute} from './route/proxy.route';
+import {dataRouteRegex, dataRoute} from './route/data.route';
+import {startSync} from './database/sync.database';
 
-export async function gateway() {
-  config();
+config();
 
-  program
-      .description(`Arweave Gateway | The CLI tool to deploy Arweave Gateways`);
+export const app: Express = express();
 
-  program
-      .command(`start`)
-      .description(`Start the Arweave Gateway`)
-      .action(() => {
-        start();
-      });
+export function start() {
+  app.set(`trust proxy`, 1);
+  app.use(corsMiddleware);
+  app.use(jsonMiddleware);
+  app.use(logConfigurationMiddleware);
+  app.use(logMiddleware);
 
-  program.parse(process.argv);
+  graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
+
+  app.get(dataRouteRegex, dataRoute);
+  app.all('*', proxyRoute);
+
+  app.listen(process.env.PORT || 3000, () => {
+    log.info(`[app] started on http://localhost:${process.env.PORT || 3000}`);
+    startSync();
+  });
 }
 
-(async () => await gateway())();
+
+(async () => await start())();

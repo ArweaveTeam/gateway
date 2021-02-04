@@ -1,6 +1,6 @@
 import moment from 'moment';
-import { pick } from 'lodash';
-import { BlockType } from '../query/block.query';
+import {pick} from 'lodash';
+import {BlockType} from '../query/block.query';
 
 export interface BlockDatabaseType {
     id: string;
@@ -12,27 +12,27 @@ export interface BlockDatabaseType {
 }
 
 export const blockExtendedFields = [
-    'diff',
-    'hash',
-    'reward_addr',
-    'last_retarget',
-    'tx_root',
-    'tx_tree',
-    'reward_pool',
-    'weave_size',
-    'block_size',
-    'cumulative_diff',
-    'hash_list_merkle',
-    'tags',
+  'diff',
+  'hash',
+  'reward_addr',
+  'last_retarget',
+  'tx_root',
+  'tx_tree',
+  'reward_pool',
+  'weave_size',
+  'block_size',
+  'cumulative_diff',
+  'hash_list_merkle',
+  'tags',
 ];
 
 export function formatBlock(block: BlockType): BlockDatabaseType {
-    return {
-        id: block.indep_hash,
-        height: block.height,
-        previous_block: block.previous_block,
-        txs: block.txs,
-        mined_at: moment(block.timestamp * 1000).format(),
-        extended: pick(block, blockExtendedFields),
-    }
+  return {
+    id: block.indep_hash,
+    height: block.height,
+    previous_block: block.previous_block,
+    txs: block.txs,
+    mined_at: moment(block.timestamp * 1000).format(),
+    extended: pick(block, blockExtendedFields),
+  };
 }
