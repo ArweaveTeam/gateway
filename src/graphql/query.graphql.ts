@@ -1,7 +1,6 @@
 import {config} from 'dotenv';
 import {QueryBuilder} from 'knex';
 import {connection} from '../database/connection.database';
-import {tagValue} from '../query/transaction.query';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
 
@@ -35,7 +34,7 @@ export interface QueryParams {
 }
 
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
-  const {to, from, tags, id, ids, status, select, since} = params;
+  const {to, from, tags, id, ids, status, select} = params;
   const {limit = 10, blocks = false, sortOrder = 'HEIGHT_DESC'} = params;
   const {offset = 0, minHeight = -1, maxHeight = -1} = params;
 
@@ -79,27 +78,27 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
         if (tag.name === index) {
           indexed = true;
-          
+
           if (tag.op === 'EQ') {
-            query.whereIn(`transactions.${index}`, tag.values)
-          } 
-          
+            query.whereIn(`transactions.${index}`, tag.values);
+          }
+
           if (tag.op === 'NEQ') {
-            query.whereNotIn(`transactions.${index}`, tag.values)
-          }          
+            query.whereNotIn(`transactions.${index}`, tag.values);
+          }
         }
       }
 
       if (indexed === false) {
         query.join(`tags as ${tagAlias}`, (join) => {
           join.on('transactions.id', `${tagAlias}.tx_id`);
-  
+
           join.andOnIn(`${tagAlias}.name`, [tag.name]);
-  
+
           if (tag.op === 'EQ') {
             join.andOnIn(`${tagAlias}.value`, tag.values);
           }
-  
+
           if (tag.op === 'NEQ') {
             join.andOnNotIn(`${tagAlias}.value`, tag.values);
           }

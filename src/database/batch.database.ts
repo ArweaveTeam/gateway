@@ -113,7 +113,7 @@ export async function storeBlock(block: BlockType) {
           batch = batch.concat(await processANSTransaction(batchScope, ansTxs));
         } catch (error) {
           console.error(error);
-        }        
+        }
       }
     }
 
