@@ -1,12 +1,28 @@
 # Arweave Gateway
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+[![Build Status](https://travis-ci.org/ArweaveTeam/gateway.svg?branch=master)](https://travis-ci.org/ArweaveTeam/gateway)
+[![codecov](https://codecov.io/gh/ArweaveTeam/gateway/branch/master/graph/badge.svg)](https://codecov.io/gh/ArweaveTeam/gateway)
+
 ## Requirements
 
 1. A Unix OS
 
 2. Docker and Docker Compose LTS
 
-There is also the development version of the guide, that you can review [here.](./DEV.md)
+### Suggested Hardware
+
+There are several million transactions on the Arweave chain. In order to effectively serve content on the gateway you'll need a decent sized computer. The ideal specs for a Gateway should have the following:
+
+1. 16GB RAM (ideally 32GB RAM)
+
+2. ~100GB of SSD storage available
+
+3. Intel i5 / AMD FX or greater, +4 vCPUs should be more than enough, these are typically Intel Xeon CPUs.
+
+# Deploying a Gateway
+
+This guide is designed to use Docker Compose. There is also the development version of the guide, that you can review [here.](./DEV.md)
 
 ## Environment
 
@@ -36,7 +52,6 @@ cp .env.docker .env
 ```
 
 ## Compilation
-
 
 You can start the server with `docker-compose`.
 
