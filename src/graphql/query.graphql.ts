@@ -1,7 +1,11 @@
+import {config} from 'dotenv';
 import {QueryBuilder} from 'knex';
 import {connection} from '../database/connection.database';
+import {tagValue} from '../query/transaction.query';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
+
+config();
 
 export type TxSortOrder = 'HEIGHT_ASC' | 'HEIGHT_DESC';
 
@@ -9,6 +13,8 @@ export const orderByClauses = {
   HEIGHT_ASC: 'transactions.height ASC NULLS LAST, id ASC',
   HEIGHT_DESC: 'transactions.height DESC NULLS FIRST, id ASC',
 };
+
+export const indices = JSON.parse(process.env.INDICES || '[]');
 
 export interface QueryParams {
   to?: string[];
@@ -54,10 +60,6 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     query.whereNotNull('transactions.height');
   }
 
-  if (since) {
-    query.where('transactions.created_at', '<', since);
-  }
-
   if (to) {
     query.whereIn('transactions.target', to);
   }
@@ -67,23 +69,43 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
   }
 
   if (tags) {
-    tags.forEach((tag, index) => {
-      const tagAlias = `${index}_${index}`;
+    for (let i = 0; i < tags.length; i++) {
+      const tag = tags[i];
+      const tagAlias = `${i}_${i}`;
+      let indexed = false;
 
-      query.join(`tags as ${tagAlias}`, (join) => {
-        join.on('transactions.id', `${tagAlias}.tx_id`);
+      for (let ii = 0; ii < indices.length; ii++) {
+        const index = indices[ii];
 
-        join.andOnIn(`${tagAlias}.name`, [tag.name]);
-
-        if (tag.op === 'EQ') {
-          join.andOnIn(`${tagAlias}.value`, tag.values);
+        if (tag.name === index) {
+          indexed = true;
+          
+          if (tag.op === 'EQ') {
+            query.whereIn(`transactions.${index}`, tag.values)
+          } 
+          
+          if (tag.op === 'NEQ') {
+            query.whereNotIn(`transactions.${index}`, tag.values)
+          }          
         }
+      }
 
-        if (tag.op === 'NEQ') {
-          join.andOnNotIn(`${tagAlias}.value`, tag.values);
-        }
-      });
-    });
+      if (indexed === false) {
+        query.join(`tags as ${tagAlias}`, (join) => {
+          join.on('transactions.id', `${tagAlias}.tx_id`);
+  
+          join.andOnIn(`${tagAlias}.name`, [tag.name]);
+  
+          if (tag.op === 'EQ') {
+            join.andOnIn(`${tagAlias}.value`, tag.values);
+          }
+  
+          if (tag.op === 'NEQ') {
+            join.andOnNotIn(`${tagAlias}.value`, tag.values);
+          }
+        });
+      }
+    }
   }
 
   if (minHeight >= 0) {

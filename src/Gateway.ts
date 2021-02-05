@@ -3,7 +3,6 @@ import express, {Express} from 'express';
 import {config} from 'dotenv';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
-import {logConfigurationMiddleware, logMiddleware} from './middleware/log.middleware';
 import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
 import {proxyRoute} from './route/proxy.route';

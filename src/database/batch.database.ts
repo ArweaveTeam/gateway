@@ -1,8 +1,8 @@
-import { DataItemJson } from 'arweave-bundles';
+import {DataItemJson} from 'arweave-bundles';
 import {Transaction, QueryBuilder} from 'knex';
 import {connection} from './connection.database';
 import {BlockType} from '../query/block.query';
-import { getData } from '../query/node.query';
+import {getData} from '../query/node.query';
 import {transaction, TransactionType, tagValue} from '../query/transaction.query';
 import {formatBlock} from './block.database';
 import {formatTransaction, DatabaseTag, ANSTransaction, formatAnsTransaction} from './transaction.database';
@@ -39,7 +39,7 @@ export function createTagBatchItem(batchScope: Transaction, tag: DatabaseTag): Q
 
 export function processTransaction(batchScope: Transaction, payload: TransactionType): QueryBuilder[] {
   const batch: QueryBuilder[] = [];
-  
+
   batch.push(createTransactionBatchItem(batchScope, payload));
 
   const id = payload.id;
@@ -47,14 +47,14 @@ export function processTransaction(batchScope: Transaction, payload: Transaction
 
   for (let i = 0; i < tags.length; i++) {
     const tag = tags[i];
-    const { name, value } = utf8DecodeTag(tag);
+    const {name, value} = utf8DecodeTag(tag);
 
     const formattedTag: DatabaseTag = {
       tx_id: id,
       index: i,
       name: name || '',
       value: value || '',
-    }
+    };
 
     batch.push(createTagBatchItem(batchScope, formattedTag));
   }
@@ -75,19 +75,19 @@ export async function processANSTransaction(batchScope: Transaction, ansTxs: Dat
 
     for (let ii = 0; ii < ansTags.length; ii++) {
       const ansTag = ansTags[ii];
-      const { name, value } = await ansBundles.decodeTag(ansTag);
+      const {name, value} = await ansBundles.decodeTag(ansTag);
 
       const formattedTag: DatabaseTag = {
         tx_id: ansTx.id,
         index: ii,
         name: name || '',
         value: value || '',
-      }
-  
+      };
+
       batch.push(createTagBatchItem(batchScope, formattedTag));
     }
   }
-  
+
   return batch;
 }
 
@@ -101,15 +101,19 @@ export async function storeBlock(block: BlockType) {
       const tx = block.txs[i];
       const payload = await transaction(tx);
 
-      batch = batch.concat(processTransaction(batchScope, payload));     
+      batch = batch.concat(processTransaction(batchScope, payload));
 
       const ans102 = tagValue(payload.tags, 'Bundle-Type') === 'ANS-102';
 
       if (ans102) {
-        const ansPayload = await getData(payload.id);
-        const ansTxs = await ansBundles.unbundleData(ansPayload);
-                
-        batch = batch.concat(await processANSTransaction(batchScope, ansTxs));
+        try {
+          const ansPayload = await getData(payload.id);
+          const ansTxs = await ansBundles.unbundleData(ansPayload);
+
+          batch = batch.concat(await processANSTransaction(batchScope, ansTxs));
+        } catch (error) {
+          console.error(error);
+        }        
       }
     }
 

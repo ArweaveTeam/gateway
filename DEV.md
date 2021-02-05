@@ -56,7 +56,7 @@ PORT=3000
 
 PARALLEL=8
 
-INDICES=["app-name", "domain", "namespace"]
+INDICES=["App-Name", "app", "domain", "namespace"]
 ```
 
 Make sure you copy this configuration to `.env`.
