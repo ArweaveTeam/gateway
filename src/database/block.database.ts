@@ -7,8 +7,8 @@ export interface BlockDatabaseType {
     previous_block: string;
     mined_at: string;
     height: number;
-    txs: string[];
-    extended: object;
+    txs: string;
+    extended: string;
 }
 
 export const blockExtendedFields = [
@@ -31,8 +31,8 @@ export function formatBlock(block: BlockType): BlockDatabaseType {
     id: block.indep_hash,
     height: block.height,
     previous_block: block.previous_block,
-    txs: block.txs,
+    txs: JSON.stringify(block.txs),
     mined_at: moment(block.timestamp * 1000).format(),
-    extended: pick(block, blockExtendedFields),
+    extended: JSON.stringify(pick(block, blockExtendedFields)),
   };
 }

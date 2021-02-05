@@ -18,8 +18,6 @@ export function start() {
   app.set(`trust proxy`, 1);
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
-  app.use(logConfigurationMiddleware);
-  app.use(logMiddleware);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 

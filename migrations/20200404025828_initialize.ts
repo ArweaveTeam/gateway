@@ -19,6 +19,7 @@ export async function up(knex: Knex) {
       table.string('owner_address');
       table.string('data_root', 64);
       table.string('parent', 64);
+      table.timestamp('created_at').defaultTo(knex.fn.now());
 
       table.primary(['id'], 'pkey_transactions');
     })
@@ -26,17 +27,19 @@ export async function up(knex: Knex) {
       table.string('id', 64).notNullable();
       table.integer('height', 4).notNullable();
       table.timestamp('mined_at').notNullable();
-      table.jsonb('txs').notNullable();
       table.string('previous_block').notNullable();
+      table.jsonb('txs').notNullable();
       table.jsonb('extended');
+      table.timestamp('created_at').defaultTo(knex.fn.now());
 
       table.primary(['id'], 'pkey_blocks');
     })
     .createTable('tags', table => {
       table.string("tx_id", 64).notNullable();
       table.integer("index").notNullable();
-      table.string("name").notNullable();
-      table.text("value").notNullable();
+      table.string("name");
+      table.text("value");
+      table.timestamp('created_at').defaultTo(knex.fn.now());
 
       table.primary(["tx_id", "index"], "pkey_tags");
       table.index(["name", "value"], "index_name_value", "BTREE");

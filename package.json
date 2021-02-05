@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "apollo-server-express": "^2.19.2",
-    "arweave": "^1.10.3",
+    "arweave": "^1.10.6",
+    "arweave-bundles": "^1.0.3",
     "body-parser": "^1.19.0",
     "colors": "^1.4.0",
     "dotenv": "^8.2.0",

@@ -3,6 +3,7 @@ import {IResolvers} from 'apollo-server-express';
 import {QueryTransactionsArgs} from './types';
 import {ISO8601DateTimeString, winstonToAr, utf8DecodeTag} from '../utility/encoding.utility';
 import {TransactionHeader} from '../types/arweave.types';
+import {QueryParams, generateQuery} from './query.graphql';
 
 type Resolvers = IResolvers;
 
@@ -33,19 +34,21 @@ export const resolvers: Resolvers = {
     transaction: async (parent, queryParams, {req, connection}) => {
       req.log.info('[graphql/v2] transaction/request', queryParams);
 
-      const params = {
+      const params: QueryParams = {
         id: queryParams.id,
         blocks: true,
         select: fieldMap,
       };
 
-      return [];
+      const result = (await generateQuery(params)).first();
+
+      return await result as TransactionHeader;
     },
     transactions: async (parent, queryParams: QueryTransactionsArgs, {req, connection}, info) => {
       const {timestamp, offset} = parseCursor(queryParams.after || newCursor());
       const pageSize = Math.min(queryParams.first || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
-      const params = {
+      const params: QueryParams = {
         limit: pageSize + 1,
         offset: offset,
         ids: queryParams.ids || undefined,
@@ -60,7 +63,7 @@ export const resolvers: Resolvers = {
         sortOrder: queryParams.sort || undefined,
       };
 
-      const results: TransactionHeader[] = [];
+      const results = (await generateQuery(params)) as TransactionHeader[];
       const hasNextPage = results.length > pageSize;
 
       return {

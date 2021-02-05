@@ -25,7 +25,10 @@ export async function startSync() {
   );
 
   await storeBlock(initialBlock);
-  parallelize(startHeight - 1);
+
+  if (parallelization) {
+    parallelize(startHeight - 1);
+  }
 }
 
 export async function parallelize(height: number) {

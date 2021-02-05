@@ -1671,15 +1671,22 @@ array.prototype.flatmap@1.2.3:
     es-abstract "^1.17.0-next.1"
     function-bind "^1.1.1"
 
-arweave@^1.10.3:
-  version "1.10.3"
-  resolved "https://registry.yarnpkg.com/arweave/-/arweave-1.10.3.tgz#70bb21ba14ba564aaea7d4c2f9e220beca4d5032"
-  integrity sha512-fHIIeMNCO7uhLUmyybI8Xl5c19RAoznjKiK0vUmW3rnzo3Wmy06NZs0M7njN0bKPH+RCaHRDuIhyhETWwKj1sw==
+arweave-bundles@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/arweave-bundles/-/arweave-bundles-1.0.3.tgz#568f99c603be2375263341db7fc664ac2bb1846b"
+  integrity sha512-AhHCJ5+vfAv1NtK4saV/D9yzCm/aJS+s5EQMXGPFW7u3Q4TLLYwFCUAp7J11aBph0xYKWN04dLoubBrtvQBX3g==
+  dependencies:
+    arweave "^1.10.5"
+
+arweave@^1.10.5, arweave@^1.10.6:
+  version "1.10.6"
+  resolved "https://registry.yarnpkg.com/arweave/-/arweave-1.10.6.tgz#7e710212139120430807d2a0d9f9389d2032d873"
+  integrity sha512-xkRHvTnCduK3HKlmCHGpMmHG1SSzJc0as9ogPw7bcYSzP0/DTkarTQkLIDi3AG2lV7IQQx4LrcqFP/rGa10v4Q==
   dependencies:
     asn1.js "^5.4.1"
     axios "^0.21.1"
     base64-js "^1.3.1"
-    bignumber.js "^8.1.1"
+    bignumber.js "^9.0.1"
 
 asap@~2.0.3:
   version "2.0.6"
@@ -1859,10 +1866,10 @@ big.js@^5.2.2:
   resolved "https://registry.yarnpkg.com/big.js/-/big.js-5.2.2.tgz#65f0af382f578bcdc742bd9c281e9cb2d7768328"
   integrity sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==
 
-bignumber.js@^8.1.1:
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-8.1.1.tgz#4b072ae5aea9c20f6730e4e5d529df1271c4d885"
-  integrity sha512-QD46ppGintwPGuL1KqmwhR0O+N2cZUg8JG/VzwI2e28sM9TqHjQB10lI4QAaMHVbLzwVLLAwEglpKPViWX+5NQ==
+bignumber.js@^9.0.1:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.0.1.tgz#8d7ba124c882bfd8e43260c67475518d0689e4e5"
+  integrity sha512-IdZR9mh6ahOBv/hYGiXyVuyCetmGJhtYkqLBpTStdhEGjegpPlUawydyaF3pbIOFynJTpllEs+NP+CS9jKFLjA==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
