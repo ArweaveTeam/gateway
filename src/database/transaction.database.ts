@@ -9,6 +9,7 @@ config();
 export interface ANSTransaction {
   id: string;
   owner: string;
+  content_type: string;
   target: string;
   tags: string;
 }
@@ -68,6 +69,7 @@ export function formatAnsTransaction(ansTransaction: DataItemJson): ANSTransacti
   return {
     id: ansTransaction.id,
     owner: ansTransaction.owner,
+    content_type: 'ANS-102',
     target: ansTransaction.target,
     tags: JSON.stringify(ansTransaction.tags),
   };
