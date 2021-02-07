@@ -12,8 +12,9 @@ export function logConfigurationMiddleware(req: Request, res: Response, next: Ne
 
   return next();
 }
-
-var accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' })
+var pathToSet = path.join(__dirname, 'access.log');
+console.log('pathToSet', pathToSet)
+var accessLogStream = fs.createWriteStream(pathToSet, { flags: 'a' })
  
 morgan.token(`trace`, (req: Request) => {
   return req.id || `UNKNOWN`;

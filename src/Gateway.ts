@@ -2,6 +2,7 @@ import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
 import {corsMiddleware} from './middleware/cors.middleware';
+import {logMiddleware} from './middleware/log.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
@@ -17,6 +18,7 @@ export function start() {
   app.set(`trust proxy`, 1);
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
+  app.use(logMiddleware);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
