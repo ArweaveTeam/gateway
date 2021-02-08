@@ -9,7 +9,7 @@ import {formatTransaction, DatabaseTag, ANSTransaction, formatAnsTransaction} fr
 import {utf8DecodeTag} from '../utility/encoding.utility';
 import {ansBundles} from '../utility/ans.utility';
 
-export function createBatchItem(batchScope: Transaction, table: string, data: object, conflictKey: string = `id`): QueryBuilder {
+export function createBatchItem(batchScope: Transaction, table: string, data: object, conflictKey: string = 'id'): QueryBuilder {
   return batchScope
       .insert(data)
       .into(table)
