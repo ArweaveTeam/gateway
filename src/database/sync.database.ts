@@ -43,7 +43,7 @@ export async function startSync() {
   }
 
   bar = new ProgressBar(
-      `:current/:total blocks synced [:bar] :percent :etas`,
+      ':current/:total blocks synced [:bar] :percent :etas',
       {
         complete: '|',
         incomplete: ' ',
@@ -56,11 +56,11 @@ export async function startSync() {
   }
 
   process.on('SIGINT', () => {
-    log.info(`[database] ensuring all blocks are stored before exit, you may see some extra output in console`);
+    log.info('[database] ensuring all blocks are stored before exit, you may see some extra output in console');
     SIGKILL = true;
     setInterval(() => {
       if (SIGINT === false) {
-        log.info(`[database] block sync state preserved, now exiting`);
+        log.info('[database] block sync state preserved, now exiting');
         process.exit();
       }
     }, 100);
@@ -87,7 +87,7 @@ export async function parallelize(height: number) {
       parallelize(height - 8);
     }
   } else {
-    log.info(`[database] sync complete`);
+    log.info('[database] sync complete');
   }
 }
 

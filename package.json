@@ -7,8 +7,8 @@
   "license": "MIT",
   "scripts": {
     "dev:lint": "eslint src/**/*.ts migrations/*.ts knexfile.ts",
-    "dev:gql": "graphql-codegen --config codegen.yml",
-    "dev:build": "tsc && npm run dev:gql",
+    "dev:gql": "npx graphql-codegen --config codegen.yml",
+    "dev:build": "npm run dev:gql && tsc",
     "dev:start": "npm run dev:build && node dist/src/Gateway.js",
     "dev:restart": "npm run migrate:down && npm run migrate:latest && npm run dev:start",
     "migrate:latest": "knex migrate:latest",
@@ -16,7 +16,7 @@
     "migrate:down": "knex migrate:down",
     "docker:start": "docker-compose up --build -d",
     "docker:stop": "docker-compose down -v",
-    "start": "npm run migrate:latest && node dist/gateway/app.js"
+    "start": "npm run migrate:latest && node dist/src/Gateway.js"
   },
   "dependencies": {
     "apollo-server-express": "^2.19.2",

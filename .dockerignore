@@ -4,6 +4,8 @@
 # Include Essential Gateway Files
 !/bin
 !/.env
+!/types.graphql
+!/codegen.yml
 !/knexfile.ts
 !/yarn.lock
 !/package.json

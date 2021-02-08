@@ -7,6 +7,8 @@ import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
+import {transactionOptionsRoute, transactionRoute} from './route/transaction.route';
+import {chunkOptionsRoute, chunkRoute} from './route/chunk.route';
 import {startSync} from './database/sync.database';
 
 config();
@@ -22,6 +24,12 @@ export function start() {
 
   app.get(dataRouteRegex, dataRoute);
   app.all('*', proxyRoute);
+
+  app.options('/tx', transactionOptionsRoute);
+  app.post('/tx', transactionRoute);
+
+  app.options('/chunk', chunkOptionsRoute);
+  app.post('/chunk', chunkRoute);
 
   app.listen(process.env.PORT || 3000, () => {
     log.info(`[app] started on http://localhost:${process.env.PORT || 3000}`);
