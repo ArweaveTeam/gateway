@@ -27,6 +27,7 @@
     "dotenv": "^8.2.0",
     "event-stream": "^4.0.1",
     "express": "^4.17.1",
+    "fs": "^0.0.1-security",
     "graphql": "^15.5.0",
     "graphql-fields": "^2.0.3",
     "knex": "^0.21.17",

@@ -8,7 +8,8 @@ import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
-import {startSync} from './database/sync.database';
+import { startSync } from './database/sync.database';
+import { logsHelper } from './utility/log.helper'
 
 config();
 
@@ -23,6 +24,7 @@ export function start() {
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
   app.get(dataRouteRegex, dataRoute);
+  app.get("/logs", logsHelper);
   app.all('*', proxyRoute);
 
   app.listen(process.env.PORT || 3000, () => {
