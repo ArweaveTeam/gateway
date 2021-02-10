@@ -53,9 +53,9 @@ export async function block(height: number): Promise<BlockType> {
     cumulative_diff: body.cumulative_diff,
     hash_list_merkle: body.hash_list_merkle,
     poa: {
-      option: body.poa.option,
-      tx_path: body.poa.tx_path,
-      chunk: body.poa.chunk,
+      option: body.poa?.option,
+      tx_path: body.poa?.tx_path,
+      chunk: body.poa?.chunk,
     },
   };
 }

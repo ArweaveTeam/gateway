@@ -1,7 +1,12 @@
 dist
 node_modules
 .env
-.sync.state.json
+.cache
+cache
+
+snapshot
+.snapshot
+.import
 
 **/*.log
 **/.DS_Store

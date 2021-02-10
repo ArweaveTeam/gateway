@@ -11,6 +11,8 @@
     "dev:build": "npm run dev:gql && tsc",
     "dev:start": "npm run dev:build && node dist/src/Gateway.js",
     "dev:restart": "npm run migrate:down && npm run migrate:latest && npm run dev:start",
+    "dev:snapshot": "npm run dev:build && node dist/src/Snapshot.js",
+    "dev:import": "npm run dev:build && node dist/src/Import.js",
     "migrate:latest": "knex migrate:latest",
     "migrate:up": "knex migrate:up",
     "migrate:down": "knex migrate:down",
