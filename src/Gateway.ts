@@ -14,7 +14,7 @@ config();
 export const app: Express = express();
 
 export function start() {
-  app.set(`trust proxy`, 1);
+  app.set('trust proxy', 1);
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
 
