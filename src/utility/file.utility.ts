@@ -1,10 +1,7 @@
-import { closeSync, openSync, utimesSync } from 'fs';
+import {existsSync, mkdirSync} from 'fs';
 
-export function touch(path: string) {
-  const time = new Date();
-  try {
-    utimesSync(path, time, time);
-  } catch (err) {
-    closeSync(openSync(path, 'w'));
+export function mkdir(path: string) {
+  if (!existsSync(path)) {
+    mkdirSync(path);
   }
 }

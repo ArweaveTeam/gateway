@@ -34,6 +34,9 @@ CREATE DATABASE arweave;
 CREATE USER arweave WITH ENCRYPTED PASSWORD 'arweave';
 GRANT ALL PRIVILEGES ON DATABASE arweave TO arweave;
 
+# Required in order to import blocks from a snapshot
+ALTER ROLE arweave WITH SUPERUSER;
+
 # exit PSQL Terminal
 exit
 ```
