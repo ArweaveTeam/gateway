@@ -21,12 +21,14 @@ export const logsHelper = function (req: Request, res: Response) {
 
 export const logsTask = async function ( ) {
   // first clear old logs
-  await clearRawLogs()
+  await clearRawLogs();
+  console.log('successfully cleared old logs');
 
   // then get the raw logs
   var rawLogs = await readRawLogs();
+  console.log('successfully fetched raw logs', rawLogs);
 
-  // var sorted = await sortAndFilterLogs();
+  var sorted = await sortAndFilterLogs(rawLogs);
 
   // var result = await writeDailyLogs();
 
@@ -59,29 +61,24 @@ async function readRawLogs() {
     logs - access.log output (raw data in array)
     resolves to an array of data payloads
 */
-async function convertLogsFromString(string) {
+async function sortAndFilterLogs(logs: any[]) {
   return new Promise((resolve, reject) => {
-    var remaining = '';
-    var result = []
+    var formatted_logs = new Array ();
 
     try {
-      string.on('data', function (data) {
-        remaining += data;
-        var index = remaining.indexOf('\n');
-        var last = 0;
-        while (index > -1) {
-          var line = remaining.substring(last, index);
-          last = index + 1;
-          
-          index = remaining.indexOf('\n', last);
+      for (var log of logs) {
+        if (log.url) {
+          console.log(
+            'found entry for ' + log.url, 
+            'entry exists: ' + formatted_logs[log.url].includes(log.address)
+          )
+          if (!formatted_logs[log.url].includes(log.address)) {
+            formatted_logs[log.url] += "," + log.address
+          }
         }
-    
-        remaining = remaining.substring(last);
-      });
-    
-      input.on('end', function () {
-        resolve(result)
-      });
+      }
+      resolve(formatted_logs)
+
     } catch (err) {
       console.log('failed during access logs conversion', err)
       reject(err)
