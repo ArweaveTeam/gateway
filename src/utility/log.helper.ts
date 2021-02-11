@@ -5,6 +5,21 @@ import { reject } from 'lodash';
 
 const logFileLocation = path.join(__dirname, '../../daily.log')
 const rawLogFileLocation = path.join(__dirname, '../../access.log')
+
+interface RawLogs {
+  address: string,
+  user: string,
+  date: string,
+  method: string,
+  uniqueId: number,
+  url: string,
+  ref: string,
+}
+
+interface FormattedLogs {
+  addresses: string[],
+  url: string
+}
   
 export const logsHelper = function (req: Request, res: Response) {
     console.log('logs file path is ', logFileLocation)
@@ -19,19 +34,26 @@ export const logsHelper = function (req: Request, res: Response) {
     })
 }
 
-export const logsTask = async function ( ) {
-  // first clear old logs
-  await clearRawLogs();
-  console.log('successfully cleared old logs');
+export const logsTask = async function () {
+  
+  try { 
+    // first clear old logs
+    await clearRawLogs();
+    console.log('successfully cleared old logs');
+  
+    // then get the raw logs
+    var rawLogs = await readRawLogs() as RawLogs[];
+    console.log('successfully fetched raw logs', rawLogs);
+  
+    var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogs[];
+  
+    var result = await writeDailyLogs(sorted);
+  
+    console.log('successfully wrote daily logs', result)
 
-  // then get the raw logs
-  var rawLogs = await readRawLogs();
-  console.log('successfully fetched raw logs', rawLogs);
-
-  var sorted = await sortAndFilterLogs(rawLogs);
-
-  // var result = await writeDailyLogs();
-
+  } catch (err) {
+    console.error('error writing daily log file', err)
+  } 
 }
 
 /*
@@ -41,12 +63,14 @@ export const logsTask = async function ( ) {
 async function readRawLogs() {
   return new Promise((resolve, reject) => {
     var logs = fs.readFileSync(rawLogFileLocation).toString().split("\n");
-    var prettyLogs = [];
+    var prettyLogs = new Array () as RawLogs[];
     for (var log of logs) {
       try {
         console.log('converting', log)
-        prettyLogs.push(JSON.parse(log))
-        console.log('converted', prettyLogs[prettyLogs.length])
+        var logJSON = JSON.parse(log) as RawLogs;
+        logJSON.uniqueId = parseInt(logJSON.url, 36)
+        prettyLogs.push(logJSON)
+        console.log('converted', prettyLogs[prettyLogs.length - 1])
       } catch (err) {
         console.log('err', err)
         reject(err)
@@ -56,12 +80,29 @@ async function readRawLogs() {
   })
 }
 
+/*
+  @readRawLogs
+    retrieves the raw logs and reads them into a json array
+*/
+async function writeDailyLogs(logs:FormattedLogs[]) {
+  return new Promise((resolve, reject) => {
+    var data = '';
+    for (var log of logs) {
+      data += JSON.stringify(log)
+    }
+    fs.writeFile(logFileLocation, data, {}, function (err) {
+      if (err) reject(err)
+      resolve({succes: true})
+    });
+  })
+}
+
 /* 
   @sortAndFilterLogs 
     logs - access.log output (raw data in array)
     resolves to an array of data payloads
 */
-async function sortAndFilterLogs(logs: any[]) {
+async function sortAndFilterLogs(logs: RawLogs[]) {
   return new Promise((resolve, reject) => {
     var formatted_logs = new Array ();
 
@@ -70,10 +111,10 @@ async function sortAndFilterLogs(logs: any[]) {
         if (log.url) {
           console.log(
             'found entry for ' + log.url, 
-            'entry exists: ' + formatted_logs[log.url].includes(log.address)
+            'entry exists: ' + formatted_logs[log.uniqueId].includes(log.address)
           )
-          if (!formatted_logs[log.url].includes(log.address)) {
-            formatted_logs[log.url] += "," + log.address
+          if (!formatted_logs[log.uniqueId].includes(log.address)) {
+            formatted_logs[log.uniqueId] += "," + log.address
           }
         }
       }
