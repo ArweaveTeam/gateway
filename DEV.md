@@ -34,6 +34,9 @@ CREATE DATABASE arweave;
 CREATE USER arweave WITH ENCRYPTED PASSWORD 'arweave';
 GRANT ALL PRIVILEGES ON DATABASE arweave TO arweave;
 
+# Required in order to import blocks from a snapshot
+ALTER ROLE arweave WITH SUPERUSER;
+
 # exit PSQL Terminal
 exit
 ```
@@ -54,7 +57,8 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=8
+PARALLEL=4
+SNAPSHOT=0
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
