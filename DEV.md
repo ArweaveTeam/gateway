@@ -57,7 +57,8 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=8
+PARALLEL=4
+SNAPSHOT=0
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
