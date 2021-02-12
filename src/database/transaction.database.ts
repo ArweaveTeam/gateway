@@ -6,6 +6,8 @@ import {fromB64Url, sha256B64Url} from '../utility/encoding.utility';
 
 config();
 
+export const indices = JSON.parse(process.env.INDICES || '[]');
+
 export interface ANSTransaction {
   id: string;
   owner: string;
@@ -39,7 +41,6 @@ export const transactionFields = [
 ];
 
 export function formatTransaction(transaction: TransactionType) {
-  const indices = JSON.parse(process.env.INDICES || '[]');
   const indexFields: any = {};
 
   for (let i = 0; i < indices.length; i++) {
@@ -65,12 +66,27 @@ export function formatTransaction(transaction: TransactionType) {
   );
 }
 
-export function formatAnsTransaction(ansTransaction: DataItemJson): ANSTransaction {
-  return {
-    id: ansTransaction.id,
-    owner: ansTransaction.owner,
-    content_type: 'ANS-102',
-    target: ansTransaction.target,
-    tags: JSON.stringify(ansTransaction.tags),
-  };
+export function formatAnsTransaction(ansTransaction: DataItemJson) {
+  const indexFields: any = {};
+
+  for (let i = 0; i < indices.length; i++) {
+    const index = indices[i];
+    const value = tagValue(ansTransaction.tags, index);
+
+    if (value) {
+      indexFields[index] = value;
+    }
+  }
+
+  return pick(
+    {
+      ...indexFields,
+      id: ansTransaction.id,
+      owner: ansTransaction.owner,
+      content_type: 'ANS-102',
+      target: ansTransaction.target,
+      tags: JSON.stringify(ansTransaction.tags),
+    },
+    transactionFields.concat(indices),
+  );
 }
