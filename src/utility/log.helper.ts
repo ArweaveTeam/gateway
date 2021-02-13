@@ -2,6 +2,7 @@ import fs from 'fs';
 import { Request, Response } from 'express';
 import path, { resolve } from 'path';
 import { reject } from 'lodash';
+import { sha256 } from 'js-sha256';
 
 const logFileLocation = path.join(__dirname, '../../daily.log')
 const rawLogFileLocation = path.join(__dirname, '../../access.log')
@@ -20,7 +21,12 @@ interface FormattedLogs {
   addresses: string[],
   url: string
 }
-  
+
+// export const getLogSalt = function () {
+
+//   return sha256()
+// }
+
 export const logsHelper = function (req: Request, res: Response) {
     console.log('logs file path is ', logFileLocation)
     fs.readFile(logFileLocation, 'utf8', (err : any, data : any) => {
@@ -38,7 +44,7 @@ export const logsTask = async function () {
   
   try { 
     // first clear old logs
-    await clearRawLogs();
+    // await clearRawLogs();
     console.log('successfully cleared old logs');
   
     // then get the raw logs
@@ -67,10 +73,14 @@ async function readRawLogs() {
     for (var log of logs) {
       try {
         console.log('converting', log)
-        var logJSON = JSON.parse(log) as RawLogs;
-        logJSON.uniqueId = parseInt(logJSON.url, 36)
-        prettyLogs.push(logJSON)
-        console.log('converted', prettyLogs[prettyLogs.length - 1])
+        if (log || log === " ") {
+          var logJSON          = JSON.parse(log) as RawLogs;
+              logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
+          prettyLogs.push(logJSON)
+          console.log('converted', prettyLogs[prettyLogs.length - 1])
+        } else {
+          console.log('tried to parse log, but skipping because log is ', log)
+        }
       } catch (err) {
         console.log('err', err)
         reject(err)
@@ -80,16 +90,24 @@ async function readRawLogs() {
   })
 }
 
+/* quick / lazy fix for mapping arrays in typescript*/
+function text2Binary(string:string) {
+  return string.split('').map(function (char) {
+      return char.charCodeAt(0).toString(2);
+  }).join(' ');
+}
+
 /*
   @readRawLogs
     retrieves the raw logs and reads them into a json array
 */
 async function writeDailyLogs(logs:FormattedLogs[]) {
   return new Promise((resolve, reject) => {
-    var data = '';
+    var data = '[';
     for (var log of logs) {
-      data += JSON.stringify(log)
+      data += "," + JSON.stringify(log)
     }
+    data += "]"
     fs.writeFile(logFileLocation, data, {}, function (err) {
       if (err) reject(err)
       resolve({succes: true})
@@ -108,16 +126,22 @@ async function sortAndFilterLogs(logs: RawLogs[]) {
 
     try {
       for (var log of logs) {
-        if (log.url) {
-          console.log(
-            'found entry for ' + log.url, 
-            'entry exists: ' + formatted_logs[log.uniqueId].includes(log.address)
-          )
-          if (!formatted_logs[log.uniqueId].includes(log.address)) {
-            formatted_logs[log.uniqueId] += "," + log.address
+        console.log('about to append log', log)
+        if (log.url && log.uniqueId) {
+          if (formatted_logs[log.uniqueId]) {
+            console.log(
+              'found entry for ' + log.url, 
+              'entry exists: ' + formatted_logs[log.uniqueId].includes(log.address)
+            )
+            if (!formatted_logs[log.uniqueId].includes(log.address)) {
+              formatted_logs[log.uniqueId] += "," + log.address
+            }
+          } else {
+            formatted_logs[log.uniqueId] += log.address
           }
         }
       }
+      console.log('about to return ' + formatted_logs.length + ' logs', formatted_logs)
       resolve(formatted_logs)
 
     } catch (err) {
