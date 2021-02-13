@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import path, { resolve } from 'path';
 import { reject } from 'lodash';
 import { sha256 } from 'js-sha256';
+import { AnyRecord } from 'dns';
 
 const logFileLocation = path.join(__dirname, '../../daily.log')
 const rawLogFileLocation = path.join(__dirname, '../../access.log')
@@ -12,7 +13,7 @@ interface RawLogs {
   user: string,
   date: string,
   method: string,
-  uniqueId: number,
+  uniqueId: string,
   url: string,
   ref: string,
 }
@@ -20,6 +21,10 @@ interface RawLogs {
 interface FormattedLogs {
   addresses: string[],
   url: string
+}
+
+interface FormattedLogsArray extends Array<FormattedLogs> {
+  [key: string]: any
 }
 
 // export const getLogSalt = function () {
@@ -51,7 +56,7 @@ export const logsTask = async function () {
     var rawLogs = await readRawLogs() as RawLogs[];
     console.log('successfully fetched raw logs', rawLogs);
   
-    var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogs[];
+    var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
   
     var result = await writeDailyLogs(sorted);
   
@@ -75,7 +80,8 @@ async function readRawLogs() {
         console.log('converting', log)
         if (log || log === " ") {
           var logJSON          = JSON.parse(log) as RawLogs;
-              logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
+              // logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
+              logJSON.uniqueId = sha256(logJSON.url)
           prettyLogs.push(logJSON)
           console.log('converted', prettyLogs[prettyLogs.length - 1])
         } else {
@@ -101,16 +107,20 @@ function text2Binary(string:string) {
   @readRawLogs
     retrieves the raw logs and reads them into a json array
 */
-async function writeDailyLogs(logs:FormattedLogs[]) {
+async function writeDailyLogs(logs:FormattedLogsArray) {
   return new Promise((resolve, reject) => {
     var data = '[';
-    for (var log of logs) {
-      data += "," + JSON.stringify(log)
+    for (var key in logs) {
+      var log = logs[key]
+      if (log && log.addresses) {
+        console.log('adding log to logs!!!!!!!!!!!!!!!!!!!', log)
+        data += "," + JSON.stringify(log)
+      } 
     }
     data += "]"
     fs.writeFile(logFileLocation, data, {}, function (err) {
       if (err) reject(err)
-      resolve({succes: true})
+      resolve({success: true, logs: data})
     });
   })
 }
@@ -122,8 +132,9 @@ async function writeDailyLogs(logs:FormattedLogs[]) {
 */
 async function sortAndFilterLogs(logs: RawLogs[]) {
   return new Promise((resolve, reject) => {
-    var formatted_logs = new Array ();
-
+    var formatted_logs: FormattedLogsArray;
+        formatted_logs = [];
+    
     try {
       for (var log of logs) {
         console.log('about to append log', log)
@@ -131,13 +142,16 @@ async function sortAndFilterLogs(logs: RawLogs[]) {
           if (formatted_logs[log.uniqueId]) {
             console.log(
               'found entry for ' + log.url, 
-              'entry exists: ' + formatted_logs[log.uniqueId].includes(log.address)
+              'entry exists: ' + formatted_logs[log.uniqueId].addresses.includes(log.address)
             )
-            if (!formatted_logs[log.uniqueId].includes(log.address)) {
-              formatted_logs[log.uniqueId] += "," + log.address
+            if (!formatted_logs[log.uniqueId].addresses.includes(log.address)) {
+              formatted_logs[ log.uniqueId ].addresses.push(log.address)
             }
           } else {
-            formatted_logs[log.uniqueId] += log.address
+            formatted_logs[log.uniqueId] = {
+              addresses: [ log.address ],
+              url : log.url
+            }
           }
         }
       }
