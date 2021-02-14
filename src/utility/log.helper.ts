@@ -48,13 +48,8 @@ export const logsHelper = function (req: Request, res: Response) {
 export const logsTask = async function () {
   
   try { 
-    // first clear old logs
-    // await clearRawLogs();
-    console.log('successfully cleared old logs');
-  
     // then get the raw logs
     var rawLogs = await readRawLogs() as RawLogs[];
-    console.log('successfully fetched raw logs', rawLogs);
   
     var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
   
@@ -62,6 +57,9 @@ export const logsTask = async function () {
   
     console.log('successfully wrote daily logs', result)
 
+    // last, clear old logs
+    await clearRawLogs();
+  
   } catch (err) {
     console.error('error writing daily log file', err)
   } 
@@ -77,20 +75,11 @@ async function readRawLogs() {
     var prettyLogs = new Array () as RawLogs[];
     for (var log of logs) {
       try {
-        console.log('trimming |' + log + '|')
-        log = log.trim()
-        console.log('trimmed |' + log + '|')
-        console.log( log, !(log === " "), !(log === "") )
         if (log && !(log === " ") && !(log === "")) {
           try {
-        
             var logJSON          = JSON.parse(log) as RawLogs;
-            // logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
-            logJSON.uniqueId = sha256(logJSON.url)
-        
+                logJSON.uniqueId = sha256(logJSON.url)
             prettyLogs.push(logJSON)
-            console.log('converted', prettyLogs[prettyLogs.length - 1])
-              
           } catch (err) {
             console.log('error reading json', err)
           }
@@ -106,13 +95,6 @@ async function readRawLogs() {
   })
 }
 
-/* quick / lazy fix for mapping arrays in typescript*/
-function text2Binary(string:string) {
-  return string.split('').map(function (char) {
-      return char.charCodeAt(0).toString(2);
-  }).join(' ');
-}
-
 /*
   @readRawLogs
     retrieves the raw logs and reads them into a json array
@@ -123,7 +105,6 @@ async function writeDailyLogs(logs:FormattedLogsArray) {
     for (var key in logs) {
       var log = logs[key]
       if (log && log.addresses) {
-        console.log('adding log to logs!!!!!!!!!!!!!!!!!!!', log)
         data += "," + JSON.stringify(log)
       } 
     }
@@ -147,13 +128,8 @@ async function sortAndFilterLogs(logs: RawLogs[]) {
     
     try {
       for (var log of logs) {
-        console.log('about to append log', log)
         if (log.url && log.uniqueId) {
           if (formatted_logs[log.uniqueId]) {
-            console.log(
-              'found entry for ' + log.url, 
-              'entry exists: ' + formatted_logs[log.uniqueId].addresses.includes(log.address)
-            )
             if (!formatted_logs[log.uniqueId].addresses.includes(log.address)) {
               formatted_logs[ log.uniqueId ].addresses.push(log.address)
             }
@@ -165,11 +141,9 @@ async function sortAndFilterLogs(logs: RawLogs[]) {
           }
         }
       }
-      console.log('about to return ' + formatted_logs.length + ' logs', formatted_logs)
       resolve(formatted_logs)
 
     } catch (err) {
-      console.log('failed during access logs conversion', err)
       reject(err)
     }
   })
