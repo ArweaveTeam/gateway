@@ -9,7 +9,7 @@ import {graphServer} from './graphql/server.graphql';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
 import { startSync } from './database/sync.database';
-import { logsHelper, logsTask, getLogSalt } from './utility/log.helper';
+import { logsHelper, logsTask } from './utility/log.helper';
 import cron from 'node-cron';
 
 config();

@@ -1,10 +1,8 @@
 import fs from 'fs';
 import { Request, Response } from 'express';
 import path, { resolve } from 'path';
-import { reject } from 'lodash';
 import { sha256 } from 'js-sha256';
-import { AnyRecord } from 'dns';
-import { cryptoRandomString } from 'crypto-random-string';
+import cryptoRandomString = require("crypto-random-string")
 
 const logFileLocation = path.join(__dirname, '../../daily.log')
 const rawLogFileLocation = path.join(__dirname, '../../access.log')
@@ -47,7 +45,7 @@ export const logsHelper = function (req: Request, res: Response) {
     })
 }
 
-export const logsTask = async function (randomNum) {
+export const logsTask = async function () {
 
   try { 
     var masterSalt = getLogSalt()
@@ -76,7 +74,7 @@ export const logsTask = async function (randomNum) {
 async function readRawLogs(masterSalt: string) {
   return new Promise((resolve, reject) => {
     var logs = fs.readFileSync(rawLogFileLocation).toString().split("\n");
-    var prettyLogs = new Array () as RawLogs[];
+    var prettyLogs = [] as RawLogs[];
     for (var log of logs) {
       try {
         if (log && !(log === " ") && !(log === "")) {
@@ -106,17 +104,24 @@ async function readRawLogs(masterSalt: string) {
 */
 async function writeDailyLogs(logs:FormattedLogsArray) {
   return new Promise((resolve, reject) => {
-    var data = '[';
+    var data = {
+      lastUpdate: new Date(),
+      summary: new Array()
+    }
     for (var key in logs) {
       var log = logs[key]
       if (log && log.addresses) {
-        data += "," + JSON.stringify(log)
+        data.summary.push(log)
       } 
     }
-    data += "]"
-    fs.writeFile(logFileLocation, data, {}, function (err) {
-      if (err) reject(err)
-      resolve({success: true, logs: data})
+    fs.writeFile(logFileLocation, JSON.stringify(data), {}, function (err) {
+      if (err) {
+        console.log('ERROR SAVING ACCESS LOG', err)
+        resolve({success: false, logs: data, error: err})
+      } else {
+        resolve({success: true, logs: data})
+
+      }
     });
   })
 }
@@ -128,8 +133,7 @@ async function writeDailyLogs(logs:FormattedLogsArray) {
 */
 async function sortAndFilterLogs(logs: RawLogs[]) {
   return new Promise((resolve, reject) => {
-    var formatted_logs: FormattedLogsArray;
-        formatted_logs = [];
+    var formatted_logs = [] as FormattedLogsArray;
     
     try {
       for (var log of logs) {
