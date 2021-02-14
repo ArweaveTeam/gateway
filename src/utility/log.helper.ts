@@ -77,13 +77,23 @@ async function readRawLogs() {
     var prettyLogs = new Array () as RawLogs[];
     for (var log of logs) {
       try {
-        console.log('converting', log)
-        if (log || log === " ") {
-          var logJSON          = JSON.parse(log) as RawLogs;
-              // logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
-              logJSON.uniqueId = sha256(logJSON.url)
-          prettyLogs.push(logJSON)
-          console.log('converted', prettyLogs[prettyLogs.length - 1])
+        console.log('trimming |' + log + '|')
+        log = log.trim()
+        console.log('trimmed |' + log + '|')
+        console.log( log, !(log === " "), !(log === "") )
+        if (log && !(log === " ") && !(log === "")) {
+          try {
+        
+            var logJSON          = JSON.parse(log) as RawLogs;
+            // logJSON.uniqueId = parseInt(text2Binary(logJSON.url))
+            logJSON.uniqueId = sha256(logJSON.url)
+        
+            prettyLogs.push(logJSON)
+            console.log('converted', prettyLogs[prettyLogs.length - 1])
+              
+          } catch (err) {
+            console.log('error reading json', err)
+          }
         } else {
           console.log('tried to parse log, but skipping because log is ', log)
         }
