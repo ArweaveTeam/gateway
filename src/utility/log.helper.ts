@@ -33,14 +33,14 @@ function getLogSalt () {
 }
 
 export const logsHelper = function (req: Request, res: Response) {
-    console.log('logs file path is ', logFileLocation)
+    // console.log('logs file path is ', logFileLocation)
     fs.readFile(logFileLocation, 'utf8', (err : any, data : any) => {
       if (err) {
         console.error(err)
         res.status(500).send(err);
         return
       }
-      console.log(data)
+      // console.log(data)
       res.status(200).send(data);
     })
 }
@@ -57,7 +57,7 @@ export const logsTask = async function () {
   
     var result = await writeDailyLogs(sorted);
   
-    console.log('successfully wrote daily logs', result)
+    // console.log('successfully wrote daily logs', result)
 
     // last, clear old logs
     await clearRawLogs();
@@ -84,13 +84,13 @@ async function readRawLogs(masterSalt: string) {
             logJSON.address  = sha256.hmac(masterSalt, logJSON.address)
             prettyLogs.push(logJSON)
           } catch (err) {
-            console.log('error reading json', err)
+            console.error('error reading json', err)
           }
         } else {
-          console.log('tried to parse log, but skipping because log is ', log)
+          console.error('tried to parse log, but skipping because log is ', log)
         }
       } catch (err) {
-        console.log('err', err)
+        console.error('err', err)
         reject(err)
       }
     }
