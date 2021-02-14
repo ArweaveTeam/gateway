@@ -4,6 +4,7 @@ import path, { resolve } from 'path';
 import { reject } from 'lodash';
 import { sha256 } from 'js-sha256';
 import { AnyRecord } from 'dns';
+import { cryptoRandomString } from 'crypto-random-string';
 
 const logFileLocation = path.join(__dirname, '../../daily.log')
 const rawLogFileLocation = path.join(__dirname, '../../access.log')
@@ -27,10 +28,11 @@ interface FormattedLogsArray extends Array<FormattedLogs> {
   [key: string]: any
 }
 
-// export const getLogSalt = function () {
+function getLogSalt () {
 
-//   return sha256()
-// }
+  return sha256(cryptoRandomString({length: 10}))
+
+}
 
 export const logsHelper = function (req: Request, res: Response) {
     console.log('logs file path is ', logFileLocation)
@@ -45,11 +47,13 @@ export const logsHelper = function (req: Request, res: Response) {
     })
 }
 
-export const logsTask = async function () {
-  
+export const logsTask = async function (randomNum) {
+
   try { 
+    var masterSalt = getLogSalt()
+    
     // then get the raw logs
-    var rawLogs = await readRawLogs() as RawLogs[];
+    var rawLogs = await readRawLogs(masterSalt) as RawLogs[];
   
     var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
   
@@ -69,7 +73,7 @@ export const logsTask = async function () {
   @readRawLogs
     retrieves the raw logs and reads them into a json array
 */
-async function readRawLogs() {
+async function readRawLogs(masterSalt: string) {
   return new Promise((resolve, reject) => {
     var logs = fs.readFileSync(rawLogFileLocation).toString().split("\n");
     var prettyLogs = new Array () as RawLogs[];
@@ -77,8 +81,9 @@ async function readRawLogs() {
       try {
         if (log && !(log === " ") && !(log === "")) {
           try {
-            var logJSON          = JSON.parse(log) as RawLogs;
-                logJSON.uniqueId = sha256(logJSON.url)
+            var logJSON      = JSON.parse(log) as RawLogs;
+            logJSON.uniqueId = sha256(logJSON.url)
+            logJSON.address  = sha256.hmac(masterSalt, logJSON.address)
             prettyLogs.push(logJSON)
           } catch (err) {
             console.log('error reading json', err)
