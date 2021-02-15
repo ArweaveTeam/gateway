@@ -21,7 +21,7 @@ export function start() {
 
   app.get('/status', statusRoute);
   app.get(dataRouteRegex, dataRoute);
-  
+
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
   app.all('*', proxyRoute);

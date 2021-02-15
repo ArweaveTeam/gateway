@@ -212,6 +212,7 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
     streams.tags.write(input);
   }
 }
+
 (async () => await snapshot())();
 
 process.on('SIGINT', () => {
