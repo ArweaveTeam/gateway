@@ -26,6 +26,7 @@ export let SIGINT: boolean = false;
 export let SIGKILL: boolean = false;
 export let bar: ProgressBar;
 export let topHeight = 0;
+export let currentHeight = 0;
 
 export const streams = {
   block: {
@@ -85,6 +86,8 @@ export async function startSync() {
 }
 
 export async function parallelize(height: number) {
+  currentHeight = height;
+
   if (height >= topHeight) {
     log.info(`[database] fully synced, monitoring for new blocks`);
     await sleep(30000);

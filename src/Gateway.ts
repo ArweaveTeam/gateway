@@ -5,6 +5,7 @@ import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
+import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
 import {startSync} from './database/sync.database';
@@ -18,9 +19,11 @@ export function start() {
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
 
+  app.get('/status', statusRoute);
+  app.get(dataRouteRegex, dataRoute);
+  
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
-  app.get(dataRouteRegex, dataRoute);
   app.all('*', proxyRoute);
 
   app.listen(process.env.PORT || 3000, () => {
