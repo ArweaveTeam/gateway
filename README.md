@@ -79,7 +79,7 @@ npm run docker:stop
 yarn docker:stop
 
 # with pure docker-compose
-docker-compose down -v
+docker-compose down
 ```
 
 ## Testing
