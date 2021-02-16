@@ -2,7 +2,7 @@ import {Request, Response} from 'express';
 import {bar, currentHeight} from '../database/sync.database';
 import {getNodeInfo} from '../query/node.query';
 
-export const elapsed = Number(new Date);
+export const start = Number(new Date);
 
 export async function statusRoute(req: Request, res: Response) {
     const info = await getNodeInfo();
@@ -12,7 +12,7 @@ export async function statusRoute(req: Request, res: Response) {
         currentHeight,
         height: info.height,
         delta: info.height - currentHeight,
-        eta: `${elapsed * (bar.total / bar.curr - 1)} seconds`,
+        eta: `${Math.abs(start - Number(new Date)) * (bar.total / bar.curr - 1) / 1000} seconds`,
     });
   }
   
