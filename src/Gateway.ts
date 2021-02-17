@@ -7,7 +7,7 @@ import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
-import {dataRouteRegex, dataRoute} from './route/data.route';
+import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {startSync} from './database/sync.database';
 
 config();
@@ -20,6 +20,7 @@ export function start() {
   app.use(jsonMiddleware);
 
   app.get('/status', statusRoute);
+  app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
