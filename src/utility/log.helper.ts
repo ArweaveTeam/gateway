@@ -84,7 +84,6 @@ async function readRawLogs(masterSalt: string) {
           }
         } else {
           console.error('tried to parse log, but skipping because log is ', log);
-          reject(err);
         }
       } catch (err) {
         console.error('err', err);
@@ -103,7 +102,7 @@ async function writeDailyLogs(logs:FormattedLogsArray) {
   return new Promise((resolve, reject) => {
     const data = {
       lastUpdate: new Date(),
-      summary: [],
+      summary: new Array (),
     };
     for (const key in logs) {
       if (logs[key]) {
