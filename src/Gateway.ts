@@ -8,8 +8,8 @@ import {log} from './utility/log.utility';
 import {graphServer} from './graphql/server.graphql';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
-import { startSync } from './database/sync.database';
-import { logsHelper, logsTask } from './utility/log.helper';
+import {startSync} from './database/sync.database';
+import {logsHelper, logsTask} from './utility/log.helper';
 import cron from 'node-cron';
 
 config();
@@ -22,16 +22,17 @@ export function start() {
   app.use(jsonMiddleware);
   app.use(logMiddleware);
 
-  cron.schedule('0 0 * * *', function() {
-    console.log('running the log cleanup task once per day');
-    logsTask()
+  cron.schedule('0 0 * * *', async function() {
+    console.log('running the log cleanup task once per day on ', new Date() );
+    const result = await logsTask();
+    console.log('daily log task returned ', result);
   });
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
   app.get(dataRouteRegex, dataRoute);
-  app.get("/logs", logsHelper);
-  app.get("/trigger-logs-dev", logsTask);
+  app.get('/logs', logsHelper);
+  // app.get("/trigger-logs-dev", logsTask);
   app.all('*', proxyRoute);
 
   app.listen(process.env.PORT || 3000, () => {

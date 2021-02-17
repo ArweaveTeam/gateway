@@ -1,11 +1,11 @@
 import fs from 'fs';
-import { Request, Response } from 'express';
-import path, { resolve } from 'path';
-import { sha256 } from 'js-sha256';
-import cryptoRandomString = require("crypto-random-string")
+import {Request, Response} from 'express';
+import path from 'path';
+import {sha256} from 'js-sha256';
+import cryptoRandomString = require('crypto-random-string')
 
-const logFileLocation = path.join(__dirname, '../../daily.log')
-const rawLogFileLocation = path.join(__dirname, '../../access.log')
+const logFileLocation = path.join(__dirname, '../../daily.log');
+const rawLogFileLocation = path.join(__dirname, '../../access.log');
 
 interface RawLogs {
   address: string,
@@ -26,46 +26,41 @@ interface FormattedLogsArray extends Array<FormattedLogs> {
   [key: string]: any
 }
 
-function getLogSalt () {
-
-  return sha256(cryptoRandomString({length: 10}))
-
+function getLogSalt() {
+  return sha256(cryptoRandomString({length: 10}));
 }
 
-export const logsHelper = function (req: Request, res: Response) {
-    // console.log('logs file path is ', logFileLocation)
-    fs.readFile(logFileLocation, 'utf8', (err : any, data : any) => {
-      if (err) {
-        console.error(err)
-        res.status(500).send(err);
-        return
-      }
-      // console.log(data)
-      res.status(200).send(data);
-    })
-}
+export const logsHelper = function(req: Request, res: Response) {
+  // console.log('logs file path is ', logFileLocation)
+  fs.readFile(logFileLocation, 'utf8', (err: any, data: any) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send(err);
+      return;
+    }
+    // console.log(data)
+    res.status(200).send(data);
+  });
+};
 
-export const logsTask = async function () {
+export const logsTask = async function() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const masterSalt = getLogSalt();
+      const rawLogs = await readRawLogs(masterSalt) as RawLogs[];
+      const sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
+      const result = await writeDailyLogs(sorted);
 
-  try { 
-    var masterSalt = getLogSalt()
-    
-    // then get the raw logs
-    var rawLogs = await readRawLogs(masterSalt) as RawLogs[];
-  
-    var sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
-  
-    var result = await writeDailyLogs(sorted);
-  
-    // console.log('successfully wrote daily logs', result)
+      // last, clear old logs
+      await clearRawLogs();
 
-    // last, clear old logs
-    await clearRawLogs();
-  
-  } catch (err) {
-    console.error('error writing daily log file', err)
-  } 
-}
+      resolve(result);
+    } catch (err) {
+      console.error('error writing daily log file', err);
+      reject(err);
+    }
+  });
+};
 
 /*
   @readRawLogs
@@ -73,29 +68,31 @@ export const logsTask = async function () {
 */
 async function readRawLogs(masterSalt: string) {
   return new Promise((resolve, reject) => {
-    var logs = fs.readFileSync(rawLogFileLocation).toString().split("\n");
-    var prettyLogs = [] as RawLogs[];
-    for (var log of logs) {
+    const logs = fs.readFileSync(rawLogFileLocation).toString().split('\n');
+    const prettyLogs = [] as RawLogs[];
+    for (const log of logs) {
       try {
-        if (log && !(log === " ") && !(log === "")) {
+        if (log && !(log === ' ') && !(log === ' ')) {
           try {
-            var logJSON      = JSON.parse(log) as RawLogs;
-            logJSON.uniqueId = sha256(logJSON.url)
-            logJSON.address  = sha256.hmac(masterSalt, logJSON.address)
-            prettyLogs.push(logJSON)
+            const logJSON = JSON.parse(log) as RawLogs;
+            logJSON.uniqueId = sha256(logJSON.url);
+            logJSON.address = sha256.hmac(masterSalt, logJSON.address);
+            prettyLogs.push(logJSON);
           } catch (err) {
-            console.error('error reading json', err)
+            console.error('error reading json', err);
+            reject(err);
           }
         } else {
-          console.error('tried to parse log, but skipping because log is ', log)
+          console.error('tried to parse log, but skipping because log is ', log);
+          reject(err);
         }
       } catch (err) {
-        console.error('err', err)
-        reject(err)
+        console.error('err', err);
+        reject(err);
       }
     }
-    resolve(prettyLogs)
-  })
+    resolve(prettyLogs);
+  });
 }
 
 /*
@@ -104,69 +101,66 @@ async function readRawLogs(masterSalt: string) {
 */
 async function writeDailyLogs(logs:FormattedLogsArray) {
   return new Promise((resolve, reject) => {
-    var data = {
+    const data = {
       lastUpdate: new Date(),
-      summary: new Array()
+      summary: [],
+    };
+    for (const key in logs) {
+      if (logs[key]) {
+        const log = logs[key];
+        if (log && log.addresses) {
+          data.summary.push(log);
+        }
+      }
     }
-    for (var key in logs) {
-      var log = logs[key]
-      if (log && log.addresses) {
-        data.summary.push(log)
-      } 
-    }
-    fs.writeFile(logFileLocation, JSON.stringify(data), {}, function (err) {
+    fs.writeFile(logFileLocation, JSON.stringify(data), {}, function(err) {
       if (err) {
-        console.log('ERROR SAVING ACCESS LOG', err)
-        resolve({success: false, logs: data, error: err})
+        console.log('ERROR SAVING ACCESS LOG', err);
+        resolve({success: false, logs: data, error: err});
       } else {
-        resolve({success: true, logs: data})
-
+        resolve({success: true, logs: data});
       }
     });
-  })
+  });
 }
 
-/* 
-  @sortAndFilterLogs 
+/*
+  @sortAndFilterLogs
     logs - access.log output (raw data in array)
     resolves to an array of data payloads
 */
 async function sortAndFilterLogs(logs: RawLogs[]) {
   return new Promise((resolve, reject) => {
-    var formatted_logs = [] as FormattedLogsArray;
-    
+    const formatted_logs = [] as FormattedLogsArray;
+
     try {
-      for (var log of logs) {
+      for (const log of logs) {
         if (log.url && log.uniqueId) {
-          if (formatted_logs[log.uniqueId]) {
-            if (!formatted_logs[log.uniqueId].addresses.includes(log.address)) {
-              formatted_logs[ log.uniqueId ].addresses.push(log.address)
-            }
+          if (formatted_logs[log.uniqueId] && !formatted_logs[log.uniqueId].addresses.includes(log.address)) {
+            formatted_logs[log.uniqueId].addresses.push(log.address);
           } else {
             formatted_logs[log.uniqueId] = {
-              addresses: [ log.address ],
-              url : log.url
-            }
+              addresses: [log.address],
+              url: log.url,
+            };
           }
         }
       }
-      resolve(formatted_logs)
-
+      resolve(formatted_logs);
     } catch (err) {
-      reject(err)
+      reject(err);
     }
-  })
-
+  });
 }
 
 /*
-  @clearRawLogs 
+  @clearRawLogs
     removes the old access logs file
 */
 async function clearRawLogs() {
   return new Promise((resolve, reject) => {
-    fs.truncate(rawLogFileLocation, 0, function () {
-      resolve(true)
+    fs.truncate(rawLogFileLocation, 0, function() {
+      resolve(true);
     });
   });
 }
