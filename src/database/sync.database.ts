@@ -55,33 +55,35 @@ export function configureSyncBar(start: number, end: number) {
 }
 
 export async function startSync() {
-  log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
-  if (storeSnapshot) {
-    log.info(`[snapshot] also writing new blocks to the snapshot folder`);
-  }
-
-  if (existsSync('.snapshot')) {
-    log.info('[database] existing sync state found');
-    const state = parseInt(readFileSync('.snapshot').toString());
-
-    if (!isNaN(state)) {
-      const nodeInfo = await getNodeInfo();
-      configureSyncBar(state, nodeInfo.height);
-      topHeight = nodeInfo.height;
-      log.info(`[database] database is currently at height ${state}, resuming sync to ${topHeight}`);
-      bar.tick();
-      await parallelize(state + 1);
-    } else {
-      log.info('[database] sync state is malformed. Please make sure it is a number');
-      process.exit();
+  if (parallelization > 0) {
+    log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
+    if (storeSnapshot) {
+      log.info(`[snapshot] also writing new blocks to the snapshot folder`);
     }
-  } else {
-    const nodeInfo = await getNodeInfo();
-    configureSyncBar(0, nodeInfo.height);
-    topHeight = nodeInfo.height;
-    log.info(`[database] syncing from block 0 to ${topHeight}`);
-    bar.tick();
-    await parallelize(0);
+  
+    if (existsSync('.snapshot')) {
+      log.info('[database] existing sync state found');
+      const state = parseInt(readFileSync('.snapshot').toString());
+  
+      if (!isNaN(state)) {
+        const nodeInfo = await getNodeInfo();
+        configureSyncBar(state, nodeInfo.height);
+        topHeight = nodeInfo.height;
+        log.info(`[database] database is currently at height ${state}, resuming sync to ${topHeight}`);
+        bar.tick();
+        await parallelize(state + 1);
+      } else {
+        log.info('[database] sync state is malformed. Please make sure it is a number');
+        process.exit();
+      }
+    } else {
+      const nodeInfo = await getNodeInfo();
+      configureSyncBar(0, nodeInfo.height);
+      topHeight = nodeInfo.height;
+      log.info(`[database] syncing from block 0 to ${topHeight}`);
+      bar.tick();
+      await parallelize(0);
+    }
   }
 }
 
