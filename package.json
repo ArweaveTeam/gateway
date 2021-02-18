@@ -19,7 +19,7 @@
     "migrate:reset": "knex migrate:down && knex migrate:latest",
     "docker:start": "docker-compose up --build -d",
     "docker:stop": "docker-compose down",
-    "docker:clean": "docker-compose down -v",
+    "docker:clean": "docker-compose down -v --rmi all",
     "start": "npm run migrate:latest && node dist/src/Gateway.js"
   },
   "dependencies": {
