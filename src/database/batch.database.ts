@@ -7,7 +7,7 @@ import {ansBundles} from '../utility/ans.utility';
 import {BlockType} from '../query/block.query';
 import {getData} from '../query/node.query';
 import {transaction, TransactionType, tagValue} from '../query/transaction.query';
-import {DatabaseTag, ANSTransaction, formatAnsTransaction} from './transaction.database';
+import {DatabaseTag, formatAnsTransaction} from './transaction.database';
 
 export function processTransaction(batchScope: Transaction, payload: TransactionType): QueryBuilder[] {
   const batch: QueryBuilder[] = [];

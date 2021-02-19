@@ -58,13 +58,13 @@ export async function startSync() {
   if (parallelization > 0) {
     log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
     if (storeSnapshot) {
-      log.info(`[snapshot] also writing new blocks to the snapshot folder`);
+      log.info('[snapshot] also writing new blocks to the snapshot folder');
     }
-  
+
     if (existsSync('.snapshot')) {
       log.info('[database] existing sync state found');
       const state = parseInt(readFileSync('.snapshot').toString());
-  
+
       if (!isNaN(state)) {
         const nodeInfo = await getNodeInfo();
         configureSyncBar(state, nodeInfo.height);
@@ -91,11 +91,11 @@ export async function parallelize(height: number) {
   currentHeight = height;
 
   if (height >= topHeight) {
-    log.info(`[database] fully synced, monitoring for new blocks`);
+    log.info('[database] fully synced, monitoring for new blocks');
     await sleep(30000);
     const nodeInfo = await getNodeInfo();
     if (nodeInfo.height > topHeight) {
-      log.info(`[database] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`)
+      log.info(`[database] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`);
     }
     topHeight = nodeInfo.height;
     await parallelize(height);
@@ -105,30 +105,30 @@ export async function parallelize(height: number) {
     for (let i = height; i < height + parallelization && i < topHeight; i++) {
       batch.push(storeBlock(i));
     }
-  
+
     SIGINT = true;
-  
+
     await Promise.all(batch);
-  
+
     await importBlocks(`${process.cwd()}/cache/block.csv`);
     await importTransactions(`${process.cwd()}/cache/transaction.csv`);
     await importTags(`${process.cwd()}/cache/tags.csv`);
-  
+
     streams.block.cache = createWriteStream('cache/block.csv');
     streams.transaction.cache = createWriteStream('cache/transaction.csv');
     streams.tags.cache = createWriteStream('cache/tags.csv');
-    
+
     if (!bar.complete) {
       bar.tick(batch.length);
     }
 
     writeFileSync('.snapshot', (height + batch.length).toString());
-  
+
     SIGINT = false;
-  
+
     if (SIGKILL === false) {
       await parallelize(height + batch.length);
-    }  
+    }
   }
 }
 

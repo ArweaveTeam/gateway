@@ -19,40 +19,40 @@ export interface ChunkType {
 export const decoder = new TextDecoder();
 
 export async function getTransactionOffset(id: string): Promise<TransactionOffsetType> {
-    const payload = await get(`${grabNode()}/tx/${id}/offset`);
-    const body = JSON.parse(payload.text);
+  const payload = await get(`${grabNode()}/tx/${id}/offset`);
+  const body = JSON.parse(payload.text);
 
-    const size = parseInt(body.size);
-    const endOffset = parseInt(body.offset);
-    const startOffset = endOffset - size + 1;
+  const size = parseInt(body.size);
+  const endOffset = parseInt(body.offset);
+  const startOffset = endOffset - size + 1;
 
-    return {
-        size,
-        endOffset,
-        startOffset,
-    }
+  return {
+    size,
+    endOffset,
+    startOffset,
+  };
 }
 
 export async function getChunk(offset: number, retry: boolean = true): Promise<ChunkType> {
-    try {
-        const payload = await get(`${grabNode()}/chunk/${offset}`);
-        const body = JSON.parse(payload.text);
-    
-        const parsed_chunk = b64UrlToBuffer(body.chunk);
-        const response_chunk = decoder.decode(parsed_chunk);
-    
-        return {
-            tx_path: body.tx_path,
-            data_path: body.data_path,
-            chunk: body.chunk,
-            parsed_chunk,
-            response_chunk,
-        }
-    } catch (error) {
-        if (retry) {
-            return getChunk(offset, false);
-        } else {
-            throw new Error(error);
-        }
+  try {
+    const payload = await get(`${grabNode()}/chunk/${offset}`);
+    const body = JSON.parse(payload.text);
+
+    const parsed_chunk = b64UrlToBuffer(body.chunk);
+    const response_chunk = decoder.decode(parsed_chunk);
+
+    return {
+      tx_path: body.tx_path,
+      data_path: body.data_path,
+      chunk: body.chunk,
+      parsed_chunk,
+      response_chunk,
+    };
+  } catch (error) {
+    if (retry) {
+      return getChunk(offset, false);
+    } else {
+      throw new Error(error);
     }
+  }
 }

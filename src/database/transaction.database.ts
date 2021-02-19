@@ -79,14 +79,14 @@ export function formatAnsTransaction(ansTransaction: DataItemJson) {
   }
 
   return pick(
-    {
-      ...indexFields,
-      id: ansTransaction.id,
-      owner: ansTransaction.owner,
-      content_type: 'ANS-102',
-      target: ansTransaction.target,
-      tags: JSON.stringify(ansTransaction.tags),
-    },
-    transactionFields.concat(indices),
+      {
+        ...indexFields,
+        id: ansTransaction.id,
+        owner: ansTransaction.owner,
+        content_type: 'ANS-102',
+        target: ansTransaction.target,
+        tags: JSON.stringify(ansTransaction.tags),
+      },
+      transactionFields.concat(indices),
   );
 }

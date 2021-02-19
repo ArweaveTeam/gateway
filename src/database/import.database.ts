@@ -7,8 +7,8 @@ config();
 export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
 
 export async function importBlocks(path: string) {
-    return new Promise(async (resolve) => {
-      await connection.raw(`
+  return new Promise(async (resolve) => {
+    await connection.raw(`
         COPY
           blocks
           (id, previous_block, mined_at, height, txs, extended)
@@ -23,17 +23,17 @@ export async function importBlocks(path: string) {
           )
         `);
 
-      return resolve(true);
-    });
-  }
-  
-  export async function importTransactions(path: string) {
-    return new Promise(async (resolve) => {
-      const fields = transactionFields
+    return resolve(true);
+  });
+}
+
+export async function importTransactions(path: string) {
+  return new Promise(async (resolve) => {
+    const fields = transactionFields
         .concat(indices)
-        .map(field => `"${field}"`);
-  
-      await connection.raw(`
+        .map((field) => `"${field}"`);
+
+    await connection.raw(`
         COPY
           transactions
           (${fields.join(',')})
@@ -47,13 +47,13 @@ export async function importBlocks(path: string) {
             FORCE_NULL("format", "height", "data_size")
           )`);
 
-      return resolve(true);
-    });
-  }
-  
-  export async function importTags(path: string) {
-    return new Promise(async (resolve) => {
-      await connection.raw(`
+    return resolve(true);
+  });
+}
+
+export async function importTags(path: string) {
+  return new Promise(async (resolve) => {
+    await connection.raw(`
         COPY
           tags
           (tx_id, index, name, value)
@@ -68,7 +68,6 @@ export async function importBlocks(path: string) {
           )
         `);
 
-      return resolve(true);
-    });
-  }
-  
+    return resolve(true);
+  });
+}

@@ -1,5 +1,5 @@
 import {existsSync, mkdirSync, readdirSync, unlinkSync} from 'fs';
-import { join } from 'path';
+import {join} from 'path';
 
 export function mkdir(path: string) {
   if (!existsSync(path)) {

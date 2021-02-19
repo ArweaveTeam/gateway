@@ -60,12 +60,12 @@ export function b64UrlToBuffer(b64UrlString: string): Uint8Array {
 }
 
 export function b64UrlDecode(b64UrlString: string): string {
-  b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
+  b64UrlString = b64UrlString.replace(/\-/g, '+').replace(/\_/g, '/');
   let padding;
-  b64UrlString.length % 4 == 0
-    ? (padding = 0)
-    : (padding = 4 - (b64UrlString.length % 4));
-  return b64UrlString.concat("=".repeat(padding));
+  b64UrlString.length % 4 == 0 ?
+    (padding = 0) :
+    (padding = 4 - (b64UrlString.length % 4));
+  return b64UrlString.concat('='.repeat(padding));
 }
 
 export function sha256(buffer: Buffer): Buffer {
