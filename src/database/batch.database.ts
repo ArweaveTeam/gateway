@@ -1,41 +1,13 @@
 import {DataItemJson} from 'arweave-bundles';
 import {Transaction, QueryBuilder} from 'knex';
 import {connection} from './connection.database';
+import {createBatchItem, createBlockBatchItem, createTransactionBatchItem, createTagBatchItem} from './knex.batch.database';
+import {utf8DecodeTag} from '../utility/encoding.utility';
+import {ansBundles} from '../utility/ans.utility';
 import {BlockType} from '../query/block.query';
 import {getData} from '../query/node.query';
 import {transaction, TransactionType, tagValue} from '../query/transaction.query';
-import {formatBlock} from './block.database';
-import {formatTransaction, DatabaseTag, ANSTransaction, formatAnsTransaction} from './transaction.database';
-import {utf8DecodeTag} from '../utility/encoding.utility';
-import {ansBundles} from '../utility/ans.utility';
-
-export function createBatchItem(batchScope: Transaction, table: string, data: object, conflictKey: string = `id`): QueryBuilder {
-  return batchScope
-      .insert(data)
-      .into(table)
-      .onConflict(conflictKey as any)
-      .ignore();
-}
-
-export function createBatchItemForTag(batchScope: Transaction, table: string, data: object): QueryBuilder {
-  return batchScope
-      .insert(data)
-      .into(table);
-}
-
-export function createBlockBatchItem(batchScope: Transaction, block: BlockType): QueryBuilder {
-  const formattedBlock = formatBlock(block);
-  return createBatchItem(batchScope, 'blocks', formattedBlock);
-}
-
-export function createTransactionBatchItem(batchScope: Transaction, transaction: TransactionType): QueryBuilder {
-  const formattedTransaction = formatTransaction(transaction);
-  return createBatchItem(batchScope, 'transactions', formattedTransaction);
-}
-
-export function createTagBatchItem(batchScope: Transaction, tag: DatabaseTag): QueryBuilder {
-  return createBatchItemForTag(batchScope, 'tags', tag);
-}
+import {DatabaseTag, formatAnsTransaction} from './transaction.database';
 
 export function processTransaction(batchScope: Transaction, payload: TransactionType): QueryBuilder[] {
   const batch: QueryBuilder[] = [];
@@ -67,7 +39,7 @@ export async function processANSTransaction(batchScope: Transaction, ansTxs: Dat
 
   for (let i = 0; i < ansTxs.length; i++) {
     const ansTx = ansTxs[i];
-    const formattedAnsTx: ANSTransaction = formatAnsTransaction(ansTx);
+    const formattedAnsTx = formatAnsTransaction(ansTx);
 
     batch.push(createBatchItem(batchScope, 'transactions', formattedAnsTx));
 

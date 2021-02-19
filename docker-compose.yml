@@ -4,17 +4,23 @@ services:
     image: postgres:12
     volumes:
       - database:/var/lib/postgresql/data
+      - app:/app
+    expose:
+      - ${DATABASE_PORT}
     ports:
-      - 5432:5432
+      - ${DATABASE_PORT}:${DATABASE_PORT}
     environment:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
+    command: -p ${DATABASE_PORT}
   # Gateway Configuration
   server:
     build:
       context: .
       dockerfile: ./docker/gateway.dockerfile
+    volumes:
+      - app:/app
     links:
       - postgres
     ports: 
@@ -24,3 +30,4 @@ services:
     
 volumes:
   database:
+  app:

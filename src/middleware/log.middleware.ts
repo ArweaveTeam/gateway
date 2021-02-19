@@ -12,13 +12,13 @@ export function logConfigurationMiddleware(req: Request, res: Response, next: Ne
   const trace = id.generate();
 
   req.id = trace;
-  res.header(`X-Trace`, trace);
+  res.header('X-Trace', trace);
 
   return next();
 }
 
-morgan.token(`trace`, (req: Request) => {
-  return req.id || `UNKNOWN`;
+morgan.token('trace', (req: Request) => {
+  return req.id || 'UNKNOWN';
 });
 
 // TODO - add encryption on the line below for :remote-addr to protect viewer's privacy

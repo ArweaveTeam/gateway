@@ -1,4 +1,5 @@
 import Ar from 'arweave/node/ar';
+import * as B64js from 'base64-js';
 import {base32} from 'rfc4648';
 import {createHash} from 'crypto';
 import {Readable, PassThrough, Transform} from 'stream';
@@ -54,7 +55,20 @@ export class Base64DUrlecode extends Transform {
     }
 }
 
-export const sha256 = (buffer: Buffer): Buffer => {
+export function b64UrlToBuffer(b64UrlString: string): Uint8Array {
+  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
+}
+
+export function b64UrlDecode(b64UrlString: string): string {
+  b64UrlString = b64UrlString.replace(/\-/g, '+').replace(/\_/g, '/');
+  let padding;
+  b64UrlString.length % 4 == 0 ?
+    (padding = 0) :
+    (padding = 4 - (b64UrlString.length % 4));
+  return b64UrlString.concat('='.repeat(padding));
+}
+
+export function sha256(buffer: Buffer): Buffer {
   return createHash('sha256').update(buffer).digest();
 };
 
@@ -93,7 +107,7 @@ export function sha256B64Url(input: Buffer): string {
   return toB64url(createHash('sha256').update(input).digest());
 }
 
-export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
+export async function streamToBuffer(stream: Readable): Promise<Buffer> {
   let buffer = Buffer.alloc(0);
   return new Promise((resolve, reject) => {
     stream.on('data', (chunk: Buffer) => {
@@ -106,27 +120,27 @@ export const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   });
 };
 
-export const streamToString = async (stream: Readable): Promise<string> => {
+export async function streamToString(stream: Readable): Promise<string> {
   return (await streamToBuffer(stream)).toString('utf-8');
 };
 
-export const bufferToJson = <T = any | undefined>(input: Buffer): T => {
+export function bufferToJson<T = any | undefined>(input: Buffer): T {
   return JSON.parse(input.toString('utf8'));
 };
 
-export const jsonToBuffer = (input: object): Buffer => {
+export function jsonToBuffer(input: object): Buffer {
   return Buffer.from(JSON.stringify(input));
 };
 
-export const streamToJson = async <T = any | undefined>(input: Readable): Promise<T> => {
+export async function streamToJson<T = any | undefined>(input: Readable): Promise<T> {
   return bufferToJson<T>(await streamToBuffer(input));
 };
 
-export const isValidUTF8 = function(buffer: Buffer) {
+export function isValidUTF8(buffer: Buffer) {
   return Buffer.compare(Buffer.from(buffer.toString(), 'utf8'), buffer) === 0;
 };
 
-export const streamDecoderb64url = (readable: Readable): Readable => {
+export function streamDecoderb64url(readable: Readable): Readable {
   const outputStream = new PassThrough({objectMode: false});
 
   const decoder = new Base64DUrlecode();
@@ -135,7 +149,8 @@ export const streamDecoderb64url = (readable: Readable): Readable => {
 
   return outputStream;
 };
-export const bufferToStream = (buffer: Buffer) => {
+
+export function bufferToStream(buffer: Buffer) {
   return new Readable({
     objectMode: false,
     read() {
@@ -145,17 +160,15 @@ export const bufferToStream = (buffer: Buffer) => {
   });
 };
 
-export const winstonToAr = (amount: string) => {
+export function winstonToAr(amount: string) {
   return ar.winstonToAr(amount);
 };
 
-export const arToWinston = (amount: string) => {
+export function arToWinston(amount: string) {
   return ar.arToWinston(amount);
 };
 
-export const utf8DecodeTag = (
-    tag: Tag,
-): { name: string | undefined; value: string | undefined } => {
+export function utf8DecodeTag(tag: Tag): { name: string | undefined; value: string | undefined } {
   let name;
   let value;
   try {

@@ -39,3 +39,7 @@ export async function getData(id: string): Promise<any> {
   const payload = await get(`${grabNode()}/${id}`);
   return payload.body;
 }
+
+export function getDataAsStream(id: string) {
+  return get(`${grabNode()}/${id}`);
+}

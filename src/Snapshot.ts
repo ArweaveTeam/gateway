@@ -1,49 +1,36 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
-import {existsSync, readFileSync, writeFileSync, createWriteStream} from 'fs';
 import {config} from 'dotenv';
-import {log} from '../utility/log.utility';
-import {ansBundles} from '../utility/ans.utility';
-import {mkdir} from '../utility/file.utility';
-import {sleep} from '../utility/sleep.utility';
-import {getNodeInfo} from '../query/node.query';
-import {block} from '../query/block.query';
-import {transaction, tagValue, Tag} from '../query/transaction.query';
-import {getData} from '../query/node.query';
-import {importBlocks, importTransactions, importTags} from './import.database';
-import {formatBlock} from '../database/block.database';
-import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from '../database/transaction.database';
+import {existsSync, readFileSync, writeFileSync, createWriteStream} from 'fs';
+import {ansBundles} from './utility/ans.utility';
+import {mkdir} from './utility/file.utility';
+import {log} from './utility/log.utility';
+import {sleep} from './utility/sleep.utility';
+import {getNodeInfo, getData} from './query/node.query';
+import {block} from './query/block.query';
+import {transaction, tagValue, Tag} from './query/transaction.query';
+import {formatBlock} from './database/block.database';
+import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from './database/transaction.database';
 
 config();
 mkdir('snapshot');
-mkdir('cache');
 
 export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
-export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
 export const parallelization = parseInt(process.env.PARALLEL || '8');
 
 export let SIGINT: boolean = false;
 export let SIGKILL: boolean = false;
+
 export let bar: ProgressBar;
 export let topHeight = 0;
-export let currentHeight = 0;
 
 export const streams = {
-  block: {
-    snapshot: createWriteStream('snapshot/block.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/block.csv'),
-  },
-  transaction: {
-    snapshot: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/transaction.csv'),
-  },
-  tags: {
-    snapshot: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/tags.csv'),
-  },
+  block: createWriteStream('snapshot/block.csv', {flags: 'a'}),
+  transaction: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
+  tags: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
 };
 
-export function configureSyncBar(start: number, end: number) {
+export function configureSnapshotBar(start: number, end: number) {
   bar = new ProgressBar(
       ':current/:total blocks synced [:bar] :percent :etas',
       {
@@ -54,48 +41,39 @@ export function configureSyncBar(start: number, end: number) {
   );
 }
 
-export async function startSync() {
-  if (parallelization > 0) {
-    log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
-    if (storeSnapshot) {
-      log.info('[snapshot] also writing new blocks to the snapshot folder');
-    }
+export async function snapshot() {
+  if (existsSync('.snapshot')) {
+    log.info('[snapshot] existing snapshot state found');
+    const snapshotState = parseInt(readFileSync('.snapshot').toString());
 
-    if (existsSync('.snapshot')) {
-      log.info('[database] existing sync state found');
-      const state = parseInt(readFileSync('.snapshot').toString());
-
-      if (!isNaN(state)) {
-        const nodeInfo = await getNodeInfo();
-        configureSyncBar(state, nodeInfo.height);
-        topHeight = nodeInfo.height;
-        log.info(`[database] database is currently at height ${state}, resuming sync to ${topHeight}`);
-        bar.tick();
-        await parallelize(state + 1);
-      } else {
-        log.info('[database] sync state is malformed. Please make sure it is a number');
-        process.exit();
-      }
-    } else {
+    if (!isNaN(snapshotState)) {
       const nodeInfo = await getNodeInfo();
-      configureSyncBar(0, nodeInfo.height);
+      configureSnapshotBar(snapshotState, nodeInfo.height);
       topHeight = nodeInfo.height;
-      log.info(`[database] syncing from block 0 to ${topHeight}`);
+      log.info(`[snapshot] snapshot is currently at height ${snapshotState}, resuming sync to ${topHeight}`);
       bar.tick();
-      await parallelize(0);
+      await parallelize(snapshotState + 1);
+    } else {
+      log.info('[snapshot] snapshot state is malformed. Please make sure it is a number');
+      process.exit();
     }
+  } else {
+    const nodeInfo = await getNodeInfo();
+    configureSnapshotBar(0, nodeInfo.height);
+    topHeight = nodeInfo.height;
+    log.info(`[snapshot] new snapshot is being generated, syncing from block 0 to ${topHeight}`);
+    bar.tick();
+    await parallelize(0);
   }
 }
 
 export async function parallelize(height: number) {
-  currentHeight = height;
-
   if (height >= topHeight) {
-    log.info('[database] fully synced, monitoring for new blocks');
+    log.info('[snapshot] fully synced, monitoring for new blocks');
     await sleep(30000);
     const nodeInfo = await getNodeInfo();
     if (nodeInfo.height > topHeight) {
-      log.info(`[database] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`);
+      log.info(`[snapshot] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`);
     }
     topHeight = nodeInfo.height;
     await parallelize(height);
@@ -110,19 +88,12 @@ export async function parallelize(height: number) {
 
     await Promise.all(batch);
 
-    await importBlocks(`${process.cwd()}/cache/block.csv`);
-    await importTransactions(`${process.cwd()}/cache/transaction.csv`);
-    await importTags(`${process.cwd()}/cache/tags.csv`);
-
-    streams.block.cache = createWriteStream('cache/block.csv');
-    streams.transaction.cache = createWriteStream('cache/transaction.csv');
-    streams.tags.cache = createWriteStream('cache/tags.csv');
-
     if (!bar.complete) {
       bar.tick(batch.length);
     }
 
     writeFileSync('.snapshot', (height + batch.length).toString());
+    writeFileSync('snapshot/.snapshot', (height + batch.length).toString());
 
     SIGINT = false;
 
@@ -138,11 +109,7 @@ export async function storeBlock(height: number) {
     const fb = formatBlock(currentBlock);
     const input = `"${fb.id}","${fb.previous_block}","${fb.mined_at}","${fb.height}","${fb.txs.replace(/"/g, '\\"')}","${fb.extended.replace(/"/g, '\\"')}"\n`;
 
-    streams.block.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.block.snapshot.write(input);
-    }
+    streams.block.write(input);
 
     if (height > 0) {
       await storeTransactions(JSON.parse(fb.txs) as Array<string>, height);
@@ -179,11 +146,7 @@ export async function storeTransaction(tx: string, height: number) {
 
     const input = `${fields.join(',')}\n`;
 
-    streams.transaction.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.transaction.snapshot.write(input);
-    }
+    streams.transaction.write(input);
 
     storeTags(ft.id, preservedTags);
 
@@ -197,12 +160,12 @@ export async function storeTransaction(tx: string, height: number) {
         await processANSTransaction(ansTxs);
       } catch (error) {
         console.log('');
-        log.info(`[database] malformed ANS payload at height ${height} for tx ${ft.id}`);
+        log.info(`[snapshot] malformed ANS payload at height ${height} for tx ${ft.id}`);
       }
     }
   } catch (error) {
     console.log('');
-    log.info(`[database] could not retrieve tx ${tx} at height ${height}`);
+    log.info(`[snapshot] could not retrieve tx ${tx} at height ${height}`);
   }
 }
 
@@ -220,11 +183,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>) {
 
     const input = `${fields.join(',')}\n`;
 
-    streams.transaction.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.transaction.snapshot.write(input);
-    }
+    streams.transaction.write(input);
 
     for (let ii = 0; ii < ansTags.length; ii++) {
       const ansTag = ansTags[ii];
@@ -239,11 +198,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>) {
 
       const input = `"${tag.tx_id}","${tag.index}","${tag.name}","${tag.value}"\n`;
 
-      streams.tags.cache.write(input);
-
-      if (storeSnapshot) {
-        streams.tags.snapshot.write(input);
-      }
+      streams.tags.write(input);
     }
   }
 }
@@ -254,20 +209,19 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
 
     const input = `"${tx_id}","${i}","${tag.name}","${tag.value}"\n`;
 
-    streams.tags.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.tags.snapshot.write(input);
-    }
+    streams.tags.write(input);
   }
 }
 
+(async () => await snapshot())();
+
 process.on('SIGINT', () => {
-  log.info('[database] ensuring all blocks are stored before exit, you may see some extra output in console');
   SIGKILL = true;
   setInterval(() => {
     if (SIGINT === false) {
-      log.info('[database] block sync state preserved, now exiting');
+      streams.block.end();
+      streams.transaction.end();
+      streams.tags.end();
       process.exit();
     }
   }, 100);

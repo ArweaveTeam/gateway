@@ -24,6 +24,8 @@ There are several million transactions on the Arweave chain. In order to effecti
 
 This guide is designed to use Docker Compose. There is also the development version of the guide, that you can review [here.](./DEV.md)
 
+Also make sure to read the [Snapshot Guide](./SNAPSHOT.md) to expedite the synchronization process for your Gateway.
+
 ## Environment
 
 By default, there is a default environment you can use located at `.env.docker` in the repository.
@@ -40,7 +42,8 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=8
+PARALLEL=4
+SNAPSHOT=0
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
@@ -76,7 +79,7 @@ npm run docker:stop
 yarn docker:stop
 
 # with pure docker-compose
-docker-compose down -v
+docker-compose down
 ```
 
 ## Testing
