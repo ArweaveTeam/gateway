@@ -31,7 +31,7 @@ Also make sure to read the [Snapshot Guide](./SNAPSHOT.md) to expedite the synch
 By default, there is a default environment you can use located at `.env.docker` in the repository.
 
 ```env
-ARWEAVE_NODES=["..."]
+ARWEAVE_NODES=["https://arweave.net"]
 
 DATABASE_HOST=postgres
 DATABASE_PORT=5432

@@ -46,7 +46,7 @@ exit
 By default, there is a development environment you can use located at `.env.dev` in the repository. This `.dev` environment is different to the `.env.docker` environment which is designed for `docker` usage.
 
 ```env
-ARWEAVE_NODES=["..."]
+ARWEAVE_NODES=["https://arweave.net"]
 
 DATABASE_HOST=0.0.0.0
 DATABASE_PORT=5432
