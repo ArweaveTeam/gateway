@@ -28,6 +28,11 @@ import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 
+import { logMiddleware } from './middleware/log.middleware';
+
+import {logsHelper, logsTask} from '../lib/log.helper';
+import cron from 'node-cron';
+
 require("express-async-errors");
 
 initConnectionPool("read", { min: 1, max: 100 });
@@ -53,8 +58,16 @@ app.use(helmet.hidePoweredBy());
 app.use(corsMiddleware);
 
 app.use(sandboxMiddleware);
+app.use(logMiddleware);
 
+cron.schedule('0 0 * * *', async function() {
+  console.log('running the log cleanup task once per day on ', new Date() );
+  const result = await logsTask();
+  console.log('daily log task returned ', result);
+});
 // Route handlers
+app.get('/logs', logsHelper);
+// app.get("/trigger-logs-dev", logsTask);
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
