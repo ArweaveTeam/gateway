@@ -1,0 +1,145 @@
+Arguments: 
+  /usr/bin/node /usr/share/yarn/bin/yarn.js add fs path sha256 cryptoRandomString
+
+PATH: 
+  /home/al/gems/bin:/home/al/gems/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+Yarn version: 
+  1.22.5
+
+Node version: 
+  10.19.0
+
+Platform: 
+  linux x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/cryptoRandomString: Not found
+      at Request.params.callback [as _callback] (/usr/share/yarn/lib/cli.js:66988:18)
+      at Request.self.callback (/usr/share/yarn/lib/cli.js:140749:22)
+      at Request.emit (events.js:198:13)
+      at Request.<anonymous> (/usr/share/yarn/lib/cli.js:141721:10)
+      at Request.emit (events.js:198:13)
+      at IncomingMessage.<anonymous> (/usr/share/yarn/lib/cli.js:141643:12)
+      at Object.onceWrapper (events.js:286:20)
+      at IncomingMessage.emit (events.js:203:15)
+      at endReadableNT (_stream_readable.js:1145:12)
+      at process._tickCallback (internal/process/next_tick.js:63:19)
+
+npm manifest: 
+  {
+    "name": "gateway-test",
+    "version": "1.0.0",
+    "description": "gateway-test",
+    "main": "index.js",
+    "scripts": {
+      "install-dnsmasq": "bash scripts/install-dnsmasq.sh",
+      "terraform": "cd terraform/environments/dev && terraform apply",
+      "build": "tsc && cp ./src/gateway/routes/graphql-v2/schema/types.graphql ./dist/gateway/routes/graphql-v2/schema/types.graphql",
+      "docker-build-prod": "docker build -t gateway-prod .",
+      "docker-build-dev": "docker build -t gateway-dev .",
+      "docker-run-prod": "docker run --env-file=.env --env AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY) --env AWS_ACCESS_KEY_ID=$(echo $AWS_ACCESS_KEY_ID) --env AWS_REGION=$(echo $AWS_REGION) --env AWS_SESSION_TOKEN=$(echo $AWS_SESSION_TOKEN) -it -p 3000:3000 gateway-prod",
+      "docker-run-dev": "docker run --env-file=.env --env AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY) --env AWS_ACCESS_KEY_ID=$(echo $AWS_ACCESS_KEY_ID) --env AWS_REGION=$(echo $AWS_REGION) --env AWS_SESSION_TOKEN=$(echo $AWS_SESSION_TOKEN) -it -p 3000:3000 gateway-dev",
+      "docker-tag-prod": "docker tag gateway-prod:latest 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-prod:latest",
+      "docker-tag-dev": "docker tag gateway-dev:latest 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-dev:latest",
+      "docker-push-prod": "docker push 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-prod:latest",
+      "docker-push-dev": "docker push 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-dev:latest",
+      "deploy-dev": "npm run docker-build-dev && npm run docker-tag-dev && npm run docker-push-dev && npm run ecs-deploy-dev",
+      "deploy-prod": "npm run docker-build-prod && npm run docker-tag-prod && npm run docker-push-prod && npm run ecs-deploy-prod",
+      "ecs-deploy-dev": "aws ecs update-service --cluster gateway-dev-ecs-cluster --service gateway-dev-ecs-service --force-new-deployment",
+      "ecs-deploy-prod": "aws ecs update-service --cluster gateway-prod-ecs-cluster --service gateway-prod-ecs-service --force-new-deployment",
+      "ecr-login-dev": "aws ecr get-login-password | docker login --username AWS --password-stdin 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway-dev:latest",
+      "ecr-login-prod": "aws ecr get-login-password | docker login --username AWS --password-stdin 384386061638.dkr.ecr.eu-west-2.amazonaws.com/arweave-gateway:latest",
+      "lambda-deploy-dev": "npm run build && serverless deploy --stage dev --aws-s3-accelerate",
+      "lambda-deploy-prod": "npm run build && serverless deploy --stage prod --aws-s3-accelerate",
+      "local-dev": "ts-node-dev --respawn --transpileOnly -r dotenv/config ./src/gateway/app.ts dotenv_config_path=.env",
+      "local-cert": "openssl req -config tls/arweave.localhost/request.cnf -new -nodes -x509 -newkey rsa:2048 -sha256 -keyout tls/arweave.localhost/key.pem -out tls/arweave.localhost/cert.pem -days 365",
+      "local-dns": "sudo brew services start dnsmasq",
+      "aws-shell": "aws-vault exec arweave-gateway-dev",
+      "test": "mocha --require ts-node/register test/*.ts",
+      "graphql-types": "graphql-codegen --config codegen.yml"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/arweave-kyle/gateway-test.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+      "url": "https://github.com/arweave-kyle/gateway-test/issues"
+    },
+    "homepage": "https://github.com/arweave-kyle/gateway-test#readme",
+    "dependencies": {
+      "@hapi/joi": "^17.1.1",
+      "@sentry/node": "^5.19.0",
+      "abort-controller": "^3.0.0",
+      "apollo-server-express": "^2.16.0",
+      "arweave": "github:arweaveteam/arweave-js#a6ef78771d43361bfb09c66f252630ce98e21326",
+      "async-retry": "^1.3.1",
+      "aws-sdk": "^2.709.0",
+      "body-parser": "^1.19.0",
+      "cloneable-readable": "^2.0.1",
+      "dotenv": "^8.2.0",
+      "express": "^4.17.1",
+      "express-async-errors": "^3.1.1",
+      "express-async-handler": "^1.1.4",
+      "express-promise-router": "^3.0.3",
+      "express-validator": "^6.6.0",
+      "graphql": "^14.6.0",
+      "graphql-fields": "^2.0.3",
+      "helmet": "^3.23.3",
+      "http-errors": "^1.8.0",
+      "knex": "^0.20.15",
+      "lodash": "^4.17.15",
+      "mime": "^2.4.6",
+      "moment": "^2.27.0",
+      "morgan": "^1.10.0",
+      "node-fetch": "^2.6.0",
+      "pg": "^7.18.2",
+      "pump": "^3.0.0",
+      "redis": "^3.0.2",
+      "rfc4648": "^1.3.0",
+      "shortid": "^2.2.15",
+      "winston": "^3.3.3"
+    },
+    "devDependencies": {
+      "@graphql-codegen/cli": "1.17.7",
+      "@graphql-codegen/typescript": "1.17.7",
+      "@graphql-codegen/typescript-resolvers": "1.17.7",
+      "@types/async-retry": "^1.4.2",
+      "@types/aws-lambda": "^8.10.57",
+      "@types/aws-serverless-express": "^3.3.3",
+      "@types/chai": "^4.2.11",
+      "@types/express": "^4.17.6",
+      "@types/express-validator": "^3.0.0",
+      "@types/graphql-fields": "^1.3.3",
+      "@types/hapi__joi": "^17.1.3",
+      "@types/helmet": "0.0.47",
+      "@types/http-errors": "^1.6.3",
+      "@types/lodash": "^4.14.157",
+      "@types/mocha": "^7.0.2",
+      "@types/morgan": "^1.9.1",
+      "@types/node-fetch": "^2.5.7",
+      "@types/pg": "^7.14.3",
+      "@types/pump": "^1.1.0",
+      "@types/redis": "^2.8.25",
+      "@types/shortid": "0.0.29",
+      "chai": "^4.2.0",
+      "mocha": "^8.0.1",
+      "serverless-deployment-bucket": "^1.1.2",
+      "serverless-export-env": "^1.3.1",
+      "serverless-offline": "^6.4.0",
+      "serverless-offline-sqs": "^3.1.3",
+      "serverless-stage-manager": "^1.0.5",
+      "ts-node": "^8.10.2",
+      "ts-node-dev": "^1.0.0-pre.50",
+      "typescript": "^3.9.6"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
