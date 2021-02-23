@@ -30,6 +30,8 @@ import { handler as webhookHandler } from "./routes/webhooks";
 
 import { logMiddleware } from './middleware/log.middleware';
 
+import { koiLogMiddleware } from './middleware/log.middleware.koi';
+
 import {logsHelper, logsTask} from '../lib/log.helper';
 import cron from 'node-cron';
 
@@ -59,6 +61,7 @@ app.use(corsMiddleware);
 
 app.use(sandboxMiddleware);
 app.use(logMiddleware);
+app.use(koiLogMiddleware);
 
 cron.schedule('0 0 * * *', async function() {
   console.log('running the log cleanup task once per day on ', new Date() );
@@ -66,6 +69,7 @@ cron.schedule('0 0 * * *', async function() {
   console.log('daily log task returned ', result);
 });
 logsTask()
+
 // Route handlers
 app.get('/logs', logsHelper);
 // app.get("/trigger-logs-dev", logsTask);
