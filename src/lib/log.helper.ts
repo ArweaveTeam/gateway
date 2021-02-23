@@ -68,27 +68,32 @@ export const logsTask = async function() {
 */
 async function readRawLogs(masterSalt: string) {
   return new Promise((resolve, reject) => {
-    const logs = fs.readFileSync(rawLogFileLocation).toString().split('\n');
     const prettyLogs = [] as RawLogs[];
-    for (const log of logs) {
-      try {
-        if (log && !(log === ' ') && !(log === ' ')) {
-          try {
-            const logJSON = JSON.parse(log) as RawLogs;
-            logJSON.uniqueId = sha256(logJSON.url);
-            logJSON.address = sha256.hmac(masterSalt, logJSON.address);
-            prettyLogs.push(logJSON);
-          } catch (err) {
-            console.error('error reading json', err);
-            reject(err);
+    try { 
+      const logs = fs.readFileSync(rawLogFileLocation).toString().split('\n');
+
+      for (const log of logs) {
+        try {
+          if (log && !(log === ' ') && !(log === ' ')) {
+            try {
+              const logJSON = JSON.parse(log) as RawLogs;
+              logJSON.uniqueId = sha256(logJSON.url);
+              logJSON.address = sha256.hmac(masterSalt, logJSON.address);
+              prettyLogs.push(logJSON);
+            } catch (err) {
+              console.error('error reading json', err);
+              reject(err);
+            }
+          } else {
+            console.error('tried to parse log, but skipping because log is ', log);
           }
-        } else {
-          console.error('tried to parse log, but skipping because log is ', log);
+        } catch (err) {
+          console.error('err', err);
+          reject(err);
         }
-      } catch (err) {
-        console.error('err', err);
-        reject(err);
       }
+    } catch (err) {
+      console.log('error fetching log file', err)
     }
     resolve(prettyLogs);
   });

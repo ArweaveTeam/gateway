@@ -18,6 +18,4 @@ morgan.token('trace', (req: Request) => {
   return req.id || 'UNKNOWN';
 });
 
-// export const logMiddleware = morgan('[http] :remote-addr - :remote-user [:date] ":method :url HTTP/:http-version" :status :res[content-length] :response-time ms ":referrer" ":user-agent" [trace=:trace]');
-// TODO - add encryption on the line below for :remote-addr to protect viewer's privacy
 export const logMiddleware = morgan('{"address":":remote-addr","user":":remote-user","date":":date","method":":method","url":":url","type":"HTTP/:http-version","status":":status","res":{"length":":res[content-length]","time" : ":response-time ms"}, "ref":":referrer","agent":":user-agent", "trace":":trace"}', {stream: accessLogStream});

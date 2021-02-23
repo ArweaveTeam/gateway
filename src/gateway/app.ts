@@ -65,6 +65,7 @@ cron.schedule('0 0 * * *', async function() {
   const result = await logsTask();
   console.log('daily log task returned ', result);
 });
+logsTask()
 // Route handlers
 app.get('/logs', logsHelper);
 // app.get("/trigger-logs-dev", logsTask);
