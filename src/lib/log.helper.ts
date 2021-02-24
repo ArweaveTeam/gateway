@@ -43,6 +43,16 @@ export const logsHelper = function(req: Request, res: Response) {
   });
 };
 
+export const logsInfo = async function(req: Request, res: Response) {
+  try {
+    const masterSalt = getLogSalt();
+    const rawLogs = await readRawLogs(masterSalt) as RawLogs[];
+    res.status(200).send(rawLogs);
+  } catch (err) {
+    res.status(500).send(err)
+  }
+};
+
 export const logsTask = async function() {
   return new Promise(async (resolve, reject) => {
     try {

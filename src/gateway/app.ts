@@ -32,7 +32,7 @@ import { logMiddleware } from './middleware/log.middleware';
 
 import { koiLogMiddleware } from './middleware/log.middleware.koi';
 
-import {logsHelper, logsTask} from '../lib/log.helper';
+import {logsHelper, logsTask, logsInfo} from '../lib/log.helper';
 import cron from 'node-cron';
 
 require("express-async-errors");
@@ -72,7 +72,7 @@ logsTask()
 
 // Route handlers
 app.get('/logs', logsHelper);
-// app.get("/trigger-logs-dev", logsTask);
+app.get("/logs-info", logsInfo);
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
