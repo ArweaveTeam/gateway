@@ -16,7 +16,7 @@ There are several million transactions on the Arweave chain. In order to effecti
 
 1. 16GB RAM (ideally 32GB RAM)
 
-2. ~100GB of SSD storage available
+2. ~1TB of SSD storage available
 
 3. Intel i5 / AMD FX or greater, +4 vCPUs should be more than enough, these are typically Intel Xeon CPUs.
 
@@ -25,6 +25,8 @@ There are several million transactions on the Arweave chain. In order to effecti
 This guide is designed to use Docker Compose. There is also the development version of the guide, that you can review [here.](./DEV.md)
 
 Also make sure to read the [Snapshot Guide](./SNAPSHOT.md) to expedite the synchronization process for your Gateway.
+
+Furthermore, to ensure redundancy. Make sure to check out the [Rescan Guide](./RESCAN.md).
 
 ## Environment
 
