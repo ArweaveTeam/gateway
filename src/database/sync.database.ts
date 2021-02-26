@@ -43,7 +43,7 @@ export const streams = {
   },
   rescan: {
     snapshot: createWriteStream('snapshot/.rescan', {flags: 'a'}),
-    cache: createWriteStream('cache/.rescan', {flags: 'a'})
+    cache: createWriteStream('cache/.rescan', {flags: 'a'}),
   },
 };
 
@@ -209,7 +209,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
       if (storeSnapshot) {
         streams.rescan.snapshot.write(`${tx},${height},normal\n`);
       }
-    }    
+    }
   }
 }
 

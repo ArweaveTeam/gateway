@@ -49,7 +49,7 @@ export async function getDataFromChunks(id: string): Promise<any> {
   const {startOffset, endOffset} = await getTransactionOffset(id);
 
   let byte = 0;
-  let chunks = ``;
+  let chunks = '';
 
   while (startOffset + byte < endOffset) {
     const chunk = await getChunk(startOffset + byte);
