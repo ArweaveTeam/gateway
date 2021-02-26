@@ -69,5 +69,6 @@ info: [snapshot] successfully imported tags.csv
 Make sure when running an actual Gateway you copy the `.snapshot` file from the `snapshot` folder into the root directory.
 
 ```bash
-cp snapshot/.snapshot .snapshot
+mkdir cache
+cp snapshot/.snapshot cache/.snapshot
 ```

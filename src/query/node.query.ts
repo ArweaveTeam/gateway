@@ -1,4 +1,5 @@
 import {get} from 'superagent';
+import {getTransactionOffset, getChunk} from './chunk.query';
 
 export const NODES = process.env.ARWEAVE_NODES ? JSON.parse(process.env.ARWEAVE_NODES) : ['http://lon-1.eu-west-1.arweave.net:1984'];
 
@@ -42,4 +43,19 @@ export async function getData(id: string): Promise<any> {
 
 export function getDataAsStream(id: string) {
   return get(`${grabNode()}/${id}`);
+}
+
+export async function getDataFromChunks(id: string): Promise<any> {
+  const {startOffset, endOffset} = await getTransactionOffset(id);
+
+  let byte = 0;
+  let chunks = '';
+
+  while (startOffset + byte < endOffset) {
+    const chunk = await getChunk(startOffset + byte);
+    byte += chunk.parsed_chunk.length;
+    chunks += chunk.response_chunk;
+  }
+
+  return chunks;
 }

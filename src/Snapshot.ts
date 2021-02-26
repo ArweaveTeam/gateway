@@ -6,7 +6,7 @@ import {ansBundles} from './utility/ans.utility';
 import {mkdir} from './utility/file.utility';
 import {log} from './utility/log.utility';
 import {sleep} from './utility/sleep.utility';
-import {getNodeInfo, getData} from './query/node.query';
+import {getNodeInfo, getDataFromChunks} from './query/node.query';
 import {block} from './query/block.query';
 import {transaction, tagValue, Tag} from './query/transaction.query';
 import {formatBlock} from './database/block.database';
@@ -28,6 +28,7 @@ export const streams = {
   block: createWriteStream('snapshot/block.csv', {flags: 'a'}),
   transaction: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
   tags: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
+  rescan: createWriteStream('snapshot/.rescan', {flags: 'a'}),
 };
 
 export function configureSnapshotBar(start: number, end: number) {
@@ -42,9 +43,9 @@ export function configureSnapshotBar(start: number, end: number) {
 }
 
 export async function snapshot() {
-  if (existsSync('.snapshot')) {
+  if (existsSync('snapshot/.snapshot')) {
     log.info('[snapshot] existing snapshot state found');
-    const snapshotState = parseInt(readFileSync('.snapshot').toString());
+    const snapshotState = parseInt(readFileSync('snapshot/.snapshot').toString());
 
     if (!isNaN(snapshotState)) {
       const nodeInfo = await getNodeInfo();
@@ -133,7 +134,7 @@ export async function storeTransactions(txs: Array<string>, height: number) {
   await Promise.all(batch);
 }
 
-export async function storeTransaction(tx: string, height: number) {
+export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
     const ft = formatTransaction(currentTransaction);
@@ -153,19 +154,32 @@ export async function storeTransaction(tx: string, height: number) {
     const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
     if (ans102) {
-      try {
-        const ansPayload = await getData(ft.id);
-        const ansTxs = await ansBundles.unbundleData(ansPayload);
-
-        await processANSTransaction(ansTxs);
-      } catch (error) {
-        console.log('');
-        log.info(`[snapshot] malformed ANS payload at height ${height} for tx ${ft.id}`);
-      }
+      await processAns(ft.id, height);
     }
   } catch (error) {
     console.log('');
-    log.info(`[snapshot] could not retrieve tx ${tx} at height ${height}`);
+    log.info(`[snapshot] could not retrieve tx ${tx} at height ${height} ${retry ? ', attempting to retrieve again' : ', missing tx stored in .rescan'}`);
+    if (retry) {
+      await storeTransaction(tx, height, false);
+    } else {
+      streams.rescan.write(`${tx},${height},normal\n`);
+    }
+  }
+}
+
+export async function processAns(id: string, height: number, retry: boolean = true) {
+  try {
+    const ansPayload = await getDataFromChunks(id);
+    const ansTxs = await ansBundles.unbundleData(ansPayload);
+
+    await processANSTransaction(ansTxs);
+  } catch (error) {
+    if (retry) {
+      await processAns(id, height, false);
+    } else {
+      log.info(`[database] malformed ANS payload at height ${height} for tx ${id}`);
+      streams.rescan.write(`${id},${height},ans\n`);
+    }
   }
 }
 

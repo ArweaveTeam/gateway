@@ -9,10 +9,10 @@ import {sleep} from '../utility/sleep.utility';
 import {getNodeInfo} from '../query/node.query';
 import {block} from '../query/block.query';
 import {transaction, tagValue, Tag} from '../query/transaction.query';
-import {getData} from '../query/node.query';
+import {getDataFromChunks} from '../query/node.query';
 import {importBlocks, importTransactions, importTags} from './import.database';
-import {formatBlock} from '../database/block.database';
-import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from '../database/transaction.database';
+import {formatBlock} from './block.database';
+import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from './transaction.database';
 
 config();
 mkdir('snapshot');
@@ -41,6 +41,10 @@ export const streams = {
     snapshot: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
     cache: createWriteStream('cache/tags.csv'),
   },
+  rescan: {
+    snapshot: createWriteStream('snapshot/.rescan', {flags: 'a'}),
+    cache: createWriteStream('cache/.rescan', {flags: 'a'}),
+  },
 };
 
 export function configureSyncBar(start: number, end: number) {
@@ -61,9 +65,9 @@ export async function startSync() {
       log.info('[snapshot] also writing new blocks to the snapshot folder');
     }
 
-    if (existsSync('.snapshot')) {
+    if (existsSync('cache/.snapshot')) {
       log.info('[database] existing sync state found');
-      const state = parseInt(readFileSync('.snapshot').toString());
+      const state = parseInt(readFileSync('cache/.snapshot').toString());
 
       if (!isNaN(state)) {
         const nodeInfo = await getNodeInfo();
@@ -122,7 +126,10 @@ export async function parallelize(height: number) {
       bar.tick(batch.length);
     }
 
-    writeFileSync('.snapshot', (height + batch.length).toString());
+    writeFileSync('cache/.snapshot', (height + batch.length).toString());
+    if (storeSnapshot) {
+      writeFileSync('snapshot/.snapshot', (height + batch.length).toString());
+    }
 
     SIGINT = false;
 
@@ -166,7 +173,7 @@ export async function storeTransactions(txs: Array<string>, height: number) {
   await Promise.all(batch);
 }
 
-export async function storeTransaction(tx: string, height: number) {
+export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
     const ft = formatTransaction(currentTransaction);
@@ -190,19 +197,38 @@ export async function storeTransaction(tx: string, height: number) {
     const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
     if (ans102) {
-      try {
-        const ansPayload = await getData(ft.id);
-        const ansTxs = await ansBundles.unbundleData(ansPayload);
-
-        await processANSTransaction(ansTxs);
-      } catch (error) {
-        console.log('');
-        log.info(`[database] malformed ANS payload at height ${height} for tx ${ft.id}`);
-      }
+      await processAns(ft.id, height);
     }
   } catch (error) {
     console.log('');
-    log.info(`[database] could not retrieve tx ${tx} at height ${height}`);
+    log.info(`[database] could not retrieve tx ${tx} at height ${height} ${retry ? ', attempting to retrieve again' : ', missing tx stored in .rescan'}`);
+    if (retry) {
+      await storeTransaction(tx, height, false);
+    } else {
+      streams.rescan.cache.write(`${tx},${height},normal\n`);
+      if (storeSnapshot) {
+        streams.rescan.snapshot.write(`${tx},${height},normal\n`);
+      }
+    }
+  }
+}
+
+export async function processAns(id: string, height: number, retry: boolean = true) {
+  try {
+    const ansPayload = await getDataFromChunks(id);
+    const ansTxs = await ansBundles.unbundleData(ansPayload);
+
+    await processANSTransaction(ansTxs);
+  } catch (error) {
+    if (retry) {
+      await processAns(id, height, false);
+    } else {
+      log.info(`[database] malformed ANS payload at height ${height} for tx ${id}`);
+      streams.rescan.cache.write(`${id},${height},ans\n`);
+      if (storeSnapshot) {
+        streams.rescan.snapshot.write(`${id},${height},ans\n`);
+      }
+    }
   }
 }
 
