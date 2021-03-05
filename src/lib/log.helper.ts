@@ -4,8 +4,8 @@ import path from 'path';
 import {sha256} from 'js-sha256';
 import cryptoRandomString = require('crypto-random-string')
 
-const logFileLocation = path.join(__dirname, '../../daily.log');
-const rawLogFileLocation = path.join(__dirname, '../../access.log');
+const logFileLocation = path.join(__dirname, '/tmp/daily.log');
+const rawLogFileLocation = path.join(__dirname, '/tmp/access.log');
 
 interface RawLogs {
   address: string,
