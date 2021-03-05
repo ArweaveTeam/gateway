@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 
 // TODO: @theloneronin what's the best place to put this file?
-const logFileLocation = path.join(__dirname, '../../access.log');
+const logFileLocation = path.join(__dirname, '/tmp/access.log');
 const accessLogStream = fs.createWriteStream(logFileLocation, {flags: 'a'});
 
 export function logConfigurationMiddleware(req: Request, res: Response, next: NextFunction) {
