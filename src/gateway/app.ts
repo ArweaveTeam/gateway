@@ -30,9 +30,8 @@ import { handler as webhookHandler } from "./routes/webhooks";
 
 import { logMiddleware } from './middleware/log.middleware';
 
-import { koiLogMiddleware } from './middleware/log.middleware.koi';
+import { joinKoi } from 'koi-logs'
 
-import {logsHelper, logsTask, logsInfo} from '../lib/log.helper';
 import cron from 'node-cron';
 
 require("express-async-errors");
@@ -61,18 +60,8 @@ app.use(corsMiddleware);
 
 app.use(sandboxMiddleware);
 app.use(logMiddleware);
-app.use(koiLogMiddleware);
 
-cron.schedule('0 0 * * *', async function() {
-  console.log('running the log cleanup task once per day on ', new Date() );
-  const result = await logsTask();
-  console.log('daily log task returned ', result);
-});
-logsTask()
-
-// Route handlers
-app.get('/logs', logsHelper);
-app.get("/logs-info", logsInfo);
+joinKoi(app)
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
