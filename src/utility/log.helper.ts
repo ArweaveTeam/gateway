@@ -4,10 +4,10 @@ import path from 'path';
 import {sha256} from 'js-sha256';
 import cryptoRandomString = require('crypto-random-string')
 
-const logFileLocation = path.join(__dirname, '../../daily.log');
-const rawLogFileLocation = path.join(__dirname, '../../access.log');
+export const logFileLocation = path.join(__dirname, '../../daily.log');
+export const rawLogFileLocation = path.join(__dirname, '../../access.log');
 
-interface RawLogs {
+export interface RawLogs {
   address: string,
   user: string,
   date: string,
@@ -17,33 +17,36 @@ interface RawLogs {
   ref: string,
 }
 
-interface FormattedLogs {
+export interface FormattedLogs {
   addresses: string[],
   url: string
 }
 
-interface FormattedLogsArray extends Array<FormattedLogs> {
+export interface FormattedLogsArray extends Array<FormattedLogs> {
   [key: string]: any
 }
 
-function getLogSalt() {
+export interface DataInterface {
+  lastUpdate: Date;
+  summary: Array<any>;
+}
+
+export function getLogSalt() {
   return sha256(cryptoRandomString({length: 10}));
 }
 
-export const logsHelper = function(req: Request, res: Response) {
-  // console.log('logs file path is ', logFileLocation)
+export function logsHelper(req: Request, res: Response) {
   fs.readFile(logFileLocation, 'utf8', (err: any, data: any) => {
     if (err) {
       console.error(err);
       res.status(500).send(err);
       return;
     }
-    // console.log(data)
     res.status(200).send(data);
   });
 };
 
-export const logsTask = async function() {
+export async function logsTask() {
   return new Promise(async (resolve, reject) => {
     try {
       const masterSalt = getLogSalt();
@@ -51,10 +54,9 @@ export const logsTask = async function() {
       const sorted = await sortAndFilterLogs(rawLogs) as FormattedLogsArray;
       const result = await writeDailyLogs(sorted);
 
-      // last, clear old logs
       await clearRawLogs();
 
-      resolve(result);
+      return resolve(result);
     } catch (err) {
       console.error('error writing daily log file', err);
       reject(err);
@@ -62,11 +64,7 @@ export const logsTask = async function() {
   });
 };
 
-/*
-  @readRawLogs
-    retrieves the raw logs and reads them into a json array
-*/
-async function readRawLogs(masterSalt: string) {
+export async function readRawLogs(masterSalt: string) {
   return new Promise((resolve, reject) => {
     const logs = fs.readFileSync(rawLogFileLocation).toString().split('\n');
     const prettyLogs = [] as RawLogs[];
@@ -94,16 +92,13 @@ async function readRawLogs(masterSalt: string) {
   });
 }
 
-/*
-  @readRawLogs
-    retrieves the raw logs and reads them into a json array
-*/
-async function writeDailyLogs(logs:FormattedLogsArray) {
-  return new Promise((resolve, reject) => {
-    const data = {
+export async function writeDailyLogs(logs:FormattedLogsArray) {
+  return new Promise((resolve) => {
+    const data: DataInterface = {
       lastUpdate: new Date(),
-      summary: new Array (),
+      summary: [],
     };
+
     for (const key in logs) {
       if (logs[key]) {
         const log = logs[key];
@@ -123,12 +118,7 @@ async function writeDailyLogs(logs:FormattedLogsArray) {
   });
 }
 
-/*
-  @sortAndFilterLogs
-    logs - access.log output (raw data in array)
-    resolves to an array of data payloads
-*/
-async function sortAndFilterLogs(logs: RawLogs[]) {
+export async function sortAndFilterLogs(logs: RawLogs[]) {
   return new Promise((resolve, reject) => {
     const formatted_logs = [] as FormattedLogsArray;
 
@@ -152,11 +142,7 @@ async function sortAndFilterLogs(logs: RawLogs[]) {
   });
 }
 
-/*
-  @clearRawLogs
-    removes the old access logs file
-*/
-async function clearRawLogs() {
+export async function clearRawLogs() {
   return new Promise((resolve, reject) => {
     fs.truncate(rawLogFileLocation, 0, function() {
       resolve(true);
