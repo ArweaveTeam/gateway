@@ -19,7 +19,7 @@ export function start() {
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
 
-  app.get('/status', statusRoute);
+  app.get('/', statusRoute);
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
