@@ -29,7 +29,7 @@ export function start() {
     console.log('daily log task returned ', result);
   });
 
-  app.get('/status', statusRoute);
+  app.get('/', statusRoute);
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 

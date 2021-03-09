@@ -12,6 +12,6 @@ export async function statusRoute(req: Request, res: Response) {
     currentHeight,
     height: info.height,
     delta: info.height - currentHeight,
-    eta: `${Math.abs(start - Number(new Date)) * (bar.total / bar.curr - 1) / 1000} seconds`,
+    eta: bar ? `${Math.abs(start - Number(new Date)) * ((bar.total) / bar.curr - 1) / 1000} seconds` : 'N/A',
   });
 }

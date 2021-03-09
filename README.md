@@ -22,11 +22,15 @@ There are several million transactions on the Arweave chain. In order to effecti
 
 # Deploying a Gateway
 
-This guide is designed to use Docker Compose. There is also the development version of the guide, that you can review [here.](./DEV.md)
+There are several guides for deploying a Gateway.
 
-Also make sure to read the [Snapshot Guide](./SNAPSHOT.md) to expedite the synchronization process for your Gateway.
+1. The [Development Guide](./DEV.md) for testing and prototyping new features.
 
-Furthermore, to ensure redundancy. Make sure to check out the [Rescan Guide](./RESCAN.md).
+2. The [Snapshot Guide](./SNAPSHOT.md) to expedite synchronization of the Arweave network.
+
+3. The [Rescan Guide](./RESCAN.md) to ensure and verify redundancy of transactions.
+
+4. The [Manifest Guide](./MANIFEST.md) for transaction manifests and to prevent `CORS`.
 
 ## Environment
 
@@ -42,6 +46,8 @@ DATABASE_PASSWORD=arweave
 DATABASE_NAME=arweave
 
 ENVIRONMENT=public
+MANIFESTS=0
+BIP39=0
 PORT=3000
 
 PARALLEL=4
