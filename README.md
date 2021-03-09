@@ -103,3 +103,9 @@ This webpage should look similar to.
 ```bash
 https://arweave.dev/graphql
 ```
+
+
+## Traffic Logs
+Traffic logs are available at /logs and can be downloaded as a signed zip archive on a daily basis.
+
+Logs will be anonymised to ensure privacy, but are aggregated to provide useful network data.
