@@ -1,4 +1,4 @@
-# Rescan Guide
+## Rescanning Cache
 
 While syncing, sometimes transactions may not be returned by Arweave Nodes. You can recover these transactions by running a rescan.
 If you received an error while retrieving a transaction while running a node. You can recover it by running.
