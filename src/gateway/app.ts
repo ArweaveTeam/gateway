@@ -61,7 +61,7 @@ app.use(corsMiddleware);
 app.use(sandboxMiddleware);
 app.use(logMiddleware);
 
-joinKoi(app)
+joinKoi(app, '/usr/app/logs/')
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
