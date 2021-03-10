@@ -1,4 +1,4 @@
-# Snapshot Guide
+# Snapshots
 
 Use this guide to generate your own snapshots or import a snapshot.
 

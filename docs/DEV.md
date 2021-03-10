@@ -1,6 +1,4 @@
-# Gateway Development Guide
-
-If you want to develop and contribute to the Gateway source code, use this guide as a reference for development and starting a server. If you're looking to deploy a Gateway. We suggest using the normal guide found [here.](./README.md)
+# Development
 
 ## Requirements
 
@@ -87,7 +85,7 @@ If you want to disable block synchronization. Simply set `PARALLEL` to `0`.
 PARALLEL=0
 ```
 
-## Deploying Migrations with Knex
+## Knex Migration
 
 For development purposes, you will want to debug Knex migrations.
 
@@ -123,7 +121,7 @@ This webpage should look similar to.
 https://arweave.dev/graphql
 ```
 
-### Additional Commands
+## Additional Commands
 
 If you're doing a lot of work related to do databases. You might want to use `yarn dev:restart` as it resets the database.
 
