@@ -181,10 +181,11 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     const currentTransaction = await transaction(tx);
     const ft = formatTransaction(currentTransaction);
     const preservedTags = JSON.parse(ft.tags) as Array<Tag>;
+
     ft.tags = `${ft.tags.replace(/"/g, '\\"')}`;
 
     const fields = transactionFields
-        .map((field) => `"${ft[field] ? ft[field] : ''}"`)
+        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
         .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
 
     const input = `${fields.join(',')}\n`;
@@ -221,7 +222,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
     const ansPayload = await getDataFromChunks(id);
     const ansTxs = await ansBundles.unbundleData(ansPayload);
 
-    await processANSTransaction(ansTxs);
+    await processANSTransaction(ansTxs, height);
   } catch (error) {
     if (retry) {
       await processAns(id, height, false);
@@ -235,7 +236,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
   }
 }
 
-export async function processANSTransaction(ansTxs: Array<DataItemJson>) {
+export async function processANSTransaction(ansTxs: Array<DataItemJson>, height: number) {
   for (let i = 0; i < ansTxs.length; i++) {
     const ansTx = ansTxs[i];
     const ft = formatAnsTransaction(ansTx);
@@ -244,7 +245,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>) {
     const ansTags = ansTx.tags;
 
     const fields = transactionFields
-        .map((field) => `"${ft[field] ? ft[field] : ''}"`)
+        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
         .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
 
     const input = `${fields.join(',')}\n`;
