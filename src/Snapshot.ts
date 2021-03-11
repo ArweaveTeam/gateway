@@ -6,6 +6,7 @@ import {ansBundles} from './utility/ans.utility';
 import {mkdir} from './utility/file.utility';
 import {log} from './utility/log.utility';
 import {sleep} from './utility/sleep.utility';
+import {TestSuite} from './utility/mocha.utility';
 import {getNodeInfo, getDataFromChunks} from './query/node.query';
 import {block} from './query/block.query';
 import {transaction, tagValue, Tag} from './query/transaction.query';
@@ -46,6 +47,8 @@ export async function snapshot() {
   if (existsSync('snapshot/.snapshot')) {
     log.info('[snapshot] existing snapshot state found');
     const snapshotState = parseInt(readFileSync('snapshot/.snapshot').toString());
+
+    signalHook();
 
     if (!isNaN(snapshotState)) {
       const nodeInfo = await getNodeInfo();
@@ -229,14 +232,19 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
 
 (async () => await snapshot())();
 
-process.on('SIGINT', () => {
-  SIGKILL = true;
-  setInterval(() => {
-    if (SIGINT === false) {
-      streams.block.end();
-      streams.transaction.end();
-      streams.tags.end();
-      process.exit();
-    }
-  }, 100);
-});
+
+export function signalHook() {
+  if (!TestSuite) {
+    process.on('SIGINT', () => {
+      SIGKILL = true;
+      setInterval(() => {
+        if (SIGINT === false) {
+          streams.block.end();
+          streams.transaction.end();
+          streams.tags.end();
+          process.exit();
+        }
+      }, 100);
+    });
+  }
+}

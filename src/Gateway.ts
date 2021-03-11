@@ -37,7 +37,6 @@ export function start() {
 
   app.get(dataRouteRegex, dataRoute);
   app.get('/logs', logsHelper);
-  // app.get("/trigger-logs-dev", logsTask);
 
   app.all('*', proxyRoute);
 
