@@ -9,6 +9,7 @@ snapshot
 .snapshot
 .import
 *.temp
+.nyc_output
 
 **/*.log
 **/.DS_Store

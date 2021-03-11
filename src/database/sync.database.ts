@@ -6,6 +6,7 @@ import {log} from '../utility/log.utility';
 import {ansBundles} from '../utility/ans.utility';
 import {mkdir} from '../utility/file.utility';
 import {sleep} from '../utility/sleep.utility';
+import {TestSuite} from '../utility/mocha.utility';
 import {getNodeInfo} from '../query/node.query';
 import {block} from '../query/block.query';
 import {transaction, tagValue, Tag} from '../query/transaction.query';
@@ -64,6 +65,8 @@ export async function startSync() {
     if (storeSnapshot) {
       log.info('[snapshot] also writing new blocks to the snapshot folder');
     }
+
+    signalHook();
 
     if (existsSync('cache/.snapshot')) {
       log.info('[database] existing sync state found');
@@ -288,13 +291,18 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
   }
 }
 
-process.on('SIGINT', () => {
-  log.info('[database] ensuring all blocks are stored before exit, you may see some extra output in console');
-  SIGKILL = true;
-  setInterval(() => {
-    if (SIGINT === false) {
-      log.info('[database] block sync state preserved, now exiting');
-      process.exit();
-    }
-  }, 100);
-});
+
+export function signalHook() {
+  if (!TestSuite) {
+    process.on('SIGINT', () => {
+      log.info('[database] ensuring all blocks are stored before exit, you may see some extra output in console');
+      SIGKILL = true;
+      setInterval(() => {
+        if (SIGINT === false) {
+          log.info('[database] block sync state preserved, now exiting');
+          process.exit();
+        }
+      }, 100);
+    });
+  }
+}
