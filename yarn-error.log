@@ -1,21 +1,21 @@
 Arguments: 
-  /usr/bin/node /usr/share/yarn/bin/yarn.js add fs path sha256 cryptoRandomString
+  /usr/bin/node /usr/share/yarn/bin/yarn.js add git+github.com/open-koi/koi-log.git
 
 PATH: 
-  /home/al/gems/bin:/home/al/gems/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
 Yarn version: 
   1.22.5
 
 Node version: 
-  10.19.0
+  10.24.0
 
 Platform: 
   linux x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/cryptoRandomString: Not found
-      at Request.params.callback [as _callback] (/usr/share/yarn/lib/cli.js:66988:18)
+  Error: https://registry.yarnpkg.com/git+github.com%2fopen-koi/koi-log.git: Request "https://registry.yarnpkg.com/git+github.com%2fopen-koi/koi-log.git" returned a 405
+      at Request.params.callback [as _callback] (/usr/share/yarn/lib/cli.js:66997:18)
       at Request.self.callback (/usr/share/yarn/lib/cli.js:140749:22)
       at Request.emit (events.js:198:13)
       at Request.<anonymous> (/usr/share/yarn/lib/cli.js:141721:10)
@@ -73,33 +73,40 @@ npm manifest:
     "dependencies": {
       "@hapi/joi": "^17.1.1",
       "@sentry/node": "^5.19.0",
+      "@types/mime": "^2.0.3",
       "abort-controller": "^3.0.0",
       "apollo-server-express": "^2.16.0",
-      "arweave": "github:arweaveteam/arweave-js#a6ef78771d43361bfb09c66f252630ce98e21326",
+      "arweave": "^1.10.11",
       "async-retry": "^1.3.1",
       "aws-sdk": "^2.709.0",
       "body-parser": "^1.19.0",
       "cloneable-readable": "^2.0.1",
+      "crypto-random-string": "^3.3.1",
       "dotenv": "^8.2.0",
       "express": "^4.17.1",
       "express-async-errors": "^3.1.1",
       "express-async-handler": "^1.1.4",
       "express-promise-router": "^3.0.3",
       "express-validator": "^6.6.0",
+      "fs": "^0.0.1-security",
+      "git": "^0.1.5",
       "graphql": "^14.6.0",
       "graphql-fields": "^2.0.3",
       "helmet": "^3.23.3",
       "http-errors": "^1.8.0",
+      "js-sha256": "^0.9.0",
       "knex": "^0.20.15",
       "lodash": "^4.17.15",
       "mime": "^2.4.6",
       "moment": "^2.27.0",
       "morgan": "^1.10.0",
       "node-fetch": "^2.6.0",
+      "path": "^0.12.7",
       "pg": "^7.18.2",
       "pump": "^3.0.0",
       "redis": "^3.0.2",
       "rfc4648": "^1.3.0",
+      "sha256": "^0.2.0",
       "shortid": "^2.2.15",
       "winston": "^3.3.3"
     },
