@@ -27,7 +27,7 @@ import { handler as newTxHandler } from "./routes/new-tx";
 import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
-import { joinKoi } from "koi-logs";
+import { joinKoi, koiLogsHelper, koiRawLogsHelper } from "koi-logs";
 
 import { logMiddleware } from './middleware/log.middleware';
 
@@ -40,6 +40,8 @@ initConnectionPool("read", { min: 1, max: 100 });
 const app = express();
 
 joinKoi(app, '/usr/app/logs/');
+app.get('/logs/', koiLogsHelper);
+app.get('/logs/raw/', koiRawLogsHelper);
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
