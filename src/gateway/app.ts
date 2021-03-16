@@ -27,21 +27,17 @@ import { handler as newTxHandler } from "./routes/new-tx";
 import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
-import { joinKoi, koiLogsHelper, koiRawLogsHelper } from "koi-logs";
+import koiLogs from "koi-logs";
+
+var koiLogger = new koiLogs("/usr/dist/app/");
 
 import { logMiddleware } from './middleware/log.middleware';
-
-
 
 require("express-async-errors");
 
 initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
-
-joinKoi(app, '/usr/app/logs/');
-app.get('/logs/', koiLogsHelper);
-app.get('/logs/raw/', koiRawLogsHelper);
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
@@ -126,3 +122,19 @@ process.on("SIGINT", function () {
     process.exit(1);
   });
 });
+
+connectKoi()
+async function connectKoi ( ) {
+
+  var koiLoggerMiddleware = await koiLogger.generateMiddleware()
+  console.log('created koi middleware', koiLoggerMiddleware)
+  app.use(koiLoggerMiddleware);
+  app.get("/logs/", async function(req, res) {
+    return await koiLogger.koiLogsHelper(req, res)
+  });
+  app.get("/logs/raw/", async function(req, res) { 
+    return await koiLogger.koiRawLogsHelper(req, res)
+  });
+  koiLogger.koiLogsDailyTask()
+  
+}
