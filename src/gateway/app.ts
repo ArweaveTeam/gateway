@@ -39,9 +39,11 @@ initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
 
-joinKoi(app, '/usr/app/logs/');
-app.get('/logs/', koiLogsHelper);
-app.get('/logs/raw/', koiRawLogsHelper);
+connectKoi ();
+
+async function connectKoi () {
+  app = await joinKoi(app, "/home/al/");
+}
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
