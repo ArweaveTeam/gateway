@@ -28,6 +28,7 @@ export const errorResponseHandler: ErrorRequestHandler = (
   res,
   next
 ) => {
+  console.log('errorResponseHandler received', error, req.log)
   req.log.error(error);
   const response = {
     status: error.expose ? error.status : 500,
