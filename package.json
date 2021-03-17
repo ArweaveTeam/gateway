@@ -7,7 +7,7 @@
     "install-dnsmasq": "bash scripts/install-dnsmasq.sh",
     "terraform": "cd terraform/environments/dev && terraform apply",
     "build": "tsc && cp ./src/gateway/routes/graphql-v2/schema/types.graphql ./dist/gateway/routes/graphql-v2/schema/types.graphql",
-    "dev:local" : "yarn run build && node -r dotenv/config dist/gateway/app.js  dotenv_config_path=.env.dev.default",
+    "dev:local" : "yarn run build && node -r dotenv/config dist/gateway/app.js  dotenv_config_path=.env.dev.default  --stack-trace-limit=25",
     "docker-build-prod": "docker build -t gateway-prod .",
     "docker-build-dev": "docker build -t gateway-dev .",
     "docker-run-prod": "docker run --env-file=.env --env AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY) --env AWS_ACCESS_KEY_ID=$(echo $AWS_ACCESS_KEY_ID) --env AWS_REGION=$(echo $AWS_REGION) --env AWS_SESSION_TOKEN=$(echo $AWS_SESSION_TOKEN) -it -p 3000:3000 gateway-prod",

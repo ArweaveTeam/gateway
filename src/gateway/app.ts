@@ -41,11 +41,11 @@ const app = express();
 
 // connectKoi(app);
 app.get("/logs/", async function (req: any, res: any) {
-  console.log('entered /logs/ setup fn')
+  // console.log('entered /logs/ setup fn')
   return await koiLogger.koiLogsHelper(req, res)
 });
 app.get("/logs/raw/", async function(req: any, res: any) { 
-  console.log('entered /logs/raw/ setup fn')
+  // console.log('entered /logs/raw/ setup fn')
   return await koiLogger.koiRawLogsHelper(req, res)
 });
 
@@ -53,7 +53,7 @@ let koiLoggerMiddleware = koiLogger.generateMiddleware()
 
 app.use(async function (req: any, res: any) {
   let middleware = await koiLoggerMiddleware;
-  console.log('middleware', middleware)
+  // console.log('middleware', middleware)
   return middleware(req, res);
 });
 
