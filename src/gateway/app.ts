@@ -40,49 +40,14 @@ initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
 
-// connectKoi(app);
 app.get("/logs/", async function (req: Request, res: Response) {
-  // console.log('entered /logs/ setup fn')
   return await koiLogger.koiLogsHelper(req, res)
 });
 app.get("/logs/raw/", async function(req: Request, res: Response) { 
-  // console.log('entered /logs/raw/ setup fn')
   return await koiLogger.koiRawLogsHelper(req, res)
 });
-async function buildMiddleware () {
-  console.log('koiMiddleWare ', JSON.stringify(koiLogger.middleware), !koiLogger.middleware )
-  if (!koiLogger.middleware) {
-    koiLogger.middleware = await koiLogger.generateMiddleware()
-    console.log('generator returned', koiLogger.middleware)
-  }
-  return koiLogger.middleware
-}
-const koiLoggerLogger: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  if (!koiLogger.rawLogFileLocation) {
-    console.log('no log location set, waiting for it...')
-    await koiLogger.rawLogFileLocation
-  }
-  console.log(koiLogger.rawLogFileLocation)
-  const accessLogStream = fs.createWriteStream(koiLogger.rawLogFileLocation, { flags: 'a' });
-  
-  var payload = {
-    "address": req.ip,
-    "date": new Date(),
-    "method": req.method,
-    "url": req.path,
-    "type": req.protocol,
-    "res": {
-      "length": ":res[content-length]",
-      "time": ":response-time ms"
-    }
-  };
-  fs.appendFile(koiLogger.rawLogFileLocation, JSON.stringify(payload) + ",", function (err) {
-    if (err) throw err;
-    console.log('Saved!');
-  });
-  next()
-}
-app.use(koiLoggerLogger)
+
+app.use(koiLogger.logger)
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
