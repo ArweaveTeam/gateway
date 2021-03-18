@@ -1,5 +1,5 @@
 import express from "express";
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { Request, Response } from 'express';
 import helmet from "helmet";
 import {
   initConnectionPool,
@@ -30,7 +30,6 @@ import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 import koiLogs from "koi-logs";
-import morgan from "morgan";
 
 var koiLogger = new koiLogs("./");
 
@@ -47,15 +46,13 @@ app.get("/logs/raw/", async function(req: Request, res: Response) {
   return await koiLogger.koiRawLogsHelper(req, res)
 });
 
-app.use(koiLogger.logger)
+app.use(koiLogger.logger);
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
 const port = process.env.APP_PORT;
 
 app.set("trust proxy", 1);
-
-// Global middleware
 
 app.use(configureRequestLogging);
 
