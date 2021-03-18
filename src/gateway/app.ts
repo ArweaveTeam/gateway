@@ -1,5 +1,4 @@
-import express from "express";
-import { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import helmet from "helmet";
 import {
   initConnectionPool,
@@ -22,7 +21,6 @@ import { handler as sandboxMiddleware } from "./middleware/sandbox";
 import { handler as arqlHandler } from "./routes/arql";
 import { handler as dataHandler } from "./routes/data";
 import { apolloServer } from "./routes/graphql";
-import fs from 'fs';
 import { apolloServer as apolloServerV2 } from "./routes/graphql-v2";
 import { handler as healthHandler } from "./routes/health";
 import { handler as newTxHandler } from "./routes/new-tx";
@@ -31,13 +29,14 @@ import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 import koiLogs from "koi-logs";
 
-var koiLogger = new koiLogs("./");
 
 require("express-async-errors");
 
 initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
+
+var koiLogger = new koiLogs("./");
 
 app.get("/logs/", async function (req: Request, res: Response) {
   return await koiLogger.koiLogsHelper(req, res)
