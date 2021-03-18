@@ -5095,7 +5095,7 @@ knex@^0.20.15:
 
 "koi-logs@git+https://github.com/open-koi/koi-log.git":
   version "1.0.0"
-  resolved "git+https://github.com/open-koi/koi-log.git#202620f893ee364d8e1952b3ac2b25bbcf2df0ef"
+  resolved "git+https://github.com/open-koi/koi-log.git#28cf7382289528eb649e489f3637602a3580f084"
   dependencies:
     "@rollup/plugin-json" "^4.1.0"
     "@rollup/plugin-typescript" "^8.2.0"

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from 'express';
 import helmet from "helmet";
 import {
   initConnectionPool,
@@ -29,9 +29,6 @@ import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 import koiLogs from "koi-logs";
 
-var koiLogger = new koiLogs("./");
-
-import { logMiddleware } from './middleware/log.middleware';
 
 require("express-async-errors");
 
@@ -39,36 +36,22 @@ initConnectionPool("read", { min: 1, max: 100 });
 
 const app = express();
 
-// connectKoi(app);
-app.get("/logs/", async function (req: any, res: any) {
-  // console.log('entered /logs/ setup fn')
+var koiLogger = new koiLogs("./");
+
+app.get("/logs/", async function (req: Request, res: Response) {
   return await koiLogger.koiLogsHelper(req, res)
 });
-app.get("/logs/raw/", async function(req: any, res: any) { 
-  // console.log('entered /logs/raw/ setup fn')
+app.get("/logs/raw/", async function(req: Request, res: Response) { 
   return await koiLogger.koiRawLogsHelper(req, res)
 });
 
-let koiLoggerMiddleware = koiLogger.generateMiddleware()
-
-app.use(async function (req: any, res: any) {
-  let middleware = await koiLoggerMiddleware;
-  // console.log('middleware', middleware)
-  return middleware(req, res);
-});
-
-
-setTimeout(function () {
-  koiLogger.koiLogsDailyTask()
-}, 2000)
+app.use(koiLogger.logger);
 
 const dataPathRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 
 const port = process.env.APP_PORT;
 
 app.set("trust proxy", 1);
-
-// Global middleware
 
 app.use(configureRequestLogging);
 
@@ -81,7 +64,6 @@ app.use(helmet.hidePoweredBy());
 app.use(corsMiddleware);
 
 app.use(sandboxMiddleware);
-app.use(logMiddleware);
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
