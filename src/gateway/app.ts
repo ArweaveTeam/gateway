@@ -29,6 +29,20 @@ import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
 import koiLogs from "koi-logs";
 
+declare global {
+  namespace Express {
+      export interface Request {
+        log: any;
+        sentry: any;
+        id: any;
+      }
+      export interface Response {
+        log: any;
+        sentry: any;
+        id: any;
+      }
+  }
+}
 
 require("express-async-errors");
 
