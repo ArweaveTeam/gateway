@@ -27,6 +27,7 @@ import { handler as newTxHandler } from "./routes/new-tx";
 import { handler as newChunkHandler } from "./routes/new-chunk";
 import { handler as proxyHandler } from "./routes/proxy";
 import { handler as webhookHandler } from "./routes/webhooks";
+import koiLogs from "koi-logs";
 
 require("express-async-errors");
 
