@@ -1,12 +1,11 @@
 import {config} from 'dotenv';
 import {DataItemJson} from 'arweave-bundles';
 import {pick} from 'lodash';
+import {indices} from '../utility/order.utility';
 import {TransactionType, tagValue} from '../query/transaction.query';
 import {fromB64Url, sha256B64Url} from '../utility/encoding.utility';
 
 config();
-
-export const indices = JSON.parse(process.env.INDICES || '[]');
 
 export interface ANSTransaction {
   id: string;

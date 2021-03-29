@@ -2,7 +2,8 @@ import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
 import {existsSync, readFileSync, writeFileSync} from 'fs';
-import {indices, streams, initStreams} from './utility/csv.utility';
+import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from './utility/serialize.utility';
+import {streams, initStreams} from './utility/csv.utility';
 import {ansBundles} from './utility/ans.utility';
 import {mkdir} from './utility/file.utility';
 import {log} from './utility/log.utility';
@@ -11,8 +12,7 @@ import {TestSuite} from './utility/mocha.utility';
 import {getNodeInfo, getDataFromChunks} from './query/node.query';
 import {block} from './query/block.query';
 import {transaction, tagValue, Tag} from './query/transaction.query';
-import {formatBlock} from './database/block.database';
-import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from './database/transaction.database';
+import {DatabaseTag} from './database/transaction.database';
 
 config();
 mkdir('snapshot');
@@ -104,13 +104,12 @@ export async function parallelize(height: number) {
 export async function storeBlock(height: number) {
   try {
     const currentBlock = await block(height);
-    const fb = formatBlock(currentBlock);
-    const input = `"${fb.id}","${fb.previous_block}","${fb.mined_at}","${fb.height}","${fb.txs.replace(/"/g, '\\"')}","${fb.extended.replace(/"/g, '\\"')}"\n`;
+    const {formattedBlock, input} = serializeBlock(currentBlock, height);
 
     streams.block.snapshot.write(input);
 
     if (height > 0) {
-      await storeTransactions(JSON.parse(fb.txs) as Array<string>, height);
+      await storeTransactions(JSON.parse(formattedBlock.txs) as Array<string>, height);
     }
   } catch (error) {
     log.info(`[snapshot] could not retrieve block at height ${height}, retrying`);
@@ -134,24 +133,15 @@ export async function storeTransactions(txs: Array<string>, height: number) {
 export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
-    const ft = formatTransaction(currentTransaction);
-    const preservedTags = JSON.parse(ft.tags) as Array<Tag>;
-    ft.tags = `${ft.tags.replace(/"/g, '\\"')}`;
-
-    const fields = transactionFields
-        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
-        .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
-
-    const input = `${fields.join(',')}\n`;
+    const {formattedTransaction, preservedTags, input} = serializeTransaction(currentTransaction, height);
 
     streams.transaction.snapshot.write(input);
-
-    storeTags(ft.id, preservedTags);
+    storeTags(formattedTransaction.id, preservedTags);
 
     const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
     if (ans102) {
-      await processAns(ft.id, height);
+      await processAns(formattedTransaction.id, height);
     }
   } catch (error) {
     console.log('');
@@ -183,16 +173,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
 export async function processANSTransaction(ansTxs: Array<DataItemJson>, height: number) {
   for (let i = 0; i < ansTxs.length; i++) {
     const ansTx = ansTxs[i];
-    const ft = formatAnsTransaction(ansTx);
-    ft.tags = `${ft.tags.replace(/"/g, '\\"')}`;
-
-    const ansTags = ansTx.tags;
-
-    const fields = transactionFields
-        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
-        .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
-
-    const input = `${fields.join(',')}\n`;
+    const {ansTags, input} = serializeAnsTransaction(ansTx, height);
 
     streams.transaction.snapshot.write(input);
 
@@ -217,9 +198,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
 export function storeTags(tx_id: string, tags: Array<Tag>) {
   for (let i = 0; i < tags.length; i++) {
     const tag = tags[i];
-
-    const input = `"${tx_id}","${i}","${tag.name}","${tag.value}"\n`;
-
+    const {input} = serializeTags(tx_id, i, tag);
     streams.tags.snapshot.write(input);
   }
 }

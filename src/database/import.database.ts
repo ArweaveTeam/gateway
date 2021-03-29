@@ -1,10 +1,9 @@
 import {config} from 'dotenv';
+import {indices} from '../utility/order.utility';
 import {connection} from '../database/connection.database';
 import {transactionFields} from '../database/transaction.database';
 
 config();
-
-export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
 
 export async function importBlocks(path: string) {
   return new Promise(async (resolve) => {

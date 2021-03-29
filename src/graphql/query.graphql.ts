@@ -1,5 +1,6 @@
 import {config} from 'dotenv';
 import {QueryBuilder} from 'knex';
+import {indices} from '../utility/order.utility';
 import {connection} from '../database/connection.database';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
@@ -12,8 +13,6 @@ export const orderByClauses = {
   HEIGHT_ASC: 'transactions.height ASC NULLS LAST, id ASC',
   HEIGHT_DESC: 'transactions.height DESC NULLS FIRST, id ASC',
 };
-
-export const indices = JSON.parse(process.env.INDICES || '[]');
 
 export interface QueryParams {
   to?: string[];
