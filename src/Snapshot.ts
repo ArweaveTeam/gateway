@@ -1,7 +1,8 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
-import {existsSync, readFileSync, writeFileSync, createWriteStream} from 'fs';
+import {existsSync, readFileSync, writeFileSync} from 'fs';
+import {indices, streams, initStreams} from './utility/csv.utility';
 import {ansBundles} from './utility/ans.utility';
 import {mkdir} from './utility/file.utility';
 import {log} from './utility/log.utility';
@@ -16,7 +17,6 @@ import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction}
 config();
 mkdir('snapshot');
 
-export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
 export const parallelization = parseInt(process.env.PARALLEL || '8');
 
 export let SIGINT: boolean = false;
@@ -24,13 +24,6 @@ export let SIGKILL: boolean = false;
 
 export let bar: ProgressBar;
 export let topHeight = 0;
-
-export const streams = {
-  block: createWriteStream('snapshot/block.csv', {flags: 'a'}),
-  transaction: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
-  tags: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
-  rescan: createWriteStream('snapshot/.rescan', {flags: 'a'}),
-};
 
 export function configureSnapshotBar(start: number, end: number) {
   bar = new ProgressBar(
@@ -48,6 +41,7 @@ export async function snapshot() {
     log.info('[snapshot] existing snapshot state found');
     const snapshotState = parseInt(readFileSync('snapshot/.snapshot').toString());
 
+    initStreams();
     signalHook();
 
     if (!isNaN(snapshotState)) {
@@ -113,7 +107,7 @@ export async function storeBlock(height: number) {
     const fb = formatBlock(currentBlock);
     const input = `"${fb.id}","${fb.previous_block}","${fb.mined_at}","${fb.height}","${fb.txs.replace(/"/g, '\\"')}","${fb.extended.replace(/"/g, '\\"')}"\n`;
 
-    streams.block.write(input);
+    streams.block.snapshot.write(input);
 
     if (height > 0) {
       await storeTransactions(JSON.parse(fb.txs) as Array<string>, height);
@@ -150,7 +144,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
 
     const input = `${fields.join(',')}\n`;
 
-    streams.transaction.write(input);
+    streams.transaction.snapshot.write(input);
 
     storeTags(ft.id, preservedTags);
 
@@ -165,7 +159,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     if (retry) {
       await storeTransaction(tx, height, false);
     } else {
-      streams.rescan.write(`${tx},${height},normal\n`);
+      streams.rescan.snapshot.write(`${tx},${height},normal\n`);
     }
   }
 }
@@ -181,7 +175,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
       await processAns(id, height, false);
     } else {
       log.info(`[database] malformed ANS payload at height ${height} for tx ${id}`);
-      streams.rescan.write(`${id},${height},ans\n`);
+      streams.rescan.snapshot.write(`${id},${height},ans\n`);
     }
   }
 }
@@ -200,7 +194,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
 
     const input = `${fields.join(',')}\n`;
 
-    streams.transaction.write(input);
+    streams.transaction.snapshot.write(input);
 
     for (let ii = 0; ii < ansTags.length; ii++) {
       const ansTag = ansTags[ii];
@@ -215,7 +209,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
 
       const input = `"${tag.tx_id}","${tag.index}","${tag.name}","${tag.value}"\n`;
 
-      streams.tags.write(input);
+      streams.tags.snapshot.write(input);
     }
   }
 }
@@ -226,12 +220,11 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
 
     const input = `"${tx_id}","${i}","${tag.name}","${tag.value}"\n`;
 
-    streams.tags.write(input);
+    streams.tags.snapshot.write(input);
   }
 }
 
 (async () => await snapshot())();
-
 
 export function signalHook() {
   if (!TestSuite) {
@@ -239,9 +232,9 @@ export function signalHook() {
       SIGKILL = true;
       setInterval(() => {
         if (SIGINT === false) {
-          streams.block.end();
-          streams.transaction.end();
-          streams.tags.end();
+          streams.block.snapshot.end();
+          streams.transaction.snapshot.end();
+          streams.tags.snapshot.end();
           process.exit();
         }
       }, 100);

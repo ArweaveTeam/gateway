@@ -1,7 +1,8 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
-import {existsSync, readFileSync, writeFileSync, createWriteStream} from 'fs';
+import {existsSync, readFileSync, writeFileSync} from 'fs';
 import {config} from 'dotenv';
+import {indices, streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
 import {ansBundles} from '../utility/ans.utility';
 import {mkdir} from '../utility/file.utility';
@@ -19,7 +20,6 @@ config();
 mkdir('snapshot');
 mkdir('cache');
 
-export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
 export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
 export const parallelization = parseInt(process.env.PARALLEL || '8');
 
@@ -28,25 +28,6 @@ export let SIGKILL: boolean = false;
 export let bar: ProgressBar;
 export let topHeight = 0;
 export let currentHeight = 0;
-
-export const streams = {
-  block: {
-    snapshot: createWriteStream('snapshot/block.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/block.csv'),
-  },
-  transaction: {
-    snapshot: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/transaction.csv'),
-  },
-  tags: {
-    snapshot: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
-    cache: createWriteStream('cache/tags.csv'),
-  },
-  rescan: {
-    snapshot: createWriteStream('snapshot/.rescan', {flags: 'a'}),
-    cache: createWriteStream('cache/.rescan', {flags: 'a'}),
-  },
-};
 
 export function configureSyncBar(start: number, end: number) {
   bar = new ProgressBar(
@@ -66,6 +47,7 @@ export async function startSync() {
       log.info('[snapshot] also writing new blocks to the snapshot folder');
     }
 
+    initStreams();
     signalHook();
 
     if (existsSync('cache/.snapshot')) {
@@ -121,9 +103,7 @@ export async function parallelize(height: number) {
     await importTransactions(`${process.cwd()}/cache/transaction.csv`);
     await importTags(`${process.cwd()}/cache/tags.csv`);
 
-    streams.block.cache = createWriteStream('cache/block.csv');
-    streams.transaction.cache = createWriteStream('cache/transaction.csv');
-    streams.tags.cache = createWriteStream('cache/tags.csv');
+    resetCacheStreams();
 
     if (!bar.complete) {
       bar.tick(batch.length);
