@@ -54,7 +54,7 @@ export async function getChunk(offset: number, retry: boolean = true): Promise<C
     if (retry) {
       return getChunk(offset, false);
     } else {
-      throw new Error(error);
+      throw error;
     }
   }
 }

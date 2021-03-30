@@ -45,17 +45,26 @@ export function getDataAsStream(id: string) {
   return get(`${grabNode()}/${id}`);
 }
 
-export async function getDataFromChunks(id: string): Promise<any> {
-  const {startOffset, endOffset} = await getTransactionOffset(id);
+export async function getDataFromChunks(id: string, retry: boolean = true): Promise<any> {
+  try {
+    const {startOffset, endOffset} = await getTransactionOffset(id);
 
-  let byte = 0;
-  let chunks = '';
+    let byte = 0;
+    let chunks = '';
 
-  while (startOffset + byte < endOffset) {
-    const chunk = await getChunk(startOffset + byte);
-    byte += chunk.parsed_chunk.length;
-    chunks += chunk.response_chunk;
+    while (startOffset + byte < endOffset) {
+      const chunk = await getChunk(startOffset + byte);
+      byte += chunk.parsed_chunk.length;
+      chunks += chunk.response_chunk;
+    }
+
+    return chunks;
+  } catch (error) {
+    if (retry) {
+      console.error(`error retrieving data from ${id}, please note that this may be a cancelled transaction`.red.bold);
+      return await getDataFromChunks(id, false);
+    } else {
+      throw error;
+    }
   }
-
-  return chunks;
 }

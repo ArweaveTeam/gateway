@@ -38,18 +38,24 @@ arweave deploy snapshot.tar.gz
 
 ## Importing a Snapshot
 
-If you want to import a snapshot. You need to make sure import the `.csv` files into the `snapshot` folder. It should look something like.
+If you want to import a snapshot. You need to make sure to update your `.env` file to have the absolute paths to each CSV
 
 ```bash
-snapshot/block.csv
-snapshot/transaction.csv
-snapshot/tags.csv
+BLOCK_PATH=/path/to/snapshot/block.csv
+TRANSACTION_PATH=/path/to/snapshot/transaction.csv
+TAGS_PATH=/path/to/snapshot/tags.csv
 ```
 
 If you're downloading a `.tar.gz` file. You can decompress it by running.
 
 ```bash
 tar -zxf snapshot.tar.gz -C snapshot
+```
+
+Also make sure that the folder that holds the snapshot csv files has `rwx` permissions.
+
+```bash
+chmod +x /path/to/snapshot
 ```
 
 You can then run the import command.
@@ -64,11 +70,4 @@ If successful, it should output.
 info: [snapshot] successfully imported block.csv
 info: [snapshot] successfully imported transaction.csv
 info: [snapshot] successfully imported tags.csv
-```
-
-Make sure when running an actual Gateway you copy the `.snapshot` file from the `snapshot` folder into the root directory.
-
-```bash
-mkdir cache
-cp snapshot/.snapshot cache/.snapshot
 ```

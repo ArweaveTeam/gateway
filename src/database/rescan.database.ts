@@ -2,10 +2,11 @@ import ProgressBar from 'progress';
 import {existsSync, createReadStream, createWriteStream, readFileSync, writeFileSync, unlinkSync} from 'fs';
 import {split, mapSync} from 'event-stream';
 import {config} from 'dotenv';
+import {streams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
 import {mkdir} from '../utility/file.utility';
 import {importTransactions, importTags} from '../database/import.database';
-import {storeTransaction, processAns, streams} from '../database/sync.database';
+import {storeTransaction, processAns} from '../database/sync.database';
 
 config();
 mkdir('snapshot');

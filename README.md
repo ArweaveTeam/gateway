@@ -43,6 +43,10 @@ PORT=3000
 PARALLEL=4
 SNAPSHOT=0
 
+BLOCK_PATH=
+TRANSACTION_PATH=
+TAGS_PATH=
+
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
 

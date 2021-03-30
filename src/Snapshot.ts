@@ -1,7 +1,9 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
-import {existsSync, readFileSync, writeFileSync, createWriteStream} from 'fs';
+import {lastBlock} from './utility/height.utility';
+import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from './utility/serialize.utility';
+import {streams, initStreams} from './utility/csv.utility';
 import {ansBundles} from './utility/ans.utility';
 import {mkdir} from './utility/file.utility';
 import {log} from './utility/log.utility';
@@ -10,13 +12,11 @@ import {TestSuite} from './utility/mocha.utility';
 import {getNodeInfo, getDataFromChunks} from './query/node.query';
 import {block} from './query/block.query';
 import {transaction, tagValue, Tag} from './query/transaction.query';
-import {formatBlock} from './database/block.database';
-import {transactionFields, DatabaseTag, formatTransaction, formatAnsTransaction} from './database/transaction.database';
+import {DatabaseTag} from './database/transaction.database';
 
 config();
 mkdir('snapshot');
 
-export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;
 export const parallelization = parseInt(process.env.PARALLEL || '8');
 
 export let SIGINT: boolean = false;
@@ -24,13 +24,6 @@ export let SIGKILL: boolean = false;
 
 export let bar: ProgressBar;
 export let topHeight = 0;
-
-export const streams = {
-  block: createWriteStream('snapshot/block.csv', {flags: 'a'}),
-  transaction: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
-  tags: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
-  rescan: createWriteStream('snapshot/.rescan', {flags: 'a'}),
-};
 
 export function configureSnapshotBar(start: number, end: number) {
   bar = new ProgressBar(
@@ -44,23 +37,18 @@ export function configureSnapshotBar(start: number, end: number) {
 }
 
 export async function snapshot() {
-  if (existsSync('snapshot/.snapshot')) {
-    log.info('[snapshot] existing snapshot state found');
-    const snapshotState = parseInt(readFileSync('snapshot/.snapshot').toString());
+  const startHeight = await lastBlock();
 
-    signalHook();
+  initStreams();
+  signalHook();
 
-    if (!isNaN(snapshotState)) {
-      const nodeInfo = await getNodeInfo();
-      configureSnapshotBar(snapshotState, nodeInfo.height);
-      topHeight = nodeInfo.height;
-      log.info(`[snapshot] snapshot is currently at height ${snapshotState}, resuming sync to ${topHeight}`);
-      bar.tick();
-      await parallelize(snapshotState + 1);
-    } else {
-      log.info('[snapshot] snapshot state is malformed. Please make sure it is a number');
-      process.exit();
-    }
+  if (startHeight > 0) {
+    const nodeInfo = await getNodeInfo();
+    configureSnapshotBar(startHeight, nodeInfo.height);
+    topHeight = nodeInfo.height;
+    log.info(`[snapshot] snapshot is currently at height ${startHeight}, resuming sync to ${topHeight}`);
+    bar.tick();
+    await parallelize(startHeight + 1);
   } else {
     const nodeInfo = await getNodeInfo();
     configureSnapshotBar(0, nodeInfo.height);
@@ -96,9 +84,6 @@ export async function parallelize(height: number) {
       bar.tick(batch.length);
     }
 
-    writeFileSync('.snapshot', (height + batch.length).toString());
-    writeFileSync('snapshot/.snapshot', (height + batch.length).toString());
-
     SIGINT = false;
 
     if (SIGKILL === false) {
@@ -110,13 +95,12 @@ export async function parallelize(height: number) {
 export async function storeBlock(height: number) {
   try {
     const currentBlock = await block(height);
-    const fb = formatBlock(currentBlock);
-    const input = `"${fb.id}","${fb.previous_block}","${fb.mined_at}","${fb.height}","${fb.txs.replace(/"/g, '\\"')}","${fb.extended.replace(/"/g, '\\"')}"\n`;
+    const {formattedBlock, input} = serializeBlock(currentBlock, height);
 
-    streams.block.write(input);
+    streams.block.snapshot.write(input);
 
     if (height > 0) {
-      await storeTransactions(JSON.parse(fb.txs) as Array<string>, height);
+      await storeTransactions(JSON.parse(formattedBlock.txs) as Array<string>, height);
     }
   } catch (error) {
     log.info(`[snapshot] could not retrieve block at height ${height}, retrying`);
@@ -140,24 +124,15 @@ export async function storeTransactions(txs: Array<string>, height: number) {
 export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
-    const ft = formatTransaction(currentTransaction);
-    const preservedTags = JSON.parse(ft.tags) as Array<Tag>;
-    ft.tags = `${ft.tags.replace(/"/g, '\\"')}`;
+    const {formattedTransaction, preservedTags, input} = serializeTransaction(currentTransaction, height);
 
-    const fields = transactionFields
-        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
-        .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
-
-    const input = `${fields.join(',')}\n`;
-
-    streams.transaction.write(input);
-
-    storeTags(ft.id, preservedTags);
+    streams.transaction.snapshot.write(input);
+    storeTags(formattedTransaction.id, preservedTags);
 
     const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
     if (ans102) {
-      await processAns(ft.id, height);
+      await processAns(formattedTransaction.id, height);
     }
   } catch (error) {
     console.log('');
@@ -165,7 +140,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     if (retry) {
       await storeTransaction(tx, height, false);
     } else {
-      streams.rescan.write(`${tx},${height},normal\n`);
+      streams.rescan.snapshot.write(`${tx},${height},normal\n`);
     }
   }
 }
@@ -181,7 +156,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
       await processAns(id, height, false);
     } else {
       log.info(`[database] malformed ANS payload at height ${height} for tx ${id}`);
-      streams.rescan.write(`${id},${height},ans\n`);
+      streams.rescan.snapshot.write(`${id},${height},ans\n`);
     }
   }
 }
@@ -189,18 +164,9 @@ export async function processAns(id: string, height: number, retry: boolean = tr
 export async function processANSTransaction(ansTxs: Array<DataItemJson>, height: number) {
   for (let i = 0; i < ansTxs.length; i++) {
     const ansTx = ansTxs[i];
-    const ft = formatAnsTransaction(ansTx);
-    ft.tags = `${ft.tags.replace(/"/g, '\\"')}`;
+    const {ansTags, input} = serializeAnsTransaction(ansTx, height);
 
-    const ansTags = ansTx.tags;
-
-    const fields = transactionFields
-        .map((field) => `"${field === 'height' ? height : ft[field] ? ft[field] : ''}"`)
-        .concat(indices.map((ifield) => `"${ft[ifield] ? ft[ifield] : ''}"`));
-
-    const input = `${fields.join(',')}\n`;
-
-    streams.transaction.write(input);
+    streams.transaction.snapshot.write(input);
 
     for (let ii = 0; ii < ansTags.length; ii++) {
       const ansTag = ansTags[ii];
@@ -213,9 +179,9 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
         value: value || '',
       };
 
-      const input = `"${tag.tx_id}","${tag.index}","${tag.name}","${tag.value}"\n`;
+      const input = `"${tag.tx_id}"|"${tag.index}"|"${tag.name}"|"${tag.value}"\n`;
 
-      streams.tags.write(input);
+      streams.tags.snapshot.write(input);
     }
   }
 }
@@ -223,15 +189,12 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
 export function storeTags(tx_id: string, tags: Array<Tag>) {
   for (let i = 0; i < tags.length; i++) {
     const tag = tags[i];
-
-    const input = `"${tx_id}","${i}","${tag.name}","${tag.value}"\n`;
-
-    streams.tags.write(input);
+    const {input} = serializeTags(tx_id, i, tag);
+    streams.tags.snapshot.write(input);
   }
 }
 
 (async () => await snapshot())();
-
 
 export function signalHook() {
   if (!TestSuite) {
@@ -239,9 +202,9 @@ export function signalHook() {
       SIGKILL = true;
       setInterval(() => {
         if (SIGINT === false) {
-          streams.block.end();
-          streams.transaction.end();
-          streams.tags.end();
+          streams.block.snapshot.end();
+          streams.transaction.snapshot.end();
+          streams.tags.snapshot.end();
           process.exit();
         }
       }, 100);
