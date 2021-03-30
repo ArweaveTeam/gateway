@@ -1,5 +1,4 @@
 import {get} from 'superagent';
-import {log} from '../utility/log.utility';
 import {b64UrlToBuffer} from '../utility/encoding.utility';
 import {grabNode} from './node.query';
 
@@ -50,7 +49,6 @@ export async function getChunk(offset: number, retry: boolean = true): Promise<C
       response_chunk,
     };
   } catch (error) {
-    log.error(error);
     if (retry) {
       return getChunk(offset, false);
     } else {
