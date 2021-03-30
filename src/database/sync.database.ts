@@ -93,9 +93,28 @@ export async function parallelize(height: number) {
 
     await Promise.all(batch);
 
-    await importBlocks(`${process.cwd()}/cache/block.csv`);
-    await importTransactions(`${process.cwd()}/cache/transaction.csv`);
-    await importTags(`${process.cwd()}/cache/tags.csv`);
+    try {
+      await importBlocks(`${process.cwd()}/cache/block.csv`);
+    } catch (error) {
+      log.error(`[sync] importing new blocks failed most likely due to it already being in the DB`);
+      log.error(error);
+    }
+
+    try {
+      await importTransactions(`${process.cwd()}/cache/transaction.csv`);
+    } catch (error) {
+      log.error(`[sync] importing new transactions failed most likely due to it already being in the DB`);
+      log.error(error);
+    }
+    
+    try {
+      await importTags(`${process.cwd()}/cache/tags.csv`);
+    } catch (error) {
+      log.error(`[sync] importing new tags failed most likely due to it already being in the DB`);
+      log.error(error);
+    }
+    
+    
 
     resetCacheStreams();
 
