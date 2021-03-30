@@ -25,20 +25,20 @@ export interface CSVStreams {
 
 export const streams: CSVStreams = {
   block: {
-    snapshot: new WriteStream(),
-    cache: new WriteStream(),
+    snapshot: createWriteStream('snapshot/block.csv', {flags: 'a'}),
+    cache: createWriteStream('cache/block.csv'),
   },
   transaction: {
-    snapshot: new WriteStream(),
-    cache: new WriteStream(),
+    snapshot: createWriteStream('snapshot/transaction.csv', {flags: 'a'}),
+    cache: createWriteStream('cache/transaction.csv'),
   },
   tags: {
-    snapshot: new WriteStream(),
-    cache: new WriteStream(),
+    snapshot: createWriteStream('snapshot/tags.csv', {flags: 'a'}),
+    cache: createWriteStream('cache/tags.csv'),
   },
   rescan: {
-    snapshot: new WriteStream(),
-    cache: new WriteStream(),
+    snapshot: createWriteStream('snapshot/.rescan', {flags: 'a'}),
+    cache: createWriteStream('cache/.rescan', {flags: 'a'}),
   },
 };
 
@@ -82,22 +82,22 @@ export function initStreams() {
   };
 
   if (appendHeaders.block) {
-    streams.block.snapshot.write(blockOrder.join('|'));
+    streams.block.snapshot.write(blockOrder.join('|') + '\n');
   }
 
-  streams.block.cache.write(blockOrder.join('|'));
+  streams.block.cache.write(blockOrder.join('|') + '\n');
 
   if (appendHeaders.transaction) {
-    streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|'));
+    streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|') + '\n');
   }
 
-  streams.transaction.cache.write(transactionOrder.concat(indices).join('|'));
+  streams.transaction.cache.write(transactionOrder.concat(indices).join('|') + '\n');
 
   if (appendHeaders.tags) {
-    streams.tags.snapshot.write(tagOrder.join('|'));
+    streams.tags.snapshot.write(tagOrder.join('|') + '\n');
   }
 
-  streams.tags.cache.write(tagOrder.join('|'));
+  streams.tags.cache.write(tagOrder.join('|') + '\n');
 }
 
 export function resetCacheStreams() {
@@ -105,7 +105,7 @@ export function resetCacheStreams() {
   streams.transaction.cache = createWriteStream('cache/transaction.csv');
   streams.tags.cache = createWriteStream('cache/tags.csv');
 
-  streams.block.cache.write(blockOrder.join('|'));
-  streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|'));
-  streams.tags.cache.write(tagOrder.join('|'));
+  streams.block.cache.write(blockOrder.join('|') + '\n');
+  streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|') + '\n');
+  streams.tags.cache.write(tagOrder.join('|') + '\n');
 }

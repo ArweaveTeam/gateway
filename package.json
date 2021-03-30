@@ -15,6 +15,7 @@
     "dev:restart": "npm run migrate:down && npm run migrate:latest && npm run dev:start",
     "dev:snapshot": "npm run dev:build && node dist/src/Snapshot.js",
     "dev:import": "npm run dev:build && node dist/src/Import.js",
+    "dev:gen-copy": "npm run dev:build && node dist/src/Copy.js",
     "rescan:cache": "npm run dev:build && node dist/src/Rescan.cache.js",
     "rescan:snapshot": "npm run dev:build && node dist/src/Rescan.snapshot.js",
     "rescan:temp": "npm run dev:build && node dist/src/Rescan.temp.js",

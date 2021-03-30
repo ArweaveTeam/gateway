@@ -1,7 +1,7 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
-import {existsSync, readFileSync, writeFileSync} from 'fs';
 import {config} from 'dotenv';
+import {lastBlock} from '../utility/height.utility';
 import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from '../utility/serialize.utility';
 import {streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
@@ -41,6 +41,8 @@ export function configureSyncBar(start: number, end: number) {
 }
 
 export async function startSync() {
+  const startHeight = await lastBlock();
+
   if (parallelization > 0) {
     log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
     if (storeSnapshot) {
@@ -50,21 +52,13 @@ export async function startSync() {
     initStreams();
     signalHook();
 
-    if (existsSync('cache/.snapshot')) {
-      log.info('[database] existing sync state found');
-      const state = parseInt(readFileSync('cache/.snapshot').toString());
-
-      if (!isNaN(state)) {
-        const nodeInfo = await getNodeInfo();
-        configureSyncBar(state, nodeInfo.height);
-        topHeight = nodeInfo.height;
-        log.info(`[database] database is currently at height ${state}, resuming sync to ${topHeight}`);
-        bar.tick();
-        await parallelize(state + 1);
-      } else {
-        log.info('[database] sync state is malformed. Please make sure it is a number');
-        process.exit();
-      }
+    if (startHeight > 0) {
+      log.info(`[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`);
+      const nodeInfo = await getNodeInfo();
+      configureSyncBar(startHeight, nodeInfo.height);
+      topHeight = nodeInfo.height;
+      bar.tick();
+      await parallelize(startHeight + 1);
     } else {
       const nodeInfo = await getNodeInfo();
       configureSyncBar(0, nodeInfo.height);
@@ -107,11 +101,6 @@ export async function parallelize(height: number) {
 
     if (!bar.complete) {
       bar.tick(batch.length);
-    }
-
-    writeFileSync('cache/.snapshot', (height + batch.length).toString());
-    if (storeSnapshot) {
-      writeFileSync('snapshot/.snapshot', (height + batch.length).toString());
     }
 
     SIGINT = false;
@@ -179,9 +168,9 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     if (retry) {
       await storeTransaction(tx, height, false);
     } else {
-      streams.rescan.cache.write(`${tx},${height},normal\n`);
+      streams.rescan.cache.write(`${tx}|${height}|normal\n`);
       if (storeSnapshot) {
-        streams.rescan.snapshot.write(`${tx},${height},normal\n`);
+        streams.rescan.snapshot.write(`${tx}|${height}|normal\n`);
       }
     }
   }
@@ -198,9 +187,9 @@ export async function processAns(id: string, height: number, retry: boolean = tr
       await processAns(id, height, false);
     } else {
       log.info(`[database] malformed ANS payload at height ${height} for tx ${id}`);
-      streams.rescan.cache.write(`${id},${height},ans\n`);
+      streams.rescan.cache.write(`${id}|${height}|ans\n`);
       if (storeSnapshot) {
-        streams.rescan.snapshot.write(`${id},${height},ans\n`);
+        streams.rescan.snapshot.write(`${id}|${height}|ans\n`);
       }
     }
   }
@@ -228,7 +217,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
         value: value || '',
       };
 
-      const input = `"${tag.tx_id}","${tag.index}","${tag.name}","${tag.value}"\n`;
+      const input = `"${tag.tx_id}"|"${tag.index}"|"${tag.name}"|"${tag.value}"\n`;
 
       streams.tags.cache.write(input);
 

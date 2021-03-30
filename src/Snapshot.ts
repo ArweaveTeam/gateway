@@ -1,7 +1,7 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
-import {existsSync, readFileSync, writeFileSync} from 'fs';
+import {lastBlock} from './utility/height.utility';
 import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from './utility/serialize.utility';
 import {streams, initStreams} from './utility/csv.utility';
 import {ansBundles} from './utility/ans.utility';
@@ -37,24 +37,18 @@ export function configureSnapshotBar(start: number, end: number) {
 }
 
 export async function snapshot() {
-  if (existsSync('snapshot/.snapshot')) {
-    log.info('[snapshot] existing snapshot state found');
-    const snapshotState = parseInt(readFileSync('snapshot/.snapshot').toString());
+  const startHeight = await lastBlock();
 
-    initStreams();
-    signalHook();
+  initStreams();
+  signalHook();
 
-    if (!isNaN(snapshotState)) {
-      const nodeInfo = await getNodeInfo();
-      configureSnapshotBar(snapshotState, nodeInfo.height);
-      topHeight = nodeInfo.height;
-      log.info(`[snapshot] snapshot is currently at height ${snapshotState}, resuming sync to ${topHeight}`);
-      bar.tick();
-      await parallelize(snapshotState + 1);
-    } else {
-      log.info('[snapshot] snapshot state is malformed. Please make sure it is a number');
-      process.exit();
-    }
+  if (startHeight > 0) {
+    const nodeInfo = await getNodeInfo();
+    configureSnapshotBar(startHeight, nodeInfo.height);
+    topHeight = nodeInfo.height;
+    log.info(`[snapshot] snapshot is currently at height ${startHeight}, resuming sync to ${topHeight}`);
+    bar.tick();
+    await parallelize(startHeight + 1);
   } else {
     const nodeInfo = await getNodeInfo();
     configureSnapshotBar(0, nodeInfo.height);
@@ -89,9 +83,6 @@ export async function parallelize(height: number) {
     if (!bar.complete) {
       bar.tick(batch.length);
     }
-
-    writeFileSync('.snapshot', (height + batch.length).toString());
-    writeFileSync('snapshot/.snapshot', (height + batch.length).toString());
 
     SIGINT = false;
 
@@ -188,7 +179,7 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
         value: value || '',
       };
 
-      const input = `"${tag.tx_id}","${tag.index}","${tag.name}","${tag.value}"\n`;
+      const input = `"${tag.tx_id}"|"${tag.index}"|"${tag.name}"|"${tag.value}"\n`;
 
       streams.tags.snapshot.write(input);
     }
