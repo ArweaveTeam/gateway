@@ -1,8 +1,10 @@
-# Gateway
+# Arweave Gateway
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 [![Build Status](https://travis-ci.org/ArweaveTeam/gateway.svg?branch=master)](https://travis-ci.org/ArweaveTeam/gateway)
 [![codecov](https://codecov.io/gh/ArweaveTeam/gateway/branch/master/graph/badge.svg)](https://codecov.io/gh/ArweaveTeam/gateway)
+
+Review the [documentation](https://arweaveteam.github.io/gateway/#/) to learn more about setting up and deploying a Gateway.
 
 ## Requirements
 
@@ -19,18 +21,6 @@ There are several million transactions on the Arweave chain. In order to effecti
 2. ~1TB of SSD storage available
 
 3. Intel i5 / AMD FX or greater, +4 vCPUs should be more than enough, these are typically Intel Xeon CPUs.
-
-### Guides
-
-The following are guides for developing and deploying with Gateways.
-
-1. The [Development Guide](./DEV.md) for testing and prototyping new features.
-
-2. The [Snapshot Guide](./SNAPSHOT.md) to expedite synchronization of the Arweave network.
-
-3. The [Rescan Guide](./RESCAN.md) to ensure and verify redundancy of transactions.
-
-4. The [Manifest Guide](./MANIFEST.md) for transaction manifests and to prevent `CORS`.
 
 ## Environment
 
@@ -52,6 +42,10 @@ PORT=3000
 
 PARALLEL=4
 SNAPSHOT=0
+
+BLOCK_PATH=
+TRANSACTION_PATH=
+TAGS_PATH=
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
