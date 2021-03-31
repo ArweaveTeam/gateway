@@ -13,11 +13,11 @@ export async function up(knex: Knex) {
         table.text('owner');
         table.jsonb('tags');
         table.string('target', 64);
-        table.string('quantity');
-        table.string('reward');
+        table.text('quantity');
+        table.text('reward');
         table.text('signature');
-        table.string('last_tx', 64);
-        table.integer('data_size', 8);
+        table.text('last_tx');
+        table.bigInteger('data_size');
         table.string('content_type');
         table.integer('format', 2);
         table.integer('height', 4);
@@ -52,8 +52,8 @@ export async function up(knex: Knex) {
       .createTable('tags', (table) => {
         table.string('tx_id', 64).notNullable();
         table.integer('index').notNullable();
-        table.string('name', 2048);
-        table.string('value', 2048);
+        table.text('name');
+        table.text('value');
         table.timestamp('created_at').defaultTo(knex.fn.now());
 
         table.primary(['tx_id', 'index'], 'pkey_tags');

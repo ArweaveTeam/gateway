@@ -10,8 +10,8 @@ config();
 export type TxSortOrder = 'HEIGHT_ASC' | 'HEIGHT_DESC';
 
 export const orderByClauses = {
-  HEIGHT_ASC: 'transactions.height ASC NULLS LAST, id ASC',
-  HEIGHT_DESC: 'transactions.height DESC NULLS FIRST, id ASC',
+  HEIGHT_ASC: 'transactions.height ASC',
+  HEIGHT_DESC: 'transactions.height DESC',
 };
 
 export interface QueryParams {
@@ -33,7 +33,7 @@ export interface QueryParams {
 }
 
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
-  const {to, from, tags, id, ids, status, select} = params;
+  const {to, from, tags, id, ids, status = 'confirmed', select} = params;
   const {limit = 10, blocks = false, sortOrder = 'HEIGHT_DESC'} = params;
   const {offset = 0, minHeight = -1, maxHeight = -1} = params;
 
