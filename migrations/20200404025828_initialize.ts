@@ -13,8 +13,8 @@ export async function up(knex: Knex) {
         table.text('owner');
         table.jsonb('tags');
         table.string('target', 64);
-        table.string('quantity');
-        table.string('reward');
+        table.text('quantity');
+        table.text('reward');
         table.text('signature');
         table.string('last_tx', 64);
         table.integer('data_size', 8);
