@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import {config} from 'dotenv';
 config();
 
 export const indices = JSON.parse(process.env.INDICES || '[]') as Array<string>;

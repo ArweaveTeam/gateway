@@ -1,6 +1,7 @@
 import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
+import cron from 'node-cron';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
@@ -11,13 +12,15 @@ import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {startSync} from './database/sync.database';
 import {logsHelper, logsTask} from './utility/log.helper';
-import cron from 'node-cron';
+import {cacheLastBlockHook} from './utility/height.utility';
 
 config();
 
 export const app: Express = express();
 
 export function start() {
+  cacheLastBlockHook();
+
   app.set('trust proxy', 1);
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
