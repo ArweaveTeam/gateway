@@ -12,15 +12,12 @@ import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {startSync} from './database/sync.database';
 import {logsHelper, logsTask} from './utility/log.helper';
-import {cacheLastBlockHook} from './utility/height.utility';
 
 config();
 
 export const app: Express = express();
 
 export function start() {
-  cacheLastBlockHook();
-
   app.set('trust proxy', 1);
   app.use(corsMiddleware);
   app.use(jsonMiddleware);

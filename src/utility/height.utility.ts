@@ -2,7 +2,7 @@ import {connection} from '../database/connection.database';
 
 export let lastBlock = 0;
 
-export async function cacheLastBlock() {
+export async function getLastBlock() {
   const result = await connection
       .queryBuilder()
       .select('height')
@@ -11,16 +11,8 @@ export async function cacheLastBlock() {
       .limit(1);
 
   if (result.length > 0) {
-    lastBlock = result[0].height;
+    return result[0].height;
   } else {
-    lastBlock = 0;
+    return 0;
   }
-}
-
-export async function cacheLastBlockHook() {
-  await cacheLastBlock();
-
-  setInterval(() => {
-    cacheLastBlock();
-  }, 1000 * 30);
 }
