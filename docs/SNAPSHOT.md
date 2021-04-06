@@ -70,10 +70,19 @@ COPY ...
 COPY ...
 ```
 
-After that's complete run the `bin/insert.sh` command.
+After that's complete run the import commands.
 
 ```bash
-sh bin/insert.sh
+# In the gateway repo
+yarn import:transaction
+yarn import:tags
+```
+
+You can then drop the tables by running `bin/drop.sh`
+
+```bash
+# In the gateway repo
+sh bin/drop.sh
 ```
 
 Once complete, you have successfully imported the snapshot and can now start up the Gateway!

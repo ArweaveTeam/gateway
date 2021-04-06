@@ -20,7 +20,7 @@ echo COPYing database to CSV please wait
 
 psql -h $PGHOST -U $PGUSER -p $PGPORT -d $PGDATABASE << EOF
 
-set statement_timeout to 60000000; commit;
+set statement_timeout to 360000000; commit;
 show statement_timeout;
 
 \COPY blocks $BLOCKLIST TO '$OUTPUT/block.csv' WITH $FORMAT;
