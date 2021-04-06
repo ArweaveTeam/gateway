@@ -58,7 +58,6 @@ BIP39=0
 PORT=3000
 
 PARALLEL=4
-SNAPSHOT=0
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```

@@ -4,33 +4,26 @@ Use this guide to generate your own snapshots or import a snapshot.
 
 ## Generate a Snapshot
 
-You can generate a snapshot while syncing your node by enabling snapshots with the `SNAPSHOT=1` variable in your environment file.
-
-However, you can have an instance solely dedicated to creating a snapshot file by running `yarn dev:snapshot`.
-
-You can configure the level of block synchronization by modifying the `PARALLEL` variable.
-
-**Examples**
+You can generate a snapshot by running `\COPY` on your Postgres Database. Use `bin/export.sh` to generate the appropriate `.csv` files. Make sure to fill out the configuration variables in `bin/export.sh` before exporting
 
 ```bash
-# Sync 4 blocks at a time when running yarn dev:snapshot
-PARALLEL=4
-SNAPSHOT=1
+export PGHOST=
+export PGUSER=
+export PGPORT=
+export PGDATABASE=
+export PGPASSWORD=
+
+# This is the output folder
+export OUTPUT=
 ```
 
-```bash
-# Sync 8 blocks at a time
-PARALLEL=8
-SNAPSHOT=1
-```
-
-When generating a snapshot. Output will appear in the `snapshot` folder. You can tar.gz the archive by running.
+After a successful `\COPY` of your database. You will then went to compress the files into `.tar.gz`.
 
 ```bash
 tar -zcvf snapshot.tar.gz snapshot
 ```
 
-You can then upload the snapshot to Arweave by running.
+You can then upload this snapshot to Arweave by running.
 
 ```bash
 arweave deploy snapshot.tar.gz
@@ -38,36 +31,49 @@ arweave deploy snapshot.tar.gz
 
 ## Importing a Snapshot
 
-If you want to import a snapshot. You need to make sure to update your `.env` file to have the absolute paths to each CSV
+If you're downloading a `.tar.gz` file. You should decompress it in a `/arweave` folder.
 
 ```bash
-BLOCK_PATH=/path/to/snapshot/block.csv
-TRANSACTION_PATH=/path/to/snapshot/transaction.csv
-TAGS_PATH=/path/to/snapshot/tags.csv
-```
+# Move the .tar.gz to /arweave path
+mkdir /arweave
+mv /path/to/snapshot.tar.gz /arweave/snapshot.tar.gz
 
-If you're downloading a `.tar.gz` file. You can decompress it by running.
-
-```bash
-tar -zxf snapshot.tar.gz -C snapshot
+# Decompress it
+tar -xvzf snapshot.tar.gz -C snapshot
 ```
 
 Also make sure that the folder that holds the snapshot csv files has `rwx` permissions.
 
 ```bash
-chmod +x /path/to/snapshot
+chmod +x /arweave/snapshot
 ```
 
-You can then run the import command.
+You should first create the temporary tables by running `bin/tables.sh`
 
 ```bash
-yarn dev:import
+# In the gateway repo
+sh bin/tables.sh
 ```
 
-If successful, it should output.
+You can then run the import `shell` script.
 
 ```bash
-info: [snapshot] successfully imported block.csv
-info: [snapshot] successfully imported transaction.csv
-info: [snapshot] successfully imported tags.csv
+# In the gateway repo
+sh bin/import.sh
 ```
+
+If successful, it should output `COPY [NUM ROWS]` continuously.
+
+```bash
+COPY [NUM ROWS]
+COPY ...
+COPY ...
+```
+
+After that's complete run the `bin/insert.sh` command.
+
+```bash
+sh bin/insert.sh
+```
+
+Once complete, you have successfully imported the snapshot and can now start up the Gateway!

@@ -1,7 +1,5 @@
 import {connection} from '../database/connection.database';
 
-export let lastBlock = 0;
-
 export async function getLastBlock() {
   const result = await connection
       .queryBuilder()

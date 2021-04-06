@@ -54,10 +54,12 @@ export async function startSync() {
     signalHook();
 
     if (startHeight > 0) {
-      log.info(`[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`);
       const nodeInfo = await getNodeInfo();
       configureSyncBar(startHeight, nodeInfo.height);
       topHeight = nodeInfo.height;
+
+      log.info(`[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`);
+
       bar.tick();
       await parallelize(startHeight + 1);
     } else {
