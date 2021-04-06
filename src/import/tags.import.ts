@@ -11,7 +11,7 @@ export async function importTags(offset: number = 0) {
         tags("tx_id", "index", "name", "value")
         SELECT 
         "tx_id", "index", "name", "value"
-        FROM tags_temp ORDER BY tx_id ASC, index ASC LIMIT ${batchAmount} OFFSET ${offset};
+        FROM tags_temp ORDER BY "tx_id" ASC, "index" ASC LIMIT ${batchAmount} OFFSET ${offset};
     `);
 
   console.log(`Successfully added ${output.rowCount} entries into the tags table`.green);
