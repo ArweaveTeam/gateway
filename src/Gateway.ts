@@ -1,6 +1,7 @@
 import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
+import cron from 'node-cron';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
@@ -11,7 +12,6 @@ import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {startSync} from './database/sync.database';
 import {logsHelper, logsTask} from './utility/log.helper';
-import cron from 'node-cron';
 
 config();
 

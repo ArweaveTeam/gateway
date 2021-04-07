@@ -1,6 +1,6 @@
 import {connection} from '../database/connection.database';
 
-export async function lastBlock() {
+export async function getLastBlock() {
   const result = await connection
       .queryBuilder()
       .select('height')

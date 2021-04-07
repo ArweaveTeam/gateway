@@ -37,7 +37,7 @@
 
     - [Importing a Snapshot](SNAPSHOT.md#importing-a-snapshot)
 
-- [Rescanning Transactions](RESCAN.md#rescanning-cache)
+- [Tuning the database](DB.md#tuning-the-database)
 
 - [Transaction Manifests](MANIFEST.md#transaction-manifests)
 

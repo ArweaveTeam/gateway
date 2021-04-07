@@ -1,7 +1,7 @@
 import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
-import {lastBlock} from '../utility/height.utility';
+import {getLastBlock} from '../utility/height.utility';
 import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from '../utility/serialize.utility';
 import {streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
@@ -41,7 +41,8 @@ export function configureSyncBar(start: number, end: number) {
 }
 
 export async function startSync() {
-  const startHeight = await lastBlock();
+  const startHeight = await getLastBlock();
+  currentHeight = startHeight;
 
   if (parallelization > 0) {
     log.info(`[database] starting sync, parallelization is set to ${parallelization}`);
@@ -53,10 +54,12 @@ export async function startSync() {
     signalHook();
 
     if (startHeight > 0) {
-      log.info(`[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`);
       const nodeInfo = await getNodeInfo();
       configureSyncBar(startHeight, nodeInfo.height);
       topHeight = nodeInfo.height;
+
+      log.info(`[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`);
+
       bar.tick();
       await parallelize(startHeight + 1);
     } else {
