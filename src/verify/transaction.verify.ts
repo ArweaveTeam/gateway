@@ -1,6 +1,6 @@
 import 'colors';
 import {connection} from '../database/connection.database';
-import {convertTags, Tag} from '../query/transaction.query';
+import {Tag} from '../query/transaction.query';
 
 export const pagination = 1000;
 
@@ -24,8 +24,8 @@ export async function verifyTransactions(offset: number = 0) {
   for (let i = 0; i < transactions.length; i++) {
     const transaction = transactions[i];
     try {
-      const b64Tags = transaction.tags as Array<Tag>;
-      const tags = convertTags(b64Tags);
+      const tags = transaction.tags as Array<Tag>;
+
 
       for (let ii = 0; ii < tags.length; ii++) {
         const tag = tags[ii];
