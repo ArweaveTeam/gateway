@@ -55,3 +55,17 @@ export function tagValue(tags: Array<Tag>, name: string): string {
 
   return '';
 }
+
+export function convertTags(tags: Array<Tag>): Array<Tag> {
+  const conversion: Array<Tag> = [];
+
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
+    conversion.push({
+      name: fromB64Url(tag.name).toString(),
+      value: fromB64Url(tag.value).toString(),
+    });
+  }
+
+  return conversion;
+}

@@ -6,15 +6,15 @@ Optimizing your Postgres Database is a great way to improve the performance of q
 ALTER SYSTEM SET max_connections = '1000';
 ALTER SYSTEM SET shared_buffers = '16GB';
 ALTER SYSTEM SET effective_cache_size = '48GB';
-ALTER SYSTEM SET maintenance_work_mem = '2GB';
+ALTER SYSTEM SET maintenance_work_mem = '8GB';
 ALTER SYSTEM SET checkpoint_completion_target = '0.9';
-ALTER SYSTEM SET wal_buffers = '1GB';
+ALTER SYSTEM SET wal_buffers = '64MB';
 ALTER SYSTEM SET default_statistics_target = '100';
 ALTER SYSTEM SET random_page_cost = '2.0';
 ALTER SYSTEM SET effective_io_concurrency = '200';
-ALTER SYSTEM SET work_mem = '8GB';
-ALTER SYSTEM SET min_wal_size = '2GB';
-ALTER SYSTEM SET max_wal_size = '8GB';
+ALTER SYSTEM SET work_mem = '64MB';
+ALTER SYSTEM SET min_wal_size = '4GB';
+ALTER SYSTEM SET max_wal_size = '16GB';
 ALTER SYSTEM SET max_worker_processes = '30';
 ALTER SYSTEM SET max_parallel_workers_per_gather = '4';
 ALTER SYSTEM SET max_parallel_workers = '30';
@@ -25,6 +25,12 @@ ALTER SYSTEM SET autovacuum_max_workers = '4';
 --- Do a non intrusive reload after altering system settings
 
 SELECT pg_reload_conf();
+```
+
+*You should also restart Postgres too.*
+
+```bash
+/etc/init.d/postgresql restart
 ```
 
 ### RAM Considerations
@@ -39,8 +45,8 @@ ALTER SYSTEM SET effective_cache_size = '...';              --- 3/4 total RAM
 `work_mem` and `wal_buffers` should be larger than default, given the amount of inserts happening concurrently on the database. A few GBs for each is enough.
 
 ```sql
-ALTER SYSTEM SET wal_buffers = '1GB';                       --- Ideally over 512mb
-ALTER SYSTEM SET work_mem = '8GB';                          --- Ideally over 2GB
+ALTER SYSTEM SET wal_buffers = '64MB';                     --- Ideally 64MB
+ALTER SYSTEM SET work_mem = '64MB';                        --- Ideally 64MB
 ```
 
 ### Thread parallelization

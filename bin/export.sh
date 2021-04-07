@@ -20,8 +20,15 @@ echo COPYing database to CSV please wait
 
 psql -h $PGHOST -U $PGUSER -p $PGPORT -d $PGDATABASE << EOF
 
-set statement_timeout to 360000000; commit;
-show statement_timeout;
+SET statement_timeout to 0;
+SET maintenance_work_mem TO '8GB';
+SET max_parallel_maintenance_workers TO 16;
+
+COMMIT;
+
+SHOW statement_timeout;
+SHOW maintenance_work_mem;
+SHOW max_parallel_maintenance_workers;
 
 \COPY blocks $BLOCKLIST TO '$OUTPUT/block.csv' WITH $FORMAT;
 \COPY transactions $TXLIST TO '$OUTPUT/transaction.csv' WITH $FORMAT;

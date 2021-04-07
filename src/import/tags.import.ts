@@ -14,8 +14,8 @@ export async function importTags(offset: number = 0) {
         FROM tags_temp ORDER BY "tx_id" ASC, "index" ASC LIMIT ${batchAmount} OFFSET ${offset};
     `);
 
-  console.log(`Successfully added ${output.rowCount} entries into the tags table`.green);
   total += output.rowCount;
+  console.log(`Successfully added ${total} entries into the tags table`.green);
 
   if (output.rowCount === 0) {
     console.log(`Successfully inserted a total of ${total} entries, the import has been completed`.green.bold);

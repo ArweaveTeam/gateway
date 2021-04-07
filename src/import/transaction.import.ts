@@ -14,8 +14,8 @@ export async function importTransactions(offset: number = 0) {
         FROM transactions_temp ORDER BY "id" ASC LIMIT ${batchAmount} OFFSET ${offset};
     `);
 
-  console.log(`Successfully added ${output.rowCount} entries into the transactions table`.green);
   total += output.rowCount;
+  console.log(`Successfully added ${total} entries into the transactions table`.green);
 
   if (output.rowCount === 0) {
     console.log(`Successfully inserted a total of ${total} entries, the import has been completed`.green.bold);

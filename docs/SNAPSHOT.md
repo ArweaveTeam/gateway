@@ -31,7 +31,13 @@ arweave deploy snapshot.tar.gz
 
 ## Importing a Snapshot
 
-If you're downloading a `.tar.gz` file. You should decompress it in a `/arweave` folder.
+If you want the official Snapshot. Download this URL:
+
+```bash
+curl -o snapshot.tar.gz https://snapshots.amplify.host/MARCH2021/snapshot.tar.gz
+```
+
+If you're downloading a `.tar.gz` file. You should decompress it in the `/arweave` folder.
 
 ```bash
 # Move the .tar.gz to /arweave path
@@ -76,6 +82,12 @@ After that's complete run the import commands.
 # In the gateway repo
 yarn import:transaction
 yarn import:tags
+
+# You might want to run these commands with nohup since they take awhile. Try the following.
+yarn dev:build
+
+nohup node dist/src/import/transaction.import.js &
+nohup node dist/src/import/tags.import.js &
 ```
 
 You can then drop the tables by running `bin/drop.sh`
