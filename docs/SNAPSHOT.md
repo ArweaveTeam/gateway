@@ -45,7 +45,7 @@ mkdir /arweave
 mv /path/to/snapshot.tar.gz /arweave/snapshot.tar.gz
 
 # Decompress it
-tar -xvzf snapshot.tar.gz -C snapshot
+tar -xvzf snapshot.tar.gz
 ```
 
 Also make sure that the folder that holds the snapshot csv files has `rwx` permissions.
@@ -54,11 +54,12 @@ Also make sure that the folder that holds the snapshot csv files has `rwx` permi
 chmod +x /arweave/snapshot
 ```
 
-You should first create the temporary tables by running `bin/tables.sh`
+You should first create the tables and then drop the indices on the tables by running `bin/index.drop.sh`
 
 ```bash
 # In the gateway repo
-sh bin/tables.sh
+yarn migrate:latest
+sh bin/index.drop.sh
 ```
 
 You can then run the import `shell` script.
@@ -76,25 +77,11 @@ COPY ...
 COPY ...
 ```
 
-After that's complete run the import commands.
+After it copies all the entries into the database. Recreate the indices by running `bin/index.create.sh`
 
 ```bash
 # In the gateway repo
-yarn import:transaction
-yarn import:tags
-
-# You might want to run these commands with nohup since they take awhile. Try the following.
-yarn dev:build
-
-nohup node dist/src/import/transaction.import.js &
-nohup node dist/src/import/tags.import.js &
-```
-
-You can then drop the tables by running `bin/drop.sh`
-
-```bash
-# In the gateway repo
-sh bin/drop.sh
+sh bin/index.create.sh
 ```
 
 Once complete, you have successfully imported the snapshot and can now start up the Gateway!
