@@ -87,7 +87,7 @@ export function tagToB64(tags: Array<TagFilter>): Array<TagFilter> {
     const tag = tags[i];
     conversion.push({
       name: toB64url(tag.name),
-      values: tag.values.map(v => toB64url(v)),
+      values: tag.values.map((v) => toB64url(v)),
     });
   }
 

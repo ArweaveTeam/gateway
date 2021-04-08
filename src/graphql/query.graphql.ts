@@ -71,6 +71,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
   if (tags) {
     const tagsConverted = tagToB64(tags);
+
     for (let i = 0; i < tagsConverted.length; i++) {
       const tag = tagsConverted[i];
       const tagAlias = `${i}_${i}`;
@@ -81,14 +82,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
         if (tag.name === index) {
           indexed = true;
-
-          if (tag.op === 'EQ') {
-            query.whereIn(`transactions.${index}`, tag.values);
-          }
-
-          if (tag.op === 'NEQ') {
-            query.whereNotIn(`transactions.${index}`, tag.values);
-          }
+          query.whereIn(`transactions.${index}`, tag.values);
         }
       }
 
@@ -97,14 +91,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
           join.on('transactions.id', `${tagAlias}.tx_id`);
 
           join.andOnIn(`${tagAlias}.name`, [tag.name]);
-
-          if (tag.op === 'EQ') {
-            join.andOnIn(`${tagAlias}.value`, tag.values);
-          }
-
-          if (tag.op === 'NEQ') {
-            join.andOnNotIn(`${tagAlias}.value`, tag.values);
-          }
+          join.andOnIn(`${tagAlias}.value`, tag.values);
         });
       }
     }
