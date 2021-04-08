@@ -4,6 +4,7 @@ import {indices} from '../utility/order.utility';
 import {connection} from '../database/connection.database';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
+import {tagToB64} from '../query/transaction.query';
 
 config();
 
@@ -69,8 +70,9 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
   }
 
   if (tags) {
-    for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
+    const tagsConverted = tagToB64(tags);
+    for (let i = 0; i < tagsConverted.length; i++) {
+      const tag = tagsConverted[i];
       const tagAlias = `${i}_${i}`;
       let indexed = false;
 
