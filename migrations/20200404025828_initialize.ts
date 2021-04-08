@@ -29,13 +29,13 @@ export async function up(knex: Knex) {
         for (let i = 0; i < indices.length; i++) {
           const index = indices[i];
           table.string(index, 64);
-          table.index(index, `index_${index}_transactions`, 'HASH');
+          table.index(index, `index_${index}_transactions`, 'BTREE');
         }
 
         table.primary(['id'], 'pkey_transactions');
-        table.index(['height'], 'transactions_height', 'HASH');
-        table.index(['owner_address'], 'transactions_owner_address', 'HASH');
-        table.index(['target'], 'transactions_target', 'HASH');
+        table.index(['height'], 'transactions_height', 'BTREE');
+        table.index(['owner_address'], 'transactions_owner_address', 'BTREE');
+        table.index(['target'], 'transactions_target', 'BTREE');
       })
       .createTable('blocks', (table) => {
         table.string('id', 64).notNullable();
@@ -47,7 +47,8 @@ export async function up(knex: Knex) {
         table.timestamp('created_at').defaultTo(knex.fn.now());
 
         table.primary(['id'], 'pkey_blocks');
-        table.index(['height'], 'blocks_height', 'HASH');
+        table.index(['height'], 'blocks_height', 'BTREE');
+        table.index(['mined_at'], 'blocks_mined_at', 'BTREE');
       })
       .createTable('tags', (table) => {
         table.string('tx_id', 64).notNullable();
@@ -58,7 +59,8 @@ export async function up(knex: Knex) {
 
         table.primary(['tx_id', 'index'], 'pkey_tags');
         table.index(['tx_id', 'name'], 'tags_tx_id_name', 'BTREE');
-        table.index(['name'], 'tags_name', 'HASH');
+        table.index(['name'], 'tags_name', 'BTREE');
+        table.index(['value'], 'tags_value', 'BTREE');
         table.index(['name', 'value'], 'tags_name_value', 'BTREE');
       });
 }
