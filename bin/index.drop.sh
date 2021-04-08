@@ -10,6 +10,7 @@ DROP INDEX "tags_name";
 DROP INDEX "tags_value";
 DROP INDEX "tags_name_value";
 DROP INDEX "tags_tx_id_name";
+DROP INDEX "tags_tx_id";
 
 DROP INDEX "index_App-Name_transactions";
 DROP INDEX "index_app_transactions";

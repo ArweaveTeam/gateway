@@ -24,10 +24,11 @@ CREATE INDEX "index_domain_transactions" ON transactions USING BTREE ("domain");
 CREATE INDEX "index_app_transactions" ON transactions USING BTREE ("app");
 CREATE INDEX "index_App-Name_transactions" ON transactions USING BTREE ("App-Name");
 
-CREATE INDEX  "tags_name" ON tags USING BTREE ("name");
-CREATE INDEX  "tags_value" ON tags USING BTREE ("value");
-CREATE INDEX  "tags_name_value" ON tags USING BTREE ("name", "value");
-CREATE INDEX  "tags_tx_id_name" ON tags USING BTREE ("tx_id", "name");
+CREATE INDEX "tags_name" ON tags USING BTREE ("name") WHERE LENGTH("name") < 64;
+CREATE INDEX "tags_value" ON tags USING BTREE ("value") WHERE LENGTH("value") < 64;
+CREATE INDEX "tags_name_value" ON tags USING BTREE ("name", "value") WHERE LENGTH("name") < 64 AND LENGTH("value") < 64;
+CREATE INDEX "tags_tx_id_name" ON tags USING BTREE ("tx_id", "name") WHERE LENGTH("name") < 64;
+CREATE INDEX "tags_tx_id" ON tags USING BTREE ("tx_id");
 
 EOF
 

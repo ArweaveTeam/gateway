@@ -62,6 +62,7 @@ export async function up(knex: Knex) {
         table.index(['name'], 'tags_name', 'BTREE');
         table.index(['value'], 'tags_value', 'BTREE');
         table.index(['name', 'value'], 'tags_name_value', 'BTREE');
+        table.index(['tx_id'], 'tags_tx_id', 'BTREE');
       });
 }
 
