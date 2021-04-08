@@ -34,7 +34,7 @@ arweave deploy snapshot.tar.gz
 If you want the official Snapshot. Download this URL:
 
 ```bash
-curl -o snapshot.tar.gz https://snapshots.amplify.host/MARCH2021/snapshot.tar.gz
+curl -o snapshot.tar.gz https://snapshots.amplify.host/APRIL7TH/snapshot.tar.gz
 ```
 
 If you're downloading a `.tar.gz` file. You should decompress it in the `/arweave` folder.

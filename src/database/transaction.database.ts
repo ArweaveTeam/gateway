@@ -47,7 +47,7 @@ export function formatTransaction(transaction: TransactionType) {
     const value = tagValue(transaction.tags, index);
 
     if (value) {
-      indexFields[index] = value;
+      indexFields[index] = transaction.tags[i];
     }
   }
 
@@ -73,7 +73,7 @@ export function formatAnsTransaction(ansTransaction: DataItemJson) {
     const value = tagValue(ansTransaction.tags, index);
 
     if (value) {
-      indexFields[index] = value;
+      indexFields[index] = ansTransaction.tags[i];
     }
   }
 
