@@ -34,8 +34,8 @@ export interface QueryParams {
 
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
   const {to, from, tags, id, ids, status = 'confirmed', select} = params;
-  const {limit = 10, blocks = false, sortOrder = 'HEIGHT_DESC'} = params;
-  const {offset = 0, minHeight = -1, maxHeight = -1} = params;
+  const {limit = 10, sortOrder = 'HEIGHT_DESC'} = params;
+  const {since, offset = 0, minHeight = -1, maxHeight = -1} = params;
 
   const query = connection
       .queryBuilder()
@@ -50,8 +50,10 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     query.whereIn('transactions.id', ids);
   }
 
-  if (blocks) {
-    query.leftJoin('blocks', 'transactions.height', 'blocks.height');
+  query.leftJoin('blocks', 'transactions.height', 'blocks.height');
+
+  if (since) {
+    query.where('blocks.mined_at', '<', since);
   }
 
   if (status === 'confirmed') {

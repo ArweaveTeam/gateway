@@ -13,6 +13,9 @@ SHOW statement_timeout;
 SHOW maintenance_work_mem;
 SHOW max_parallel_maintenance_workers;
 
+CREATE INDEX "blocks_height" ON blocks USING BTREE ("height");
+CREATE INDEX "blocks_mined_at" ON blocks USING BTREE ("mined_at");
+
 CREATE INDEX "transactions_height" ON transactions USING BTREE ("height");
 CREATE INDEX "transactions_target" ON transactions USING BTREE ("target");
 CREATE INDEX "transactions_owner_address" ON transactions USING BTREE ("owner_address");
@@ -22,6 +25,7 @@ CREATE INDEX "index_app_transactions" ON transactions USING BTREE ("app");
 CREATE INDEX "index_App-Name_transactions" ON transactions USING BTREE ("App-Name");
 
 CREATE INDEX  "tags_name" ON tags USING BTREE ("name");
+CREATE INDEX  "tags_value" ON tags USING BTREE ("value");
 CREATE INDEX  "tags_name_value" ON tags USING BTREE ("name", "value");
 CREATE INDEX  "tags_tx_id_name" ON tags USING BTREE ("tx_id", "name");
 
