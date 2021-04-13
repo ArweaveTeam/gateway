@@ -17,17 +17,6 @@ config();
 
 export const app: Express = express();
 
-const koiLogger = new KoiLogs('./');
-
-app.get('/logs/', async function(req: Request, res: Response) {
-  return koiLogger.koiLogsHelper(req, res);
-}) as RequestHandler;
-app.get('/logs/raw/', async function(req: Request, res: Response) { 
-  return koiLogger.koiRawLogsHelper(req, res);
-}) as RequestHandler;
-
-app.use(koiLogger.logger);
-
 export function start() {
   app.set('trust proxy', 1);
   app.use(corsMiddleware);
@@ -43,6 +32,17 @@ export function start() {
 
   app.get('/peers', peerRoute);
   app.all('*', proxyRoute);
+
+  const koiLogger = new KoiLogs('./');
+
+  app.get('/logs/', async function(req: Request, res: Response) {
+    return koiLogger.koiLogsHelper(req, res);
+  }) as RequestHandler;
+  app.get('/logs/raw/', async function(req: Request, res: Response) { 
+    return koiLogger.koiRawLogsHelper(req, res);
+  }) as RequestHandler;
+
+  app.use(koiLogger.logger);
 
   app.listen(process.env.PORT || 3000, () => {
     log.info(`[app] started on http://localhost:${process.env.PORT || 3000}`);
