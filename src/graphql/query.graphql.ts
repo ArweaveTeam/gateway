@@ -73,9 +73,9 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     const tagsConverted = tagToB64(tags);
 
     const subQuery = connection
-      .queryBuilder()
-      .select(`*`)
-      .from(`tags`);
+        .queryBuilder()
+        .select('*')
+        .from('tags');
 
     let runSubQuery = false;
 
@@ -93,8 +93,8 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
       }
 
       if (indexed === false) {
-        subQuery.where(`name`, tag.name);
-        subQuery.whereIn(`value`, tag.values);
+        subQuery.where('name', tag.name);
+        subQuery.whereIn('value', tag.values);
         runSubQuery = true;
       }
     }

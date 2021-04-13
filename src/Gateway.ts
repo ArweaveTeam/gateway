@@ -1,5 +1,5 @@
 import 'colors';
-import express, {Express, Request, Response, RequestHandler} from 'express';
+import express, {Express} from 'express';
 import {config} from 'dotenv';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
@@ -10,8 +10,8 @@ import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {peerRoute} from './route/peer.route';
+import {koiLogger, koiLogsRoute, koiLogsRawRoute} from './route/koi.route';
 import {startSync} from './database/sync.database';
-import KoiLogs from 'koi-logs';
 
 config();
 
@@ -22,27 +22,20 @@ export function start() {
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
   app.use(logMiddleware);
+  app.use(koiLogger.logger);
 
   app.get('/', statusRoute);
-  
+
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
   app.get('/peers', peerRoute);
+  app.get('/logs', koiLogsRoute);
+  app.get('/logs/raw', koiLogsRawRoute);
+
   app.all('*', proxyRoute);
-
-  const koiLogger = new KoiLogs('./');
-
-  app.get('/logs/', async function(req: Request, res: Response) {
-    return koiLogger.koiLogsHelper(req, res);
-  }) as RequestHandler;
-  app.get('/logs/raw/', async function(req: Request, res: Response) { 
-    return koiLogger.koiRawLogsHelper(req, res);
-  }) as RequestHandler;
-
-  app.use(koiLogger.logger);
 
   app.listen(process.env.PORT || 3000, () => {
     log.info(`[app] started on http://localhost:${process.env.PORT || 3000}`);
