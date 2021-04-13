@@ -10,6 +10,7 @@ import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
+import {peerRoute} from './route/peer.route';
 import {startSync} from './database/sync.database';
 import {logsHelper, logsTask} from './utility/log.helper';
 
@@ -30,14 +31,14 @@ export function start() {
   });
 
   app.get('/', statusRoute);
+  
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
-  app.get(dataRouteRegex, dataRoute);
+  app.get('/peers', peerRoute);
   app.get('/logs', logsHelper);
-
   app.all('*', proxyRoute);
 
   app.listen(process.env.PORT || 3000, () => {

@@ -4,7 +4,7 @@ import {indices} from '../utility/order.utility';
 import {connection} from '../database/connection.database';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
-import {tagToB64} from '../query/transaction.query';
+import {tagToB64, toB64url} from '../query/transaction.query';
 
 config();
 
@@ -72,13 +72,19 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
   if (tags) {
     const tagsConverted = tagToB64(tags);
 
+    const subQuery = connection
+      .queryBuilder()
+      .select(`*`)
+      .from(`tags`);
+
+    let runSubQuery = false;
+
     for (let i = 0; i < tagsConverted.length; i++) {
       const tag = tagsConverted[i];
-      const tagAlias = `${i}_${i}`;
       let indexed = false;
 
       for (let ii = 0; ii < indices.length; ii++) {
-        const index = indices[ii];
+        const index = toB64url(indices[ii]);
 
         if (tag.name === index) {
           indexed = true;
@@ -87,13 +93,22 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
       }
 
       if (indexed === false) {
-        query.join(`tags as ${tagAlias}`, (join) => {
-          join.on('transactions.id', `${tagAlias}.tx_id`);
-
-          join.andOnIn(`${tagAlias}.name`, [tag.name]);
-          join.andOnIn(`${tagAlias}.value`, tag.values);
-        });
+        subQuery.where(`name`, tag.name);
+        subQuery.whereIn(`value`, tag.values);
+        runSubQuery = true;
       }
+    }
+
+    if (runSubQuery) {
+      const results = await subQuery;
+      const tx_ids = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const {tx_id} = results[i];
+        tx_ids.push(tx_id);
+      }
+
+      query.whereIn('transactions.id', tx_ids);
     }
   }
 
