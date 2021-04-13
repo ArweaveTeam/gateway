@@ -100,7 +100,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     }
 
     if (runSubQuery) {
-      const results = await subQuery;
+      const results = await subQuery.limit(limit).offset(offset);
       const tx_ids = [];
 
       for (let i = 0; i < results.length; i++) {
