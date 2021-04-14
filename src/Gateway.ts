@@ -1,7 +1,6 @@
 import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
-import cron from 'node-cron';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
@@ -10,8 +9,9 @@ import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
+import {peerRoute} from './route/peer.route';
+import {koiLogger, koiLogsRoute, koiLogsRawRoute} from './route/koi.route';
 import {startSync} from './database/sync.database';
-import {logsHelper, logsTask} from './utility/log.helper';
 
 config();
 
@@ -22,21 +22,18 @@ export function start() {
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
   app.use(logMiddleware);
-
-  cron.schedule('0 0 * * *', async function() {
-    console.log('running the log cleanup task once per day on ', new Date() );
-    const result = await logsTask();
-    console.log('daily log task returned ', result);
-  });
+  app.use(koiLogger.logger);
 
   app.get('/', statusRoute);
+
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
-  app.get(dataRouteRegex, dataRoute);
-  app.get('/logs', logsHelper);
+  app.get('/peers', peerRoute);
+  app.get('/logs', koiLogsRoute);
+  app.get('/logs/raw', koiLogsRawRoute);
 
   app.all('*', proxyRoute);
 
