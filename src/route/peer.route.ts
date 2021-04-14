@@ -4,6 +4,7 @@ export async function peerRoute(req: Request, res: Response) {
   return res.status(200).send({
     status: 'OK',
     nodes: [
+      'https://gateway-n1.amplify.host',
       'https://gateway-n2.amplify.host',
     ],
   });
