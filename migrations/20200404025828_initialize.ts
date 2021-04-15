@@ -4,6 +4,9 @@ import {config} from 'dotenv';
 config();
 
 export async function up(knex: Knex) {
+  const indices = JSON.parse(process.env.INDICES || '[]');
+
+
   return knex.schema
       .withSchema(process.env.ENVIRONMENT || 'public')
       .createTable('transactions', (table) => {
@@ -23,6 +26,11 @@ export async function up(knex: Knex) {
         table.string('data_root', 64);
         table.string('parent', 64);
         table.timestamp('created_at').defaultTo(knex.fn.now());
+
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
+          table.string(index, 64);
+        }
 
         table.primary(['id'], 'pkey_transactions');
       })
