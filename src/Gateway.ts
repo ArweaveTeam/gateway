@@ -10,7 +10,7 @@ import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {peerRoute} from './route/peer.route';
-import {koiLogger, koiLogsRoute, koiLogsRawRoute} from './route/koi.route';
+import {koiLogger, koiLogsRoute, koiLogsRawRoute, koiLogsInfo} from './route/koi.route';
 import {startSync} from './database/sync.database';
 
 config();
@@ -34,6 +34,7 @@ export function start() {
   app.get('/peers', peerRoute);
   app.get('/logs', koiLogsRoute);
   app.get('/logs/raw', koiLogsRawRoute);
+  app.get('/logs/info', koiLogsInfo);
 
   app.all('*', proxyRoute);
 
