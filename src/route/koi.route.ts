@@ -10,3 +10,7 @@ export async function koiLogsRoute(req: Request, res: Response) {
 export async function koiLogsRawRoute(req: Request, res: Response) {
   return koiLogger.koiRawLogsHelper(req, res);
 }
+
+export async function koiLogsInfo(req: Request, res: Response) {
+  return koiLogger.info(req, res);
+}
