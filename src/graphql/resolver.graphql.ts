@@ -1,14 +1,17 @@
 import moment from 'moment';
+import {config} from 'dotenv';
 import {IResolvers} from 'apollo-server-express';
 import {QueryTransactionsArgs, QueryBlockArgs, QueryBlocksArgs} from './types';
 import {ISO8601DateTimeString, winstonToAr, utf8DecodeTag} from '../utility/encoding.utility';
 import {TransactionHeader} from '../types/arweave.types';
 import {QueryParams, generateQuery, generateBlockQuery} from './query.graphql';
 
+config();
+
 type Resolvers = IResolvers;
 
-const DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = parseInt(process.env.DEFAULT_PAGE_SIZE || '10');
+const MAX_PAGE_SIZE = parseInt(process.env.MAX_PAGE_SIZE || '100');
 
 const fieldMap = {
   id: 'transactions.id',

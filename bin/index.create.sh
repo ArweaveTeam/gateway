@@ -54,6 +54,11 @@ CREATE INDEX "tags_value_128" ON tags USING BTREE ("value") WHERE LENGTH("value"
 CREATE INDEX "tags_name_value_128" ON tags USING BTREE ("name", "value") WHERE LENGTH("name") > 64 AND LENGTH("name") < 128 AND LENGTH("value") > 64 AND LENGTH("value") < 128;
 --- Tag Transaction Id, Name Index (under 128 chracters)
 CREATE INDEX "tags_tx_id_name_128" ON tags USING BTREE ("tx_id", "name") WHERE LENGTH("name") > 64 AND LENGTH("name") < 128;
+--- Tag created_at
+CREATE INDEX "tags_created_at" ON tags USING BTREE ("created_at");
+CREATE INDEX "tags_created_at_64" ON tags USING BTREE ("created_at") WHERE LENGTH("value") < 64;
+CREATE INDEX "tags_created_at_128" ON tags USING BTREE ("created_at") WHERE LENGTH("value") < 128;
+
 
 EOF
 

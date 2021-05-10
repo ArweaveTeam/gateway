@@ -11,6 +11,101 @@ export type Scalars = {
   Float: number;
 };
 
+/** Representation of a value transfer between wallets, in both winson and ar. */
+export type Amount = {
+  __typename?: 'Amount';
+  /** Amount as a winston string e.g. \`"1000000000000"\`. */
+  winston: Scalars['String'];
+  /** Amount as an AR string e.g. \`"0.000000000001"\`. */
+  ar: Scalars['String'];
+};
+
+export type Block = {
+  __typename?: 'Block';
+  /** The block ID. */
+  id: Scalars['ID'];
+  /** The block timestamp (UTC). */
+  timestamp: Scalars['Int'];
+  /** The block height. */
+  height: Scalars['Int'];
+  /** The previous block ID. */
+  previous: Scalars['ID'];
+};
+
+/**
+ * Paginated result set using the GraphQL cursor spec,
+ * see: https://relay.dev/graphql/connections.htm.
+ */
+export type BlockConnection = {
+  __typename?: 'BlockConnection';
+  pageInfo: PageInfo;
+  edges: Array<BlockEdge>;
+};
+
+/** Paginated result set using the GraphQL cursor spec. */
+export type BlockEdge = {
+  __typename?: 'BlockEdge';
+  /**
+   * The cursor value for fetching the next page.
+   * 
+   * Pass this to the \`after\` parameter in \`blocks(after: $cursor)\`, the next page will start from the next item after this.
+   */
+  cursor: Scalars['String'];
+  /** A block object. */
+  node: Block;
+};
+
+/** Find blocks within a given range */
+export type BlockFilter = {
+  /** Minimum block height to filter from */
+  min?: Maybe<Scalars['Int']>;
+  /** Maximum block height to filter to */
+  max?: Maybe<Scalars['Int']>;
+};
+
+/**
+ * The data bundle containing the current data item.
+ * See: https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md.
+ */
+export type Bundle = {
+  __typename?: 'Bundle';
+  /** ID of the containing data bundle. */
+  id: Scalars['ID'];
+};
+
+/** Basic metadata about the transaction data payload. */
+export type MetaData = {
+  __typename?: 'MetaData';
+  /** Size of the associated data in bytes. */
+  size: Scalars['String'];
+  /** Type is derrived from the \`content-type\` tag on a transaction. */
+  type?: Maybe<Scalars['String']>;
+};
+
+/** Representation of a transaction owner. */
+export type Owner = {
+  __typename?: 'Owner';
+  /** The owner's wallet address. */
+  address: Scalars['String'];
+  /** The owner's public key as a base64url encoded string. */
+  key: Scalars['String'];
+};
+
+/** Paginated page info using the GraphQL cursor spec. */
+export type PageInfo = {
+  __typename?: 'PageInfo';
+  hasNextPage: Scalars['Boolean'];
+};
+
+/**
+ * The parent transaction for bundled transactions,
+ * see: https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md.
+ */
+export type Parent = {
+  __typename?: 'Parent';
+  id: Scalars['ID'];
+};
+
 export type Query = {
   __typename?: 'Query';
   /** Get a transaction by its id */
@@ -61,6 +156,14 @@ export enum SortOrder {
   HeightDesc = 'HEIGHT_DESC'
 }
 
+export type Tag = {
+  __typename?: 'Tag';
+  /** UTF-8 tag name */
+  name: Scalars['String'];
+  /** UTF-8 tag value */
+  value: Scalars['String'];
+};
+
 /** Find transactions with the folowing tag name and value */
 export type TagFilter = {
   /** The tag name */
@@ -83,65 +186,13 @@ export type TagFilter = {
   op?: Maybe<TagOperator>;
 };
 
-/** Find blocks within a given range */
-export type BlockFilter = {
-  /** Minimum block height to filter from */
-  min?: Maybe<Scalars['Int']>;
-  /** Maximum block height to filter to */
-  max?: Maybe<Scalars['Int']>;
-};
-
-/**
- * Paginated result set using the GraphQL cursor spec,
- * see: https://relay.dev/graphql/connections.htm.
- */
-export type BlockConnection = {
-  __typename?: 'BlockConnection';
-  pageInfo: PageInfo;
-  edges: Array<BlockEdge>;
-};
-
-/** Paginated result set using the GraphQL cursor spec. */
-export type BlockEdge = {
-  __typename?: 'BlockEdge';
-  /**
-   * The cursor value for fetching the next page.
-   * 
-   * Pass this to the \`after\` parameter in \`blocks(after: $cursor)\`, the next page will start from the next item after this.
-   */
-  cursor: Scalars['String'];
-  /** A block object. */
-  node: Block;
-};
-
-/**
- * Paginated result set using the GraphQL cursor spec,
- * see: https://relay.dev/graphql/connections.htm.
- */
-export type TransactionConnection = {
-  __typename?: 'TransactionConnection';
-  pageInfo: PageInfo;
-  edges: Array<TransactionEdge>;
-};
-
-/** Paginated result set using the GraphQL cursor spec. */
-export type TransactionEdge = {
-  __typename?: 'TransactionEdge';
-  /**
-   * The cursor value for fetching the next page.
-   * 
-   * Pass this to the \`after\` parameter in \`transactions(after: $cursor)\`, the next page will start from the next item after this.
-   */
-  cursor: Scalars['String'];
-  /** A transaction object. */
-  node: Transaction;
-};
-
-/** Paginated page info using the GraphQL cursor spec. */
-export type PageInfo = {
-  __typename?: 'PageInfo';
-  hasNextPage: Scalars['Boolean'];
-};
+/** The operator to apply to a tag value. */
+export enum TagOperator {
+  /** Equal */
+  Eq = 'EQ',
+  /** Not equal */
+  Neq = 'NEQ'
+}
 
 export type Transaction = {
   __typename?: 'Transaction';
@@ -169,78 +220,27 @@ export type Transaction = {
 };
 
 /**
- * The parent transaction for bundled transactions,
- * see: https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md.
+ * Paginated result set using the GraphQL cursor spec,
+ * see: https://relay.dev/graphql/connections.htm.
  */
-export type Parent = {
-  __typename?: 'Parent';
-  id: Scalars['ID'];
+export type TransactionConnection = {
+  __typename?: 'TransactionConnection';
+  pageInfo: PageInfo;
+  edges: Array<TransactionEdge>;
 };
 
-/**
- * The data bundle containing the current data item.
- * See: https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md.
- */
-export type Bundle = {
-  __typename?: 'Bundle';
-  /** ID of the containing data bundle. */
-  id: Scalars['ID'];
+/** Paginated result set using the GraphQL cursor spec. */
+export type TransactionEdge = {
+  __typename?: 'TransactionEdge';
+  /**
+   * The cursor value for fetching the next page.
+   * 
+   * Pass this to the \`after\` parameter in \`transactions(after: $cursor)\`, the next page will start from the next item after this.
+   */
+  cursor: Scalars['String'];
+  /** A transaction object. */
+  node: Transaction;
 };
-
-export type Block = {
-  __typename?: 'Block';
-  /** The block ID. */
-  id: Scalars['ID'];
-  /** The block timestamp (UTC). */
-  timestamp: Scalars['Int'];
-  /** The block height. */
-  height: Scalars['Int'];
-  /** The previous block ID. */
-  previous: Scalars['ID'];
-};
-
-/** Basic metadata about the transaction data payload. */
-export type MetaData = {
-  __typename?: 'MetaData';
-  /** Size of the associated data in bytes. */
-  size: Scalars['String'];
-  /** Type is derrived from the \`content-type\` tag on a transaction. */
-  type?: Maybe<Scalars['String']>;
-};
-
-/** Representation of a value transfer between wallets, in both winson and ar. */
-export type Amount = {
-  __typename?: 'Amount';
-  /** Amount as a winston string e.g. \`"1000000000000"\`. */
-  winston: Scalars['String'];
-  /** Amount as an AR string e.g. \`"0.000000000001"\`. */
-  ar: Scalars['String'];
-};
-
-/** Representation of a transaction owner. */
-export type Owner = {
-  __typename?: 'Owner';
-  /** The owner's wallet address. */
-  address: Scalars['String'];
-  /** The owner's public key as a base64url encoded string. */
-  key: Scalars['String'];
-};
-
-export type Tag = {
-  __typename?: 'Tag';
-  /** UTF-8 tag name */
-  name: Scalars['String'];
-  /** UTF-8 tag value */
-  value: Scalars['String'];
-};
-
-/** The operator to apply to a tag value. */
-export enum TagOperator {
-  /** Equal */
-  Eq = 'EQ',
-  /** Not equal */
-  Neq = 'NEQ'
-}
 
 
 
@@ -320,59 +320,66 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
-  Query: ResolverTypeWrapper<{}>;
-  ID: ResolverTypeWrapper<Scalars['ID']>;
+  Amount: ResolverTypeWrapper<Amount>;
   String: ResolverTypeWrapper<Scalars['String']>;
+  Block: ResolverTypeWrapper<Block>;
+  ID: ResolverTypeWrapper<Scalars['ID']>;
   Int: ResolverTypeWrapper<Scalars['Int']>;
-  SortOrder: SortOrder;
-  TagFilter: TagFilter;
-  BlockFilter: BlockFilter;
   BlockConnection: ResolverTypeWrapper<BlockConnection>;
   BlockEdge: ResolverTypeWrapper<BlockEdge>;
-  TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
-  TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
+  BlockFilter: BlockFilter;
+  Bundle: ResolverTypeWrapper<Bundle>;
+  MetaData: ResolverTypeWrapper<MetaData>;
+  Owner: ResolverTypeWrapper<Owner>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
-  Transaction: ResolverTypeWrapper<Transaction>;
   Parent: ResolverTypeWrapper<Parent>;
-  Bundle: ResolverTypeWrapper<Bundle>;
-  Block: ResolverTypeWrapper<Block>;
-  MetaData: ResolverTypeWrapper<MetaData>;
-  Amount: ResolverTypeWrapper<Amount>;
-  Owner: ResolverTypeWrapper<Owner>;
+  Query: ResolverTypeWrapper<{}>;
+  SortOrder: SortOrder;
   Tag: ResolverTypeWrapper<Tag>;
+  TagFilter: TagFilter;
   TagOperator: TagOperator;
+  Transaction: ResolverTypeWrapper<Transaction>;
+  TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
+  TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
 };
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
-  Query: {};
-  ID: Scalars['ID'];
+  Amount: Amount;
   String: Scalars['String'];
+  Block: Block;
+  ID: Scalars['ID'];
   Int: Scalars['Int'];
-  TagFilter: TagFilter;
-  BlockFilter: BlockFilter;
   BlockConnection: BlockConnection;
   BlockEdge: BlockEdge;
-  TransactionConnection: TransactionConnection;
-  TransactionEdge: TransactionEdge;
+  BlockFilter: BlockFilter;
+  Bundle: Bundle;
+  MetaData: MetaData;
+  Owner: Owner;
   PageInfo: PageInfo;
   Boolean: Scalars['Boolean'];
-  Transaction: Transaction;
   Parent: Parent;
-  Bundle: Bundle;
-  Block: Block;
-  MetaData: MetaData;
-  Amount: Amount;
-  Owner: Owner;
+  Query: {};
   Tag: Tag;
+  TagFilter: TagFilter;
+  Transaction: Transaction;
+  TransactionConnection: TransactionConnection;
+  TransactionEdge: TransactionEdge;
 };
 
-export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
-  transaction?: Resolver<Maybe<ResolversTypes['Transaction']>, ParentType, ContextType, RequireFields<QueryTransactionArgs, 'id'>>;
-  transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, RequireFields<QueryTransactionsArgs, 'first' | 'sort'>>;
-  block?: Resolver<Maybe<ResolversTypes['Block']>, ParentType, ContextType, RequireFields<QueryBlockArgs, never>>;
-  blocks?: Resolver<ResolversTypes['BlockConnection'], ParentType, ContextType, RequireFields<QueryBlocksArgs, 'first' | 'sort'>>;
+export type AmountResolvers<ContextType = any, ParentType extends ResolversParentTypes['Amount'] = ResolversParentTypes['Amount']> = {
+  winston?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  ar?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
+};
+
+export type BlockResolvers<ContextType = any, ParentType extends ResolversParentTypes['Block'] = ResolversParentTypes['Block']> = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  timestamp?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  height?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  previous?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
 export type BlockConnectionResolvers<ContextType = any, ParentType extends ResolversParentTypes['BlockConnection'] = ResolversParentTypes['BlockConnection']> = {
@@ -387,20 +394,43 @@ export type BlockEdgeResolvers<ContextType = any, ParentType extends ResolversPa
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
-export type TransactionConnectionResolvers<ContextType = any, ParentType extends ResolversParentTypes['TransactionConnection'] = ResolversParentTypes['TransactionConnection']> = {
-  pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
-  edges?: Resolver<Array<ResolversTypes['TransactionEdge']>, ParentType, ContextType>;
+export type BundleResolvers<ContextType = any, ParentType extends ResolversParentTypes['Bundle'] = ResolversParentTypes['Bundle']> = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
-export type TransactionEdgeResolvers<ContextType = any, ParentType extends ResolversParentTypes['TransactionEdge'] = ResolversParentTypes['TransactionEdge']> = {
-  cursor?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  node?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType>;
+export type MetaDataResolvers<ContextType = any, ParentType extends ResolversParentTypes['MetaData'] = ResolversParentTypes['MetaData']> = {
+  size?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  type?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
+};
+
+export type OwnerResolvers<ContextType = any, ParentType extends ResolversParentTypes['Owner'] = ResolversParentTypes['Owner']> = {
+  address?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  key?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
 export type PageInfoResolvers<ContextType = any, ParentType extends ResolversParentTypes['PageInfo'] = ResolversParentTypes['PageInfo']> = {
   hasNextPage?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
+};
+
+export type ParentResolvers<ContextType = any, ParentType extends ResolversParentTypes['Parent'] = ResolversParentTypes['Parent']> = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
+};
+
+export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  transaction?: Resolver<Maybe<ResolversTypes['Transaction']>, ParentType, ContextType, RequireFields<QueryTransactionArgs, 'id'>>;
+  transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, RequireFields<QueryTransactionsArgs, 'first' | 'sort'>>;
+  block?: Resolver<Maybe<ResolversTypes['Block']>, ParentType, ContextType, RequireFields<QueryBlockArgs, never>>;
+  blocks?: Resolver<ResolversTypes['BlockConnection'], ParentType, ContextType, RequireFields<QueryBlocksArgs, 'first' | 'sort'>>;
+};
+
+export type TagResolvers<ContextType = any, ParentType extends ResolversParentTypes['Tag'] = ResolversParentTypes['Tag']> = {
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
@@ -420,63 +450,33 @@ export type TransactionResolvers<ContextType = any, ParentType extends Resolvers
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
-export type ParentResolvers<ContextType = any, ParentType extends ResolversParentTypes['Parent'] = ResolversParentTypes['Parent']> = {
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+export type TransactionConnectionResolvers<ContextType = any, ParentType extends ResolversParentTypes['TransactionConnection'] = ResolversParentTypes['TransactionConnection']> = {
+  pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
+  edges?: Resolver<Array<ResolversTypes['TransactionEdge']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
-export type BundleResolvers<ContextType = any, ParentType extends ResolversParentTypes['Bundle'] = ResolversParentTypes['Bundle']> = {
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
-};
-
-export type BlockResolvers<ContextType = any, ParentType extends ResolversParentTypes['Block'] = ResolversParentTypes['Block']> = {
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  timestamp?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  height?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  previous?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
-};
-
-export type MetaDataResolvers<ContextType = any, ParentType extends ResolversParentTypes['MetaData'] = ResolversParentTypes['MetaData']> = {
-  size?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  type?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
-};
-
-export type AmountResolvers<ContextType = any, ParentType extends ResolversParentTypes['Amount'] = ResolversParentTypes['Amount']> = {
-  winston?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  ar?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
-};
-
-export type OwnerResolvers<ContextType = any, ParentType extends ResolversParentTypes['Owner'] = ResolversParentTypes['Owner']> = {
-  address?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  key?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType>;
-};
-
-export type TagResolvers<ContextType = any, ParentType extends ResolversParentTypes['Tag'] = ResolversParentTypes['Tag']> = {
-  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+export type TransactionEdgeResolvers<ContextType = any, ParentType extends ResolversParentTypes['TransactionEdge'] = ResolversParentTypes['TransactionEdge']> = {
+  cursor?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  node?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType>;
 };
 
 export type Resolvers<ContextType = any> = {
-  Query?: QueryResolvers<ContextType>;
+  Amount?: AmountResolvers<ContextType>;
+  Block?: BlockResolvers<ContextType>;
   BlockConnection?: BlockConnectionResolvers<ContextType>;
   BlockEdge?: BlockEdgeResolvers<ContextType>;
+  Bundle?: BundleResolvers<ContextType>;
+  MetaData?: MetaDataResolvers<ContextType>;
+  Owner?: OwnerResolvers<ContextType>;
+  PageInfo?: PageInfoResolvers<ContextType>;
+  Parent?: ParentResolvers<ContextType>;
+  Query?: QueryResolvers<ContextType>;
+  Tag?: TagResolvers<ContextType>;
+  Transaction?: TransactionResolvers<ContextType>;
   TransactionConnection?: TransactionConnectionResolvers<ContextType>;
   TransactionEdge?: TransactionEdgeResolvers<ContextType>;
-  PageInfo?: PageInfoResolvers<ContextType>;
-  Transaction?: TransactionResolvers<ContextType>;
-  Parent?: ParentResolvers<ContextType>;
-  Bundle?: BundleResolvers<ContextType>;
-  Block?: BlockResolvers<ContextType>;
-  MetaData?: MetaDataResolvers<ContextType>;
-  Amount?: AmountResolvers<ContextType>;
-  Owner?: OwnerResolvers<ContextType>;
-  Tag?: TagResolvers<ContextType>;
 };
 
 
