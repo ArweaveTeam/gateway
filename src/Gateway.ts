@@ -5,6 +5,7 @@ import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
 import {log} from './utility/log.utility';
+import {sessionMiddleware, sessionPinningMiddleware} from './utility/session.utility';
 import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
 import {proxyRoute} from './route/proxy.route';
@@ -19,9 +20,12 @@ export const app: Express = express();
 
 export function start() {
   app.set('trust proxy', 1);
+
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
   app.use(logMiddleware);
+  app.use(sessionMiddleware);
+  app.use(sessionPinningMiddleware);
   app.use(koiLogger.logger);
 
   app.get('/', statusRoute);

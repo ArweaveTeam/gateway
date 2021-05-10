@@ -15,6 +15,11 @@ export const orderByClauses = {
   HEIGHT_DESC: 'transactions.height DESC',
 };
 
+export const tagOrderByClauses = {
+  HEIGHT_ASC: 'tags.created_at ASC',
+  HEIGHT_DESC: 'tags.created_at DESC',
+};
+
 export interface QueryParams {
   to?: string[];
   from?: string[];
@@ -88,19 +93,23 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
         if (tag.name === index) {
           indexed = true;
-          query.whereIn(`transactions.${index}`, tag.values);
+          query.orWhereIn(`transactions.${index}`, tag.values);
         }
       }
 
       if (indexed === false) {
-        subQuery.where('name', tag.name);
-        subQuery.whereIn('value', tag.values);
+        subQuery.orWhere('name', tag.name);
+        subQuery.orWhereIn('value', tag.values);
         runSubQuery = true;
       }
     }
 
     if (runSubQuery) {
-      const results = await subQuery.limit(limit).offset(offset);
+      const results = await subQuery
+          .limit(limit)
+          .offset(offset)
+          .orderByRaw(tagOrderByClauses[sortOrder]);
+
       const tx_ids = [];
 
       for (let i = 0; i < results.length; i++) {
