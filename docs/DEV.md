@@ -59,6 +59,9 @@ PORT=3000
 
 PARALLEL=4
 
+DEFAULT_PAGE_SIZE=10
+MAX_PAGE_SIZE=100
+
 INDICES=["App-Name", "app", "domain", "namespace"]
 ```
 
