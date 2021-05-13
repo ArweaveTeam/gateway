@@ -102,7 +102,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
       if (indexed === false) {
         names.push(tag.name);
         values.push.apply(values, tag.values);
-        
+
         runSubQuery = true;
       }
     }
@@ -141,7 +141,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     query.orderByRaw(orderByClauses[sortOrder]);
   }
 
-  query.orderByRaw(`transactions.created_at DESC`);
+  query.orderByRaw('transactions.created_at DESC');
 
   return query;
 }

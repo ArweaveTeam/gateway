@@ -200,7 +200,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
 export async function processAns(id: string, height: number, retry: boolean = true) {
   try {
     const ansPayload = await getDataFromChunks(id);
-    const ansTxs = await ansBundles.unbundleData(ansPayload);
+    const ansTxs = await ansBundles.unbundleData(ansPayload.toString('utf-8'));
 
     await processANSTransaction(ansTxs, height);
   } catch (error) {

@@ -13,7 +13,7 @@ export interface ChunkType {
     data_path: string;
     chunk: string;
     parsed_chunk: Uint8Array;
-    response_chunk: string;
+    response_chunk: Buffer;
 }
 
 export const decoder = new TextDecoder();
@@ -33,13 +33,13 @@ export async function getTransactionOffset(id: string): Promise<TransactionOffse
   };
 }
 
-export async function getChunk(offset: number, retry: boolean = true): Promise<ChunkType> {
+export async function getChunk(offset: number, retry: boolean = true, retryCount: number = 5): Promise<ChunkType> {
   try {
     const payload = await get(`${grabNode()}/chunk/${offset}`);
     const body = JSON.parse(payload.text);
 
     const parsed_chunk = b64UrlToBuffer(body.chunk);
-    const response_chunk = decoder.decode(parsed_chunk);
+    const response_chunk = Buffer.from(parsed_chunk);
 
     return {
       tx_path: body.tx_path,
@@ -49,8 +49,8 @@ export async function getChunk(offset: number, retry: boolean = true): Promise<C
       response_chunk,
     };
   } catch (error) {
-    if (retry) {
-      return getChunk(offset, false);
+    if (retry && retryCount > 0) {
+      return getChunk(offset, true, retryCount - 1);
     } else {
       throw error;
     }

@@ -46,6 +46,8 @@ DEFAULT_PAGE_SIZE=10
 MAX_PAGE_SIZE=100
 
 INDICES=["App-Name", "app", "domain", "namespace"]
+
+CACHING=1
 ```
 
 Make sure you copy this configuration to `.env`.
