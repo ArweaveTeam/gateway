@@ -76,6 +76,8 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
   if (tags) {
     const tagsConverted = tagToB64(tags);
+    const names: Array<string> = [];
+    const values: Array<string> = [];
 
     const subQuery = connection
         .queryBuilder()
@@ -93,16 +95,20 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
         if (tag.name === index) {
           indexed = true;
-          query.orWhereIn(`transactions.${index}`, tag.values);
+          query.whereIn(`transactions.${index}`, tag.values);
         }
       }
 
       if (indexed === false) {
-        subQuery.orWhere('name', tag.name);
-        subQuery.orWhereIn('value', tag.values);
+        names.push(tag.name);
+        values.push.apply(values, tag.values);
+        
         runSubQuery = true;
       }
     }
+
+    subQuery.whereIn('name', names);
+    subQuery.whereIn('value', values);
 
     if (runSubQuery) {
       const results = await subQuery
@@ -134,6 +140,8 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
   if (Object.keys(orderByClauses).includes(sortOrder)) {
     query.orderByRaw(orderByClauses[sortOrder]);
   }
+
+  query.orderByRaw(`transactions.created_at DESC`);
 
   return query;
 }
