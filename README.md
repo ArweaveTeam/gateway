@@ -43,6 +43,8 @@ PORT=3000
 PARALLEL=4
 
 INDICES=["App-Name", "app", "domain", "namespace"]
+
+CACHING=1
 ```
 
 Make sure you copy this configuration to `.env`.

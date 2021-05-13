@@ -1,8 +1,8 @@
-
+import {exists} from 'fs-jetpack';
 import {Request, Response} from 'express';
 import {stringToBip39, stringToHash} from '../utility/bip39.utility';
 import {transaction as getTransaction, tagValue} from '../query/transaction.query';
-import {getTransactionOffset, getChunk} from '../query/chunk.query';
+import {cacheFile, cacheAnsFile} from '../caching/file.caching';
 
 export const dataRouteRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 export const pathRegex = /^\/?([a-z0-9-_]{43})/i;
@@ -34,19 +34,21 @@ export async function dataRoute(req: Request, res: Response) {
 
   const metadata = await getTransaction(transaction);
   const contentType = tagValue(metadata.tags, 'Content-Type');
+  const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 
   res.setHeader('content-type', contentType);
-  const {startOffset, endOffset} = await getTransactionOffset(transaction);
 
-  let byte = 0;
+  if (ans102) {
+    await cacheAnsFile(transaction);
+  } else {
+    await cacheFile(transaction);
+  }  
 
-  while (startOffset + byte < endOffset) {
-    const chunk = await getChunk(startOffset + byte);
-    byte += chunk.parsed_chunk.length;
-
-    res.write(chunk.response_chunk);
+  if (exists(`${process.cwd()}/cache/tx/${transaction}`)) {
+    res.status(200);
+    res.sendFile(`${process.cwd()}/cache/tx/${transaction}`);
+  } else {
+    res.status(500);
+    res.json({status: 'ERROR', message: 'Could not retrieve tx, please retry'});
   }
-
-  res.status(200);
-  res.end();
 }
