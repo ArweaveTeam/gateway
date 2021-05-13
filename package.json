@@ -1,6 +1,6 @@
 {
   "name": "@arweave/gateway",
-  "version": "0.9.1",
+  "version": "0.10.1",
   "main": "dist/src/Gateway.js",
   "repository": "git@github.com:ArweaveTeam/gateway.git",
   "author": "Arweave <hello@arweave.org>",
@@ -15,6 +15,7 @@
     "dev:restart": "npm run migrate:down && npm run migrate:latest && npm run dev:start",
     "import:transaction": "npm run dev:build && node dist/src/import/transaction.import.js",
     "import:tags": "npm run dev:build && node dist/src/import/tags.import.ts",
+    "verify:ans": "npm run dev:build && node dist/src/caching/ans.verify.js",
     "verify:prune": "npm run dev:build && node dist/src/verify/prune.verify.js",
     "verify:transaction": "npm run dev:build && node dist/src/verify/transaction.verify.js",
     "migrate:down": "knex migrate:down",

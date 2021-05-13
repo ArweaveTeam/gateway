@@ -62,7 +62,7 @@ export async function getDataFromChunks(id: string, retry: boolean = true): Prom
   } catch (error) {
     if (retry) {
       console.error(`error retrieving data from ${id}, please note that this may be a cancelled transaction`.red.bold);
-      return await getDataFromChunks(id, true);
+      return await getDataFromChunks(id, false);
     } else {
       throw error;
     }
