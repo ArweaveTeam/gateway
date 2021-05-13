@@ -32,23 +32,27 @@ export async function dataRoute(req: Request, res: Response) {
     }
   }
 
-  const metadata = await getTransaction(transaction);
-  const contentType = tagValue(metadata.tags, 'Content-Type');
-  const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
+  try {
+    const metadata = await getTransaction(transaction);
+    const contentType = tagValue(metadata.tags, 'Content-Type');
+    const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
+  
+    res.setHeader('content-type', contentType);
 
-  res.setHeader('content-type', contentType);
-
-  if (ans102) {
-    await cacheAnsFile(transaction);
-  } else {
-    await cacheFile(transaction);
-  }  
+    if (ans102) {
+      await cacheAnsFile(transaction);
+    } else {
+      await cacheFile(transaction);
+    }  
+  } catch (error) {
+    
+  }
 
   if (exists(`${process.cwd()}/cache/tx/${transaction}`)) {
     res.status(200);
     res.sendFile(`${process.cwd()}/cache/tx/${transaction}`);
   } else {
     res.status(500);
-    res.json({status: 'ERROR', message: 'Could not retrieve tx, please retry'});
+    res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
   }
 }

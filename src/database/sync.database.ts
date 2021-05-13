@@ -15,6 +15,7 @@ import {transaction, tagValue, Tag} from '../query/transaction.query';
 import {getDataFromChunks} from '../query/node.query';
 import {importBlocks, importTransactions, importTags} from './import.database';
 import {DatabaseTag} from './transaction.database';
+import {cacheANSEntries} from '../caching/ans.entry.caching';
 
 config();
 mkdir('snapshot');
@@ -202,6 +203,7 @@ export async function processAns(id: string, height: number, retry: boolean = tr
     const ansPayload = await getDataFromChunks(id);
     const ansTxs = await ansBundles.unbundleData(ansPayload.toString('utf-8'));
 
+    await cacheANSEntries(ansTxs);
     await processANSTransaction(ansTxs, height);
   } catch (error) {
     if (retry) {
