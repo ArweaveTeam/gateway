@@ -4,12 +4,13 @@ import {getNodeInfo} from '../query/node.query';
 
 export const start = Number(new Date);
 
-export async function statusRoute(req: Request, res: Response) {
+export async function syncRoute(req: Request, res: Response) {
   const info = await getNodeInfo();
 
   const delta = info.height - currentHeight;
+  const status = delta < 3 ? 200 : 400;
 
-  return res.status(200).send({
+  return res.status(status).send({
     status: 'OK',
     gatewayHeight: currentHeight,
     arweaveHeight: info.height,

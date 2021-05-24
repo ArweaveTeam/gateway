@@ -1,14 +1,16 @@
 import 'colors';
+import {config} from 'dotenv';
 import {connection} from '../database/connection.database';
 import {toB64url} from '../query/transaction.query';
 import {cacheAnsFile} from './file.caching';
 
+config();
+
+const startingOffset = parseInt(process.env.CACHE_OFFSET || '0');
 const name = toB64url('Bundle-Type');
 const value = toB64url('ANS-102');
 
-export async function ansVerify(offset: number = 0, parallelization: number = 4) {
-  console.log(name, value);
-
+export async function ansVerify(offset: number = startingOffset, parallelization: number = 4) {
   const query = await connection
       .queryBuilder()
       .select('*')
