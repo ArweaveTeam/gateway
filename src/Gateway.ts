@@ -8,6 +8,7 @@ import {log} from './utility/log.utility';
 import {sessionMiddleware, sessionPinningMiddleware} from './utility/session.utility';
 import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
+import {syncRoute} from './route/sync.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
 import {peerRoute} from './route/peer.route';
@@ -29,6 +30,7 @@ export function start() {
   app.use(koiLogger.logger);
 
   app.get('/', statusRoute);
+  app.get('/status', syncRoute);
 
   app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);

@@ -66,6 +66,7 @@ INDICES=["App-Name", "app", "domain", "namespace"]
 
 CACHING=1
 CACHE_FOLDER=/gateway/cache
+CACHE_OFFSET=0
 ```
 
 Make sure you copy this configuration to `.env`.
