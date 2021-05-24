@@ -1,5 +1,6 @@
 import {exists, write} from 'fs-jetpack';
 import {DataItemJson} from 'arweave-bundles';
+import {cacheFolder} from './file.caching';
 import {b64UrlToBuffer} from '../utility/encoding.utility';
 
 export async function cacheANSEntries(entries: Array<DataItemJson>) {
@@ -10,8 +11,8 @@ export async function cacheANSEntries(entries: Array<DataItemJson>) {
 
     const bufferData = Buffer.from(b64UrlToBuffer(data));
 
-    if (exists(`${process.cwd()}/cache/tx/${id}`) === false) {
-      write(`${process.cwd()}/cache/tx/${id}`, bufferData.toString('utf-8'));
+    if (exists(`${cacheFolder}/${id}`) === false) {
+      write(`${cacheFolder}/${id}`, bufferData.toString('utf-8'));
     }
   }
 }
