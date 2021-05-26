@@ -2,7 +2,8 @@ import {exists} from 'fs-jetpack';
 import {Request, Response} from 'express';
 import {stringToBip39, stringToHash} from '../utility/bip39.utility';
 import {transaction as getTransaction, tagValue} from '../query/transaction.query';
-import {cacheFile, cacheAnsFile} from '../caching/file.caching';
+import {cacheFolder, cacheFile, cacheAnsFile} from '../caching/file.caching';
+
 
 export const dataRouteRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 export const pathRegex = /^\/?([a-z0-9-_]{43})/i;
@@ -48,9 +49,9 @@ export async function dataRoute(req: Request, res: Response) {
 
   }
 
-  if (exists(`${process.cwd()}/cache/tx/${transaction}`)) {
+  if (exists(`${cacheFolder}/${transaction}`)) {
     res.status(200);
-    res.sendFile(`${process.cwd()}/cache/tx/${transaction}`);
+    res.sendFile(`${cacheFolder}/${transaction}`);
   } else {
     res.status(500);
     res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
