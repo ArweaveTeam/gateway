@@ -133,7 +133,7 @@ export async function parallelize(height: number) {
   }
 }
 
-export async function storeBlock(height: number) {
+export async function storeBlock(height: number, retry: number = 0) {
   try {
     const currentBlock = await block(height);
     const {formattedBlock, input} = serializeBlock(currentBlock, height);
@@ -148,9 +148,14 @@ export async function storeBlock(height: number) {
       await storeTransactions(JSON.parse(formattedBlock.txs) as Array<string>, height);
     }
   } catch (error) {
-    log.info(`[snapshot] could not retrieve block at height ${height}, retrying`);
     if (SIGKILL === false) {
-      await storeBlock(height);
+      if (retry >= 3) {
+        log.info(`[snapshot] there were problems retrieving ${height}, restarting the server`);
+        process.exit();
+      } else {
+        log.info(`[snapshot] could not retrieve block at height ${height}, retrying`);
+        await storeBlock(height, retry + 1);
+      }
     }
   }
 }
