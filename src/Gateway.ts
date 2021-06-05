@@ -10,7 +10,7 @@ import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
 import {syncRoute} from './route/sync.route';
 import {proxyRoute} from './route/proxy.route';
-import {dataRouteRegex, dataHeadRoute, dataRoute} from './route/data.route';
+import {dataRouteRegex, dataRoute} from './route/data.route';
 import {peerRoute} from './route/peer.route';
 import {koiLogger, koiLogsRoute, koiLogsRawRoute} from './route/koi.route';
 import {startSync} from './database/sync.database';
@@ -32,7 +32,6 @@ export function start() {
   app.get('/', statusRoute);
   app.get('/status', syncRoute);
 
-  app.head(dataRouteRegex, dataHeadRoute);
   app.get(dataRouteRegex, dataRoute);
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
