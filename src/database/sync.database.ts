@@ -29,6 +29,7 @@ export let SIGKILL: boolean = false;
 export let bar: ProgressBar;
 export let topHeight = 0;
 export let currentHeight = 0;
+export let timer = setTimeout(() => {}, 0);
 
 export function configureSyncBar(start: number, end: number) {
   bar = new ProgressBar(
@@ -75,6 +76,12 @@ export async function startSync() {
 }
 
 export async function parallelize(height: number) {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    log.info('[database] sync timed out, restarting server');
+    process.exit();
+  }, 300 * 1000);
+
   currentHeight = height;
 
   if (height >= topHeight) {
@@ -83,8 +90,9 @@ export async function parallelize(height: number) {
     const nodeInfo = await getNodeInfo();
     if (nodeInfo.height > topHeight) {
       log.info(`[database] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`);
+      topHeight = nodeInfo.height;
     }
-    topHeight = nodeInfo.height;
+
     await parallelize(height);
   } else {
     const batch = [];
@@ -149,7 +157,7 @@ export async function storeBlock(height: number, retry: number = 0) {
     }
   } catch (error) {
     if (SIGKILL === false) {
-      if (retry >= 3) {
+      if (retry >= 25) {
         log.info(`[snapshot] there were problems retrieving ${height}, restarting the server`);
         process.exit();
       } else {
