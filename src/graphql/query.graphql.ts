@@ -112,8 +112,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
     if (runSubQuery) {
       const results = await subQuery
-          .limit(limit)
-          .offset(offset)
+          .limit(limit + offset)
           .orderByRaw(tagOrderByClauses[sortOrder]);
 
       const tx_ids = [];
