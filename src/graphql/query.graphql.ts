@@ -30,7 +30,7 @@ export interface QueryParams {
   offset?: number;
   select?: any;
   blocks?: boolean;
-  since?: ISO8601DateTimeString;
+  since?: ISO8601DateTimeString | string;
   sortOrder?: TxSortOrder;
   status?: 'any' | 'confirmed' | 'pending';
   pendingMinutes?: number;
@@ -41,7 +41,7 @@ export interface QueryParams {
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
   const {to, from, tags, id, ids, status = 'confirmed', select} = params;
   const {limit = 10, sortOrder = 'HEIGHT_DESC'} = params;
-  const {since, offset = 0, minHeight = -1, maxHeight = -1} = params;
+  const {since = new Date().toISOString(), offset = 0, minHeight = -1, maxHeight = -1} = params;
 
   const query = connection
       .queryBuilder()
@@ -135,11 +135,11 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     query.where('transactions.height', '<=', maxHeight);
   }
 
-  query.limit(limit).offset(offset);
-
   if (Object.keys(orderByClauses).includes(sortOrder)) {
     query.orderByRaw(orderByClauses[sortOrder]);
   }
+
+  query.limit(limit).offset(offset);
 
   query.orderByRaw('transactions.created_at DESC');
 

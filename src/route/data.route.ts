@@ -40,7 +40,7 @@ export async function dataRoute(req: Request, res: Response) {
       await cacheFile(transaction);
 
       if (exists(`${cacheFolder}/${transaction}`)) {
-        if (contentType === 'application/x.arweave-manifest+json') {
+        if (contentType === 'application/x.arweave-manifest+json' || contentType === 'application/x.arweave-manifest') {
           res.setHeader('content-type', 'text/html');
 
           const manifestFile = read(`${cacheFolder}/${transaction}`) || '{}';
