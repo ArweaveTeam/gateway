@@ -95,7 +95,7 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
         if (tag.name === index) {
           indexed = true;
-          query.whereIn(`transactions.${index}`, tag.values);
+          query.whereIn(`transactions.${indices[ii]}`, tag.values);
         }
       }
 

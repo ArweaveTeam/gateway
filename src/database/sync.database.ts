@@ -78,8 +78,8 @@ export async function startSync() {
 export async function parallelize(height: number) {
   clearTimeout(timer);
   timer = setTimeout(async () => {
-    log.info('[database] sync timed out, restarting sync');
-    await startSync();
+    log.info('[database] sync timed out, restarting server');
+    process.exit();
   }, 300 * 1000);
 
   currentHeight = height;

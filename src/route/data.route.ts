@@ -32,6 +32,7 @@ export async function dataRoute(req: Request, res: Response) {
   try {
     const metadata = await getTransaction(transaction);
     const contentType = tagValue(metadata.tags, 'Content-Type');
+    const ua = tagValue(metadata.tags, 'User-Agent');
     const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 
     if (ans102) {
@@ -57,7 +58,7 @@ export async function dataRoute(req: Request, res: Response) {
 
             Object.keys(manifest.paths).map((key) => {
               const id = manifest.paths[key].id;
-              manifestHtml = manifestHtml.split(key).join(`${manifestPrefix}/${id}`);
+              manifestHtml = manifestHtml.split(key).join(`${manifestPrefix}/${id}?manifestId=${transaction}`);
             });
 
             res.status(200);
@@ -66,10 +67,29 @@ export async function dataRoute(req: Request, res: Response) {
             throw new Error('Could not parse manifest html file');
           }
         } else {
-          res.setHeader('content-type', contentType);
+          if (contentType && contentType !== "null") {
+            res.setHeader('content-type', contentType);
+          }
+          
+          if (ua === 'arkb') {
+            const manifestId = req.query.manifestId;
 
-          res.status(200);
-          res.sendFile(`${cacheFolder}/${transaction}`);
+            const manifestFile = read(`${cacheFolder}/${manifestId}`) || '{}';
+            const manifest: ManifestV1 = JSON.parse(manifestFile.toString());
+
+            let arkbFile = read(`${cacheFolder}/${transaction}`) || '';
+
+            Object.keys(manifest.paths).map((key) => {
+              const id = manifest.paths[key].id;
+              arkbFile = arkbFile.split(key).join(`${id}?manifestId=${manifestId}`);
+            });
+
+            res.status(200);
+            res.send(arkbFile);
+          } else {
+            res.status(200);
+            res.sendFile(`${cacheFolder}/${transaction}`);
+          }
         }
       }
     }
