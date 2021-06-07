@@ -67,10 +67,10 @@ export async function dataRoute(req: Request, res: Response) {
             throw new Error('Could not parse manifest html file');
           }
         } else {
-          if (contentType && contentType !== "null") {
+          if (contentType && contentType !== 'null') {
             res.setHeader('content-type', contentType);
           }
-          
+
           if (ua === 'arkb') {
             const manifestId = req.query.manifestId;
 

@@ -223,10 +223,10 @@ export interface Cursor {
 }
 
 export function newCursor(): string {
-  return encodeCursor({timestamp: moment().toISOString(), offset: 0})
+  return encodeCursor({timestamp: moment().toISOString(), offset: 0});
 }
 
-export function encodeCursor ({timestamp, offset}: Cursor): string {
+export function encodeCursor({timestamp, offset}: Cursor): string {
   const string = JSON.stringify([timestamp, offset]);
   return Buffer.from(string).toString('base64');
 };
