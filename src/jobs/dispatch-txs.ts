@@ -25,9 +25,6 @@ export const handler = createQueueHandler<DispatchTx>(
     };
 
     await broadcastTx(fullTx, [
-      "http://sfo-1.na-west-1.arweave.net:1984",
-      "http://fra-2.eu-central-2.arweave.net:1984",
-      "http://nyc-2.na-east-1.arweave.net:1984",
       "http://gateway-1.arweave.net:1984",
       "http://gateway-2.arweave.net:1984",
       "http://gateway-3.arweave.net:1984",
