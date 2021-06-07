@@ -5,6 +5,7 @@ import { broadcastTx } from "../lib/broadcast";
 import { ImportTx, DispatchTx } from "../interfaces/messages";
 import { toB64url } from "../lib/encoding";
 import { Transaction } from "../lib/arweave";
+import { hosts } from "./export-chunks";
 
 export const handler = createQueueHandler<DispatchTx>(
   getQueueUrl("dispatch-txs"),
@@ -24,14 +25,7 @@ export const handler = createQueueHandler<DispatchTx>(
           : "",
     };
 
-    await broadcastTx(fullTx, [
-      "http://lon-1.eu-west-1.arweave.net:1984",
-      "http://lon-2.eu-west-1.arweave.net:1984",
-      "http://lon-3.eu-west-1.arweave.net:1984",
-      "http://lon-4.eu-west-1.arweave.net:1984",
-      "http://lon-5.eu-west-1.arweave.net:1984",
-      "http://lon-6.eu-west-1.arweave.net:1984",
-    ]);
+    await broadcastTx(fullTx, hosts);
 
     console.log(`publishing: ${tx.id}`);
 

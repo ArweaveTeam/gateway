@@ -12,9 +12,14 @@ import {
 import { wait } from "../lib/helpers";
 import log from "../lib/log";
 
-export const hosts = JSON.parse(
-  process.env.ARWEAVE_NODES || "null"
-) as string[];
+export const hosts: string[] = process.env.ARWEAVE_NODES ? JSON.parse(process.env.ARWEAVE_NODES) : [
+  "http://lon-1.eu-west-1.arweave.net:1984",
+  "http://lon-2.eu-west-1.arweave.net:1984",
+  "http://lon-3.eu-west-1.arweave.net:1984",
+  "http://lon-4.eu-west-1.arweave.net:1984",
+  "http://lon-5.eu-west-1.arweave.net:1984",
+  "http://lon-6.eu-west-1.arweave.net:1984",
+];
 
 export const handler = createQueueHandler<ExportChunk>(
   getQueueUrl("export-chunks"),
