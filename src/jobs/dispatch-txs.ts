@@ -25,12 +25,15 @@ export const handler = createQueueHandler<DispatchTx>(
     };
 
     await broadcastTx(fullTx, [
-      "http://lon-1.eu-west-1.arweave.net:1984",
-      "http://lon-2.eu-west-1.arweave.net:1984",
-      "http://lon-3.eu-west-1.arweave.net:1984",
-      "http://lon-4.eu-west-1.arweave.net:1984",
-      "http://lon-5.eu-west-1.arweave.net:1984",
-      "http://lon-6.eu-west-1.arweave.net:1984",
+      "http://sfo-1.na-west-1.arweave.net:1984",
+      "http://fra-2.eu-central-2.arweave.net:1984",
+      "http://nyc-2.na-east-1.arweave.net:1984",
+      "http://gateway-1.arweave.net:1984",
+      "http://gateway-2.arweave.net:1984",
+      "http://gateway-3.arweave.net:1984",
+      "http://gateway-4.arweave.net:1984",
+      "http://gateway-5.arweave.net:1984",
+      "http://gateway-6.arweave.net:1984",
     ]);
 
     console.log(`publishing: ${tx.id}`);
