@@ -10,6 +10,7 @@ import {
 } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
+import { broadcastTx } from "../../../lib/broadcast";
 
 import Joi, { Schema } from "@hapi/joi";
 import { parseInput } from "../../middleware/validate-body";
@@ -57,6 +58,10 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
   res
 ) => {
   const tx = parseInput<Transaction>(txSchema, req.body);
+
+  req.log.info(`Redirection to node init`);
+
+  await broadcastTx(tx, [process.env.AMPLIFY_GATEWAY_URL]);
 
   req.log.info(`[new-tx]`, {
     ...tx,
