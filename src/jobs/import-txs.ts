@@ -18,10 +18,13 @@ import {
   getBundleImport,
   saveBundleStatus,
 } from "../database/bundle-import-db";
+import { broadcastTx } from "../lib/broadcast";
 
 export const handler = createQueueHandler<ImportTx>(
   getQueueUrl("import-txs"),
   async ({ id, tx }) => {
+    await broadcastTx(tx, [process.env.AMPLIFY_GATEWAY_URL]);
+
     const pool = getConnectionPool("write");
 
     const header = tx || (await fetchTransactionHeader(id || ""));
