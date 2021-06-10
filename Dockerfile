@@ -10,7 +10,7 @@ COPY ./package-lock.json .
 COPY ./tsconfig.json .
 
 RUN npm install
-RUN npm run build
+# RUN npm run build
 RUN npm ci
 
 # We're splitting NPM and node_modules into a separate
