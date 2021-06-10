@@ -14,6 +14,7 @@ import { broadcastTx } from "../../../lib/broadcast";
 
 import Joi, { Schema } from "@hapi/joi";
 import { parseInput } from "../../middleware/validate-body";
+import { hosts } from "../../../jobs/export-chunks";
 
 export const txSchema: Schema = Joi.object({
   id: Joi.string()
@@ -61,7 +62,7 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
 
   req.log.info(`Redirection to node init`);
 
-  await broadcastTx(tx, [process.env.AMPLIFY_GATEWAY_URL]);
+  await broadcastTx(tx, hosts);
 
   req.log.info(`[new-tx]`, {
     ...tx,
