@@ -68,6 +68,7 @@ provider:
     ARWEAVE_GATEWAY_DOMAIN: ${file(serverless.${opt:stage, 'dev'}.yml):domain}
     REDIS_HOST: ${file(serverless.${opt:stage, 'dev'}.yml):REDIS_HOST}
     REDIS_OFFLINE_QUEUE: ${file(serverless.${opt:stage, 'dev'}.yml):REDIS_OFFLINE_QUEUE}
+    AMPLIFY_GATEWAY_URL: '["https://gateway.amplify.host"]'
 
 plugins:
   - serverless-stage-manager
