@@ -1,7 +1,9 @@
-FROM node:12.16.3-alpine AS base
+FROM node:14.17.0-stretch AS base
 
-RUN apk update && apk upgrade && \
-    apk add --no-cache bash git openssh
+# RUN apk update && apk upgrade && \
+#     apk add --no-cache bash git openssh
+
+RUN apt update && apt install bash git 
 
 WORKDIR /usr/app
 
@@ -9,12 +11,16 @@ COPY ./package.json .
 COPY ./package-lock.json .
 COPY ./tsconfig.json .
 
-RUN npm ci
+RUN npm install
+# RUN npm run build
+# RUN npm ci
+
+RUN npm install -g arweave
 
 # We're splitting NPM and node_modules into a separate
 # image so we have lighter layers, with just our code changes.
 
-FROM node:12.16.3-alpine AS build
+FROM node:14.17.0-stretch AS build
 
 WORKDIR /usr/app
 
@@ -32,6 +38,8 @@ COPY --from=base /usr/app/tsconfig.json .
 RUN ls ./node_modules/arweave
 
 COPY src ./src
+
+RUN npm install
 
 RUN npm run build
 
