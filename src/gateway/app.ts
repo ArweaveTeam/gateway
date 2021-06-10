@@ -30,7 +30,7 @@ import { handler as webhookHandler } from "./routes/webhooks";
 
 import { logMiddleware } from './middleware/log.middleware';
 
-import { joinKoi } from 'koi-logs'
+import JoinKoi from 'koi-logs';
 
 import cron from 'node-cron';
 
@@ -61,7 +61,7 @@ app.use(corsMiddleware);
 app.use(sandboxMiddleware);
 app.use(logMiddleware);
 
-joinKoi(app, '/usr/app/logs/')
+new JoinKoi('/usr/app/logs');
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
