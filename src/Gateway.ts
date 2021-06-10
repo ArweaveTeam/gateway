@@ -8,6 +8,7 @@ import {log} from './utility/log.utility';
 import {sessionMiddleware, sessionPinningMiddleware} from './utility/session.utility';
 import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
+import {transactionRoute} from './route/transaction.route';
 import {syncRoute} from './route/sync.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
@@ -36,6 +37,7 @@ export function start() {
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
+  app.post('/tx', transactionRoute);
   app.get('/peers', peerRoute);
   app.get('/logs', koiLogsRoute);
   app.get('/logs/raw', koiLogsRawRoute);

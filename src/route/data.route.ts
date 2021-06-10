@@ -58,7 +58,8 @@ export async function dataRoute(req: Request, res: Response) {
 
             Object.keys(manifest.paths).map((key) => {
               const id = manifest.paths[key].id;
-              manifestHtml = manifestHtml.split(key).join(`${manifestPrefix}/${id}?manifestId=${transaction}`);
+
+              manifestHtml = manifestHtml.split(key).join(`${manifestPrefix}/${id}?manifestId=${transaction}&ext=`);
             });
 
             res.status(200);
@@ -71,7 +72,7 @@ export async function dataRoute(req: Request, res: Response) {
             res.setHeader('content-type', contentType);
           }
 
-          if (ua === 'arkb') {
+          if (ua === 'arkb' && req.query.manifestId) {
             const manifestId = req.query.manifestId;
 
             const manifestFile = read(`${cacheFolder}/${manifestId}`) || '{}';
@@ -81,7 +82,7 @@ export async function dataRoute(req: Request, res: Response) {
 
             Object.keys(manifest.paths).map((key) => {
               const id = manifest.paths[key].id;
-              arkbFile = arkbFile.split(key).join(`${id}?manifestId=${manifestId}`);
+              arkbFile = arkbFile.split(key).join(`${id}?manifestId=${manifestId}&ext=`);
             });
 
             res.status(200);
