@@ -1,4 +1,4 @@
-FROM node:14.17.0-alpine AS base
+FROM node:14.17.0-stretch AS base
 
 RUN apk update && apk upgrade && \
     apk add --no-cache bash git openssh
@@ -16,7 +16,7 @@ RUN npm ci
 # We're splitting NPM and node_modules into a separate
 # image so we have lighter layers, with just our code changes.
 
-FROM node:14.17.0-alpine AS build
+FROM node:14.17.0-stretch AS build
 
 WORKDIR /usr/app
 
