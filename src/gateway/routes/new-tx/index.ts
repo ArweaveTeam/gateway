@@ -10,6 +10,7 @@ import {
 } from "../../../interfaces/messages";
 import { RequestHandler } from "express";
 import { BadRequest } from "http-errors";
+import { broadcastTx } from "../../../lib/broadcast";
 
 import Joi, { Schema } from "@hapi/joi";
 import { parseInput } from "../../middleware/validate-body";
