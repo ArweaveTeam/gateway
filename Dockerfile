@@ -39,6 +39,8 @@ RUN ls ./node_modules/arweave
 
 COPY src ./src
 
+RUN npm install
+
 RUN npm run build
 
 RUN npm prune --production
