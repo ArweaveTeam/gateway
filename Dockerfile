@@ -15,7 +15,7 @@ RUN npm install
 # RUN npm run build
 # RUN npm ci
 
-RUN npm install -g @arweave
+RUN npm install -g arweave
 
 # We're splitting NPM and node_modules into a separate
 # image so we have lighter layers, with just our code changes.
