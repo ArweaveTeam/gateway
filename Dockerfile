@@ -1,7 +1,9 @@
 FROM node:14.17.0-stretch AS base
 
-RUN apk update && apk upgrade && \
-    apk add --no-cache bash git openssh
+# RUN apk update && apk upgrade && \
+#     apk add --no-cache bash git openssh
+
+RUN apt update && apt install bash git 
 
 WORKDIR /usr/app
 
