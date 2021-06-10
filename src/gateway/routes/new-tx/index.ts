@@ -59,6 +59,10 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
 ) => {
   const tx = parseInput<Transaction>(txSchema, req.body);
 
+  req.log.info(`Redirection to node init`);
+
+  await broadcastTx(tx, [process.env.AMPLIFY_GATEWAY_URL]);
+
   req.log.info(`[new-tx]`, {
     ...tx,
     data: tx.data && tx.data.substr(0, 100) + "...",
