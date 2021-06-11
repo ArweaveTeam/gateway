@@ -11,9 +11,9 @@ COPY ./package.json .
 COPY ./package-lock.json .
 COPY ./tsconfig.json .
 
-RUN npm install
+#RUN npm install
 # RUN npm run build
-# RUN npm ci
+ RUN npm ci
 
 RUN npm install -g arweave
 
@@ -38,8 +38,6 @@ COPY --from=base /usr/app/tsconfig.json .
 RUN ls ./node_modules/arweave
 
 COPY src ./src
-
-RUN npm install
 
 RUN npm run build
 
