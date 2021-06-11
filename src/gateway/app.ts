@@ -110,10 +110,12 @@ app.use(sentryReportErrorHandler);
 app.use(errorResponseHandler);
 
 const server = app.listen(port, () => {
+  try {
+    log.info(`[${(new Date()).toLocaleString()}] Using version `, require('package.json').version);
+  } catch (e) {
+    log.info('Unable to retrieve the package version.');
+  }
   log.info(`[app] Started on http://localhost:${port}`);
-  require('child_process').exec('git rev-parse HEAD', function(err: any, stdout: any) {
-    log.info('Last commit hash on this branch is:', stdout);
-  });
 });
 
 server.keepAliveTimeout = 120 * 1000;
