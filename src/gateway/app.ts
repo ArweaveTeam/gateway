@@ -113,9 +113,10 @@ const server = app.listen(port, () => {
   try {
     log.info(`[${(new Date()).toLocaleString()}] Using version `, require('package.json').version);
   } catch (e) {
-    log.info('Unable to retrieve the package version.');
+    log.info(`'Unable to retrieve the package version.'`);
   }
   log.info(`[app] Started on http://localhost:${port}`);
+  log.info(`[tudor-test] Deployed via pipeline 23:59 June11th2021`);
 });
 
 server.keepAliveTimeout = 120 * 1000;
