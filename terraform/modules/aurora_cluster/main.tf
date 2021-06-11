@@ -38,7 +38,7 @@ module "aurora_cluster" {
   name                            = var.name
   snapshot_identifier             = var.from_snapshot
   engine                          = "aurora-postgresql"
-  engine_version                  = "11.6"
+  engine_version                  = "11.9"
   subnets                         = var.subnet_ids
   vpc_id                          = var.vpc_id
   replica_count                   = 2
