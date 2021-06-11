@@ -4,68 +4,68 @@ import { Chunk, Transaction } from "./arweave";
 
 export async function broadcastTx(tx: Transaction, hosts: string[]) {
   log.info(`[broadcast-tx] broadcasting new tx`, { id: tx.id });
-  await Promise.all(
-    hosts.map(async (host) => {
-      await retry(
-        {
-          retryCount: 5,
-          retryDelay: 1000,
-          timeout: 10000,
-        },
-        async (attempt, { reject }) => {
-          log.info(`[broadcast-tx] sending`, { attempt, host, id: tx.id });
-          const { status: existingStatus, ok: isReceived } = await fetch(
-            `${host}/tx/${tx.id}/id`
-          );
 
-          if (isReceived) {
-            log.info(`[broadcast-tx] already received`, {
-              attempt,
-              host,
-              id: tx.id,
-              existingStatus,
-            });
-            return true;
-          }
+  let tmpHosts: string[] = JSON.parse(JSON.stringify(hosts));
+  let submitted = false;
+  while(!submitted) {
+    const index = Math.floor(Math.random()*tmpHosts.length);
+    const host = tmpHosts[index];
 
-          const { status: postStatus, ok: postOk } = await fetch(`${host}/tx`, {
-            method: "POST",
-            body: JSON.stringify(tx),
-            headers: { "Content-Type": "application/json" },
-            timeout: 10000,
-          });
+    log.info(`[broadcast-tx] sending`, { host, id: tx.id });
+    try {
+      const { status: existingStatus, ok: isReceived } = await fetch(
+        `${host}/tx/${tx.id}/id`
+      );
 
-          log.info(`[broadcast-tx] sent`, {
-            attempt,
-            host,
-            id: tx.id,
-            postStatus,
-          });
+      if (isReceived) {
+        log.info(`[broadcast-tx] already received`, {
+          host,
+          id: tx.id,
+          existingStatus,
+        });
+        submitted = true;
+        break;
+      }
 
-          // Don't even retry on these codes
-          if ([400, 410].includes(postStatus)) {
-            reject(postStatus);
-          }
+      const { status: postStatus, ok: postOk } = await fetch(`${host}/tx`, {
+        method: "POST",
+        body: JSON.stringify(tx),
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      });
 
-          return postOk;
-        },
-        (error, attempt) => {
-          log.warn(`[broadcast-tx] warning`, {
-            error: error.message,
-            attempt,
-            host,
-            id: tx.id,
-          });
-        }
-      ).catch((error) => {
+      log.info(`[broadcast-tx] sent`, {
+        host,
+        id: tx.id,
+        postStatus,
+      });
+
+      // Don't even retry on these codes
+      if ([400, 410].includes(postStatus)) {
         log.error(`[broadcast-tx] failed`, {
           id: tx.id,
           host,
-          error: error.message,
+          error: postStatus,
         });
+        tmpHosts.splice(index, 1);
+        if(!tmpHosts.length) {
+          tmpHosts = JSON.parse(JSON.stringify(hosts));
+        }
+      }
+
+      submitted = true;
+    } catch (e) {
+      log.error(`[broadcast-tx] failed`, {
+        id: tx.id,
+        host,
+        error: e.message,
       });
-    })
-  );
+      tmpHosts.splice(index, 1);
+      if(!tmpHosts.length) {
+        tmpHosts = JSON.parse(JSON.stringify(hosts));
+      }
+    }
+  }
 }
 
 export async function broadcastChunk(chunk: Chunk, hosts: string[]) {
