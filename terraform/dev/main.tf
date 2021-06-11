@@ -21,6 +21,10 @@ data "aws_vpc" "default" {
 
 data "aws_subnet_ids" "all" {
   vpc_id = data.aws_vpc.default.id
+      filter {
+    name   = "tag:Name"
+    values = ["eu-west-2b","eu-west-2c"]
+  }
 }
 
 module "acm_region_us_east_1" {
