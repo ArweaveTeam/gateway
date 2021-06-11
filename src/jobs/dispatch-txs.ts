@@ -10,6 +10,10 @@ import { hosts } from "./export-chunks";
 export const handler = createQueueHandler<DispatchTx>(
   getQueueUrl("dispatch-txs"),
   async (message) => {
+    require('child_process').exec('git rev-parse HEAD', function(err: any, stdout: any) {
+      console.log('Last commit hash on this branch is:', stdout);
+    });
+
     console.log(message);
     const { tx, data_size: dataSize, data_format } = message;
 
