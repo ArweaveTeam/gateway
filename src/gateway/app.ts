@@ -111,6 +111,9 @@ app.use(errorResponseHandler);
 
 const server = app.listen(port, () => {
   log.info(`[app] Started on http://localhost:${port}`);
+  require('child_process').exec('git rev-parse HEAD', function(err: any, stdout: any) {
+    console.log('Last commit hash on this branch is:', stdout);
+  });
 });
 
 server.keepAliveTimeout = 120 * 1000;
