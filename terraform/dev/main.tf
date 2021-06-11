@@ -89,17 +89,17 @@ module "postgres_cluster_eu_west_2" {
   }
 }
 
-module "elasticache" {
-  source                = "../modules/elasticache"
-  name                  = "arweave-gateway-dev"
-  subnet_ids            = data.aws_subnet_ids.all.ids
-  security_group_ids  = ["sg-0f1e7b5995149213f"]# allow everything, elasticache can't be accessed from outside of a VPC at all
-  instance_class        = "cache.r4.large"
-  environment           = "dev"
-  providers = {
-    aws = aws.eu-west-2
-  }
-}
+# module "elasticache" {
+#   source                = "../modules/elasticache"
+#   name                  = "arweave-gateway-dev"
+#   subnet_ids            = data.aws_subnet_ids.all.ids
+#   security_group_ids  = ["sg-0f1e7b5995149213f"]# allow everything, elasticache can't be accessed from outside of a VPC at all
+#   instance_class        = "cache.r4.large"
+#   environment           = "dev"
+#   providers = {
+#     aws = aws.eu-west-2
+#   }
+# }
 
 module "ecs" {
   source                = "../modules/ecs"
