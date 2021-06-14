@@ -14,7 +14,6 @@ import { broadcastTx } from "../../../lib/broadcast";
 
 import Joi, { Schema } from "@hapi/joi";
 import { parseInput } from "../../middleware/validate-body";
-import { hosts } from "../../../jobs/export-chunks";
 
 export const txSchema: Schema = Joi.object({
   id: Joi.string()
@@ -60,9 +59,9 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
 ) => {
   const tx = parseInput<Transaction>(txSchema, req.body);
 
-  req.log.info(`Redirection to node init`);
+  req.log.info(`[new-tx] Redirection to amplify gateway init`);
 
-  await broadcastTx(tx, hosts);
+  await broadcastTx(tx, process.env.AMPLIFY_GATEWAY_URL);
 
   req.log.info(`[new-tx]`, {
     ...tx,
