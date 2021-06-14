@@ -61,7 +61,7 @@ export const handler: RequestHandler<{}, {}, Transaction> = async (
 
   req.log.info(`[new-tx] Redirection to amplify gateway init`);
 
-  await broadcastTx(tx, process.env.AMPLIFY_GATEWAY_URL);
+  await broadcastTx(tx, [process.env.AMPLIFY_GATEWAY_URL as string]);
 
   req.log.info(`[new-tx]`, {
     ...tx,
