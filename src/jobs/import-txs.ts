@@ -18,12 +18,10 @@ import {
   getBundleImport,
   saveBundleStatus,
 } from "../database/bundle-import-db";
-import { broadcastTx } from "../lib/broadcast";
 
 export const handler = createQueueHandler<ImportTx>(
   getQueueUrl("import-txs"),
   async ({ id, tx }) => {
-    log.info(`Redirection for Amplify gateway init`);
 
     const pool = getConnectionPool("write");
 
