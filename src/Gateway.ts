@@ -15,6 +15,7 @@ import {dataRouteRegex, dataRoute} from './route/data.route';
 import {peerRoute} from './route/peer.route';
 import {koiLogger, koiLogsRoute, koiLogsRawRoute} from './route/koi.route';
 import {startSync} from './database/sync.database';
+import cors from 'cors';
 
 config();
 
@@ -22,7 +23,7 @@ export const app: Express = express();
 
 export function start() {
   app.set('trust proxy', 1);
-
+  app.use(cors());
   app.use(corsMiddleware);
   app.use(jsonMiddleware);
   app.use(logMiddleware);
@@ -41,7 +42,6 @@ export function start() {
   app.get('/peers', peerRoute);
   app.get('/logs', koiLogsRoute);
   app.get('/logs/raw', koiLogsRawRoute);
-
   app.all('*', proxyRoute);
 
   app.listen(process.env.PORT || 3000, () => {
