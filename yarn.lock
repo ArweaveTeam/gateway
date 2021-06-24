@@ -5246,9 +5246,9 @@ knex@^0.21.17:
     tildify "2.0.0"
     v8flags "^3.2.0"
 
-"koi-logs@https://github.com/open-koi/logs#VerifySignature":
+"koi-logs@https://github.com/koii-network/logs#VerifySignature":
   version "1.0.3"
-  resolved "https://github.com/open-koi/logs#3f31a88b43f18c97a8031081ef4af1d58a30bca4"
+  resolved "https://github.com/koii-network/logs#3f31a88b43f18c97a8031081ef4af1d58a30bca4"
   dependencies:
     "@_koi/sdk" "^2.1.16-beta.27"
     "@rollup/plugin-json" "^4.1.0"
