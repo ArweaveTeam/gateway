@@ -9,7 +9,7 @@ import {pathRegex} from '../route/data.route';
 config();
 
 export const port = process.env.PORT || '3000';
-export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.net';
+export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.online';
 
 export async function manifestMiddleware(req: Request, res: Response, next: NextFunction) {
   const prefix = req.hostname.split('.')[0].match(pathRegex) || [];
