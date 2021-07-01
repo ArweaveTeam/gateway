@@ -1,13 +1,15 @@
 import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
-import {corsMiddleware} from './middleware/cors.middleware';
+import cors from 'cors';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
+import {manifestMiddleware} from './middleware/manifest.middleware';
 import {log} from './utility/log.utility';
 import {sessionMiddleware, sessionPinningMiddleware} from './utility/session.utility';
 import {graphServer} from './graphql/server.graphql';
 import {statusRoute} from './route/status.route';
+import {transactionRoute} from './route/transaction.route';
 import {syncRoute} from './route/sync.route';
 import {proxyRoute} from './route/proxy.route';
 import {dataRouteRegex, dataRoute} from './route/data.route';
@@ -22,12 +24,13 @@ export const app: Express = express();
 export function start() {
   app.set('trust proxy', 1);
 
-  app.use(corsMiddleware);
+  app.use(cors());
   app.use(jsonMiddleware);
   app.use(logMiddleware);
   app.use(sessionMiddleware);
   app.use(sessionPinningMiddleware);
   app.use(koiLogger.logger);
+  app.use(manifestMiddleware);
 
   app.get('/', statusRoute);
   app.get('/status', syncRoute);
@@ -36,6 +39,7 @@ export function start() {
 
   graphServer({introspection: true, playground: true}).applyMiddleware({app, path: '/graphql'});
 
+  app.post('/tx', transactionRoute);
   app.get('/peers', peerRoute);
   app.get('/logs', koiLogsRoute);
   app.get('/logs/raw', koiLogsRawRoute);

@@ -51,7 +51,7 @@ CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
-MANIFEST_PREFIX=https://gateway.amplify.host
+MANIFEST_PREFIX=amp-gw.online
 ```
 
 Make sure you copy this configuration to `.env`.

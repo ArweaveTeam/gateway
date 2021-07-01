@@ -1,52 +1,24 @@
 # Transaction Manifests
 
-### Enabling Transaction Manifests
+Transaction manifests are only usable with a valid domain. Please make sure to have a valid domain with wildcard SSL enabled. You can use Let's Encrypt to configure a domain accordingly.
 
-Transaction Manifests are important to prevent `CORS`. By default, manifests are disabled in the `.env` files. You can enable it by changing:
+In order to effectively use manifests. You need to have domain wildcards pointing to your domain.
 
-```bash
-MANIFESTS=0
+### Configuring Manifests
+
+In order to configure manifests, you need to change the `MANIFEST_PREFIX` environment variable. It should just be your domain name. Simply change it from:
+
+```conf
+MANIFEST_PREFIX=amp-gw.online
 ```
 
 to
 
-```bash
-MANIFESTS=1
+```conf
+MANIFEST_PREFIX=my-actual.domain
 ```
 
-In order to effectively use manifests. You need to have domain wildcards pointing to your domain.
-
-### Using BIP39 or SHA256
-
-There are two different types of transaction manifests subdomains. SHA256 and BIP39. You can enable SHA256 subdomains by changing your `.env` file to:
-
-```bash
-BIP39=0
-```
-
-You can enable BIP39 subdomains by changing the `.env` file to:
-
-```bash
-BIP39=1
-```
-
-## Manifests for Websites
-
-Manifests are fairly simple for actual domains. Let's say own the domain `amplify.testing123`. Follow these steps to enable transaction manifests on your website.
-
-1. Point your `@` record to your Gateway server.
-
-    - This would be an `A` record for an IP.
-
-    - This would be a `CNAME` record for a service's subdomain (ie: AWS EC2, Heroku)
-
-2. Point your `*.amplify.testing123` record to your Gateway server. Follow the same rules as 1.
-
-3. Test your Gateway endpoints
-    
-    - Run `ping amplify.testing123`. Ensure it runs a valid response.
-
-    - Go to any transaction id on `amplify.testing123/[tx id]` and ensure it redirects to a valid transaction manifest path.
+Once configured and the Gateway points to the same domain. It should be good to go.
 
 ## Manifests for Development
 

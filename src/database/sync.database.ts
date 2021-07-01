@@ -77,7 +77,7 @@ export async function startSync() {
 
 export async function parallelize(height: number) {
   clearTimeout(timer);
-  timer = setTimeout(() => {
+  timer = setTimeout(async () => {
     log.info('[database] sync timed out, restarting server');
     process.exit();
   }, 300 * 1000);
@@ -159,7 +159,7 @@ export async function storeBlock(height: number, retry: number = 0) {
     if (SIGKILL === false) {
       if (retry >= 25) {
         log.info(`[snapshot] there were problems retrieving ${height}, restarting the server`);
-        process.exit();
+        await startSync();
       } else {
         log.info(`[snapshot] could not retrieve block at height ${height}, retrying`);
         await storeBlock(height, retry + 1);

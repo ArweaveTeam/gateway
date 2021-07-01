@@ -4,8 +4,8 @@ import {grabNode} from '../query/node.query';
 
 export const sessionMiddleware = expressSession({
   secret: process.env.SESSION_SECRET || 'gateway123',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
 });
 
 export function sessionPinningMiddleware(req: Request, res: Response, next: NextFunction) {

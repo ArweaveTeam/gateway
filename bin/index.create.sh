@@ -34,6 +34,8 @@ CREATE INDEX "index_domain_transactions" ON transactions USING BTREE ("domain");
 CREATE INDEX "index_app_transactions" ON transactions USING BTREE ("app");
 --- Transaction App-Name Index
 CREATE INDEX "index_App-Name_transactions" ON transactions USING BTREE ("App-Name");
+--- Transactions created_at index
+CREATE INDEX "transactions_created_at" ON transactions USING BTREE ("created_at");
 
 --- Tag Indices
 --- Tag Transaction Id Index

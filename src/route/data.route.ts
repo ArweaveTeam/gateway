@@ -1,6 +1,7 @@
 import {config} from 'dotenv';
 import {read, exists} from 'fs-jetpack';
 import {Request, Response} from 'express';
+import {connection} from '../database/connection.database';
 import {ManifestV1} from '../types/manifest.types';
 import {log} from '../utility/log.utility';
 import {transaction as getTransaction, tagValue} from '../query/transaction.query';
@@ -11,7 +12,8 @@ config();
 export const dataRouteRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43})\/(.*)$/i;
 export const pathRegex = /^\/?([a-z0-9-_]{43})/i;
 
-export const manifestPrefix = process.env.MANIFEST_PREFIX || 'https://gateway.amplify.host';
+export const port = process.env.PORT || '3000';
+export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.online';
 
 export async function dataHeadRoute(req: Request, res: Response) {
   const path = req.path.match(pathRegex) || [];
@@ -34,49 +36,62 @@ export async function dataRoute(req: Request, res: Response) {
     const contentType = tagValue(metadata.tags, 'Content-Type');
     const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 
+    if (req.hostname !== `${transaction}.${manifestPrefix}`) {
+      if (contentType === 'application/x.arweave-manifest+json' || contentType === 'application/x.arweave-manifest') {
+        const manifestFile = read(`${cacheFolder}/${transaction}`) || '{}';
+        const manifest: ManifestV1 = JSON.parse(manifestFile.toString());
+
+        const cachePaths = Object.keys(manifest.paths).map((key) => cacheFile(manifest.paths[key].id));
+        await Promise.all(cachePaths);
+
+        for (let i = 0; i < Object.keys(manifest.paths).length; i++) {
+          const path_url = Object.keys(manifest.paths)[i];
+          const manifest_path = manifest.paths[path_url];
+
+          const existingTx = await connection
+              .table('manifest')
+              .where('manifest_id', transaction)
+              .where('tx_id', manifest_path.id);
+
+          if (existingTx && existingTx.length > 0) {
+            return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
+          }
+
+          await connection
+              .table('manifest')
+              .insert({
+                manifest_url: transaction.toLowerCase(),
+                manifest_id: transaction,
+                path: path_url,
+                tx_id: manifest_path.id,
+              });
+        }
+
+        return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
+      }
+    }
+
     if (ans102) {
       await cacheAnsFile(transaction);
     } else {
       await cacheFile(transaction);
+    }
 
-      if (exists(`${cacheFolder}/${transaction}`)) {
-        if (contentType === 'application/x.arweave-manifest+json') {
-          res.setHeader('content-type', 'text/html');
-
-          const manifestFile = read(`${cacheFolder}/${transaction}`) || '{}';
-          const manifest: ManifestV1 = JSON.parse(manifestFile.toString());
-
-          const manifestIndex = manifest.index.path;
-          const manifestIndexTransaction = manifest.paths[manifestIndex].id;
-
-          const cachePaths = Object.keys(manifest.paths).map((key) => cacheFile(manifest.paths[key].id));
-          await Promise.all(cachePaths);
-
-          if (exists(`${cacheFolder}/${manifestIndexTransaction}`)) {
-            let manifestHtml = read(`${cacheFolder}/${manifestIndexTransaction}`) || '';
-
-            Object.keys(manifest.paths).map((key) => {
-              const id = manifest.paths[key].id;
-              manifestHtml = manifestHtml.split(key).join(`${manifestPrefix}/${id}`);
-            });
-
-            res.status(200);
-            res.send(manifestHtml);
-          } else {
-            throw new Error('Could not parse manifest html file');
-          }
-        } else {
-          res.setHeader('content-type', contentType);
-
-          res.status(200);
-          res.sendFile(`${cacheFolder}/${transaction}`);
-        }
+    if (exists(`${cacheFolder}/${transaction}`)) {
+      if (contentType && contentType !== 'null') {
+        res.setHeader('content-type', contentType);
       }
+
+      res.status(200);
+      return res.sendFile(`${cacheFolder}/${transaction}`);
+    } else {
+      throw new Error('File not found');
     }
   } catch (error) {
     log.error(`[route] error generating response for ${transaction}`);
     console.error(error);
+
     res.status(500);
-    res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
+    return res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
   }
 }

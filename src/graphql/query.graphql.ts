@@ -1,7 +1,7 @@
 import {config} from 'dotenv';
 import {QueryBuilder} from 'knex';
-import {indices} from '../utility/order.utility';
 import {connection} from '../database/connection.database';
+import {indices} from '../utility/order.utility';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
 import {tagToB64, toB64url} from '../query/transaction.query';
@@ -30,7 +30,7 @@ export interface QueryParams {
   offset?: number;
   select?: any;
   blocks?: boolean;
-  since?: ISO8601DateTimeString;
+  since?: ISO8601DateTimeString | string;
   sortOrder?: TxSortOrder;
   status?: 'any' | 'confirmed' | 'pending';
   pendingMinutes?: number;
@@ -41,7 +41,7 @@ export interface QueryParams {
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
   const {to, from, tags, id, ids, status = 'confirmed', select} = params;
   const {limit = 10, sortOrder = 'HEIGHT_DESC'} = params;
-  const {since, offset = 0, minHeight = -1, maxHeight = -1} = params;
+  const {since = new Date().toISOString(), offset = 0, minHeight = -1, maxHeight = -1} = params;
 
   const query = connection
       .queryBuilder()
@@ -76,55 +76,29 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
   if (tags) {
     const tagsConverted = tagToB64(tags);
-    const names: Array<string> = [];
-    const values: Array<string> = [];
 
-    const subQuery = connection
-        .queryBuilder()
-        .select('*')
-        .from('tags');
-
-    let runSubQuery = false;
-
-    for (let i = 0; i < tagsConverted.length; i++) {
-      const tag = tagsConverted[i];
+    tagsConverted.forEach((tag) => {
       let indexed = false;
 
-      for (let ii = 0; ii < indices.length; ii++) {
-        const index = toB64url(indices[ii]);
+      for (let i = 0; i < indices.length; i++) {
+        const index = toB64url(indices[i]);
 
         if (tag.name === index) {
+          query.whereIn(`transactions.${indices[i]}`, tag.values);
           indexed = true;
-          query.whereIn(`transactions.${index}`, tag.values);
         }
       }
 
       if (indexed === false) {
-        names.push(tag.name);
-        values.push.apply(values, tag.values);
-
-        runSubQuery = true;
+        query.whereIn('transactions.id', (subQuery) => {
+          return subQuery
+              .select('tx_id')
+              .from('tags')
+              .where('tags.name', tag.name)
+              .whereIn('tags.value', tag.values);
+        });
       }
-    }
-
-    subQuery.whereIn('name', names);
-    subQuery.whereIn('value', values);
-
-    if (runSubQuery) {
-      const results = await subQuery
-          .limit(limit)
-          .offset(offset)
-          .orderByRaw(tagOrderByClauses[sortOrder]);
-
-      const tx_ids = [];
-
-      for (let i = 0; i < results.length; i++) {
-        const {tx_id} = results[i];
-        tx_ids.push(tx_id);
-      }
-
-      query.whereIn('transactions.id', tx_ids);
-    }
+    });
   }
 
   if (minHeight >= 0) {
@@ -135,13 +109,13 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
     query.where('transactions.height', '<=', maxHeight);
   }
 
-  query.limit(limit).offset(offset);
-
   if (Object.keys(orderByClauses).includes(sortOrder)) {
     query.orderByRaw(orderByClauses[sortOrder]);
   }
 
-  query.orderByRaw('transactions.created_at DESC');
+  query.limit(limit).offset(offset);
+
+  query.orderByRaw('transactions.id ASC');
 
   return query;
 }

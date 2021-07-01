@@ -222,18 +222,20 @@ export interface Cursor {
   offset: number;
 }
 
-export const newCursor = (): string => encodeCursor({timestamp: moment().toISOString(), offset: 0});
+export function newCursor(): string {
+  return encodeCursor({timestamp: moment().toISOString(), offset: 0});
+}
 
-export const encodeCursor = ({timestamp, offset}: Cursor): string => {
+export function encodeCursor({timestamp, offset}: Cursor): string {
   const string = JSON.stringify([timestamp, offset]);
   return Buffer.from(string).toString('base64');
 };
 
-export const parseCursor = (cursor: string): Cursor => {
+export function parseCursor(cursor: string): Cursor {
   try {
     const [timestamp, offset] = JSON.parse(Buffer.from(cursor, 'base64').toString()) as [ISO8601DateTimeString, number];
     return {timestamp, offset};
   } catch (error) {
     throw new Error('invalid cursor');
   }
-};
+}
