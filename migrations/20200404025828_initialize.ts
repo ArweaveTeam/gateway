@@ -61,7 +61,7 @@ export async function up(knex: Knex) {
         table.text('path').notNullable();
 
         table.primary(['manifest_url', 'tx_id'], 'pkey_manifest');
-      })
+      });
 }
 
 export async function down(knex: Knex) {

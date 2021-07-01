@@ -1,7 +1,7 @@
 import 'colors';
 import express, {Express} from 'express';
 import {config} from 'dotenv';
-import {corsMiddleware} from './middleware/cors.middleware';
+import cors from 'cors';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
 import {manifestMiddleware} from './middleware/manifest.middleware';
@@ -24,7 +24,7 @@ export const app: Express = express();
 export function start() {
   app.set('trust proxy', 1);
 
-  app.use(corsMiddleware);
+  app.use(cors());
   app.use(jsonMiddleware);
   app.use(logMiddleware);
   app.use(sessionMiddleware);

@@ -20,27 +20,27 @@ export async function manifestMiddleware(req: Request, res: Response, next: Next
       const path = req.path.substring(1) || 'index.html';
 
       const data = await connection
-        .table('manifest')
-        .where('manifest_url', prefixUri)
-        .where('path', path);
+          .table('manifest')
+          .where('manifest_url', prefixUri)
+          .where('path', path);
 
-        if (data.length > 0) {
-          const tx_id = data[0].tx_id;
+      if (data.length > 0) {
+        const tx_id = data[0].tx_id;
 
-          if (lookup(path)) {
-            res.set('content-type', lookup(path) as string);
-          }
-
-          return res.sendFile(`${cacheFolder}/${tx_id}`);
-        } else {
-          res.status(404);
-          return res.json({ status: 'ERROR', message: 'Path not found' });
+        if (lookup(path)) {
+          res.set('content-type', lookup(path) as string);
         }
+
+        return res.sendFile(`${cacheFolder}/${tx_id}`);
+      } else {
+        res.status(404);
+        return res.json({status: 'ERROR', message: 'Path not found'});
+      }
     } catch (error) {
-        log.error(`[route] error generating response for ${prefixUri}`);
-        console.error(error);
-        res.status(500);
-        return res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
+      log.error(`[route] error generating response for ${prefixUri}`);
+      console.error(error);
+      res.status(500);
+      return res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
     }
   } else {
     return next();

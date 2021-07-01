@@ -34,7 +34,6 @@ export async function dataRoute(req: Request, res: Response) {
   try {
     const metadata = await getTransaction(transaction);
     const contentType = tagValue(metadata.tags, 'Content-Type');
-    const ua = tagValue(metadata.tags, 'User-Agent');
     const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 
     if (req.hostname !== `${transaction}.${manifestPrefix}`) {
@@ -50,24 +49,24 @@ export async function dataRoute(req: Request, res: Response) {
           const manifest_path = manifest.paths[path_url];
 
           const existingTx = await connection
-            .table('manifest')
-            .where('manifest_id', transaction)
-            .where('tx_id', manifest_path.id);
+              .table('manifest')
+              .where('manifest_id', transaction)
+              .where('tx_id', manifest_path.id);
 
           if (existingTx && existingTx.length > 0) {
             return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
           }
 
           await connection
-            .table('manifest')
-            .insert({
-              manifest_url: transaction.toLowerCase(),
-              manifest_id: transaction,
-              path: path_url,
-              tx_id: manifest_path.id,
-            })
+              .table('manifest')
+              .insert({
+                manifest_url: transaction.toLowerCase(),
+                manifest_id: transaction,
+                path: path_url,
+                tx_id: manifest_path.id,
+              });
         }
-        
+
         return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
       }
     }
