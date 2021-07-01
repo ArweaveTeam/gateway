@@ -49,6 +49,15 @@ export async function dataRoute(req: Request, res: Response) {
           const path_url = Object.keys(manifest.paths)[i];
           const manifest_path = manifest.paths[path_url];
 
+          const existingTx = await connection
+            .table('manifest')
+            .where('manifest_id', transaction)
+            .where('tx_id', manifest_path.id);
+
+          if (existingTx && existingTx.length > 0) {
+            return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
+          }
+
           await connection
             .table('manifest')
             .insert({
@@ -56,7 +65,7 @@ export async function dataRoute(req: Request, res: Response) {
               manifest_id: transaction,
               path: path_url,
               tx_id: manifest_path.id,
-            });
+            })
         }
         
         return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
