@@ -4,6 +4,7 @@ import {config} from 'dotenv';
 import {corsMiddleware} from './middleware/cors.middleware';
 import {jsonMiddleware} from './middleware/json.middleware';
 import {logMiddleware} from './middleware/log.middleware';
+import {manifestMiddleware} from './middleware/manifest.middleware';
 import {log} from './utility/log.utility';
 import {sessionMiddleware, sessionPinningMiddleware} from './utility/session.utility';
 import {graphServer} from './graphql/server.graphql';
@@ -29,6 +30,7 @@ export function start() {
   app.use(sessionMiddleware);
   app.use(sessionPinningMiddleware);
   app.use(koiLogger.logger);
+  app.use(manifestMiddleware);
 
   app.get('/', statusRoute);
   app.get('/status', syncRoute);

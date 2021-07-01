@@ -53,7 +53,15 @@ export async function up(knex: Knex) {
         table.timestamp('created_at').defaultTo(knex.fn.now());
 
         table.primary(['tx_id', 'index'], 'pkey_tags');
-      });
+      })
+      .createTable('manifest', (table) => {
+        table.string('manifest_url', 64).notNullable();
+        table.string('manifest_id', 64).notNullable();
+        table.string('tx_id', 64).notNullable();
+        table.string('path').notNullable();
+
+        table.primary(['manifest_url', 'tx_id'], 'pkey_manifest');
+      })
 }
 
 export async function down(knex: Knex) {
@@ -61,5 +69,6 @@ export async function down(knex: Knex) {
       .withSchema(process.env.ENVIRONMENT || 'public')
       .dropTableIfExists('transactions')
       .dropTableIfExists('blocks')
-      .dropTableIfExists('tags');
+      .dropTableIfExists('tags')
+      .dropTableIfExists('manifest');
 }
