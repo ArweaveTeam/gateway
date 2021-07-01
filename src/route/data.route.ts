@@ -13,7 +13,7 @@ export const dataRouteRegex = /^\/?([a-zA-Z0-9-_]{43})\/?$|^\/?([a-zA-Z0-9-_]{43
 export const pathRegex = /^\/?([a-z0-9-_]{43})/i;
 
 export const port = process.env.PORT || '3000';
-export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.net';
+export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.online';
 
 export async function dataHeadRoute(req: Request, res: Response) {
   const path = req.path.match(pathRegex) || [];

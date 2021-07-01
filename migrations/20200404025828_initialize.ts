@@ -58,7 +58,7 @@ export async function up(knex: Knex) {
         table.string('manifest_url', 64).notNullable();
         table.string('manifest_id', 64).notNullable();
         table.string('tx_id', 64).notNullable();
-        table.string('path').notNullable();
+        table.text('path').notNullable();
 
         table.primary(['manifest_url', 'tx_id'], 'pkey_manifest');
       })
