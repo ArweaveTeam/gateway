@@ -17,6 +17,7 @@ COPY tsconfig.json tsconfig.json
 COPY src src
 COPY migrations migrations
 
+RUN mkdir /app/snapshot /app/cache
 RUN chmod +x bin/wait.sh
 RUN yarn dev:build
 
