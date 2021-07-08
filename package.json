@@ -5,6 +5,9 @@
   "repository": "git@github.com:ArweaveTeam/gateway.git",
   "author": "Arweave <hello@arweave.org>",
   "license": "MIT",
+  "prettier": {
+    "singleQuote": true
+  },
   "scripts": {
     "dev:test": "npm run dev:build && nyc mocha dist/test dist/test/**/*.js",
     "dev:codecov": "nyc report --reporter=text-lcov | codecov --pipe --token=cea7a229-8289-4a7c-9dc6-4fb694978cb2",
@@ -55,6 +58,7 @@
     "morgan": "^1.10.0",
     "node-cron": "^2.0.3",
     "pg": "^8.5.1",
+    "pg-copy-streams": "^5.1.1",
     "progress": "^2.0.3",
     "rfc4648": "^1.4.0",
     "shortid": "^2.2.16",
@@ -75,6 +79,7 @@
     "@types/node": "^14.14.22",
     "@types/node-cron": "^2.0.3",
     "@types/pg": "^7.14.11",
+    "@types/pg-copy-streams": "^1.2.1",
     "@types/progress": "^2.0.3",
     "@types/shortid": "^0.0.29",
     "@types/superagent": "^4.1.10",
