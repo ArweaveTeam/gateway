@@ -28,9 +28,9 @@ export async function importBlocks(path: string) {
           client.release();
           resolve(true);
         })
-        .on("error", (err) => {
+        .on("error", (err: unknown) => {
           client.release();
-          reject(err);
+          reject(new String(err));
         });
     } catch (error) {
       return reject(error);
@@ -65,9 +65,9 @@ export async function importTransactions(path: string) {
           client.release();
           resolve(true);
         })
-        .on("error", (err) => {
+        .on("error", (err: unknown) => {
           client.release();
-          reject(err);
+          reject(new String(err));
         });
     } catch (error) {
       return reject(error);
@@ -98,9 +98,9 @@ export async function importTags(path: string) {
           client.release();
           resolve(true);
         })
-        .on("error", (err) => {
+        .on("error", (err: unknown) => {
           client.release();
-          reject(err);
+          reject(new String(err));
         });
     } catch (error) {
       return reject(error);
