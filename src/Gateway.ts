@@ -19,6 +19,8 @@ import {startSync} from './database/sync.database';
 
 config();
 
+export const enableManifests = process.env.MANIFEST === '1' ? true : false;
+
 export const app: Express = express();
 
 export function start() {
@@ -30,7 +32,10 @@ export function start() {
   app.use(sessionMiddleware);
   app.use(sessionPinningMiddleware);
   app.use(koiLogger.logger);
-  app.use(manifestMiddleware);
+
+  if (enableManifests) {
+    app.use(manifestMiddleware);
+  }
 
   app.get('/', statusRoute);
   app.get('/status', syncRoute);

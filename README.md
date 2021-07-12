@@ -38,7 +38,8 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=4
+PARALLEL=1
+ANS102=1
 
 INDICES=["App-Name", "app", "domain", "namespace"]
 
@@ -46,6 +47,7 @@ CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
+MANIFEST=1
 MANIFEST_PREFIX=amp-gw.online
 ```
 

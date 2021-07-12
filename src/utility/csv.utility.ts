@@ -1,5 +1,6 @@
 import {existsSync, WriteStream, createWriteStream} from 'fs';
 import {indices, blockOrder, transactionOrder, tagOrder} from './order.utility';
+import {mkdir} from './file.utility';
 
 export interface CSVStreams {
     block: {
@@ -22,6 +23,9 @@ export interface CSVStreams {
         cache: WriteStream;
     };
 }
+
+mkdir('snapshot');
+mkdir('cache');
 
 export const streams: CSVStreams = {
   block: {

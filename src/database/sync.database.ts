@@ -6,7 +6,6 @@ import {serializeBlock, serializeTransaction, serializeAnsTransaction, serialize
 import {streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
 import {ansBundles} from '../utility/ans.utility';
-import {mkdir} from '../utility/file.utility';
 import {sleep} from '../utility/sleep.utility';
 import {TestSuite} from '../utility/mocha.utility';
 import {getNodeInfo} from '../query/node.query';
@@ -18,11 +17,10 @@ import {DatabaseTag} from './transaction.database';
 import {cacheANSEntries} from '../caching/ans.entry.caching';
 
 config();
-mkdir('snapshot');
-mkdir('cache');
 
+export const storeANS102 = process.env.ANS102 === '1' ? true : false;
 export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
-export const parallelization = parseInt(process.env.PARALLEL || '8');
+export const parallelization = parseInt(process.env.PARALLEL || '1');
 
 export let SIGINT: boolean = false;
 export let SIGKILL: boolean = false;
@@ -109,21 +107,21 @@ export async function parallelize(height: number) {
       await importBlocks(`${process.cwd()}/cache/block.csv`);
     } catch (error) {
       log.error('[sync] importing new blocks failed most likely due to it already being in the DB');
-      log.error(error);
+      console.error(error);
     }
 
     try {
       await importTransactions(`${process.cwd()}/cache/transaction.csv`);
     } catch (error) {
       log.error('[sync] importing new transactions failed most likely due to it already being in the DB');
-      log.error(error);
+      console.error(error);
     }
 
     try {
       await importTags(`${process.cwd()}/cache/tags.csv`);
     } catch (error) {
       log.error('[sync] importing new tags failed most likely due to it already being in the DB');
-      log.error(error);
+      console.error(error);
     }
 
 
@@ -192,10 +190,12 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
 
     storeTags(formattedTransaction.id, preservedTags);
 
-    const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
+    if (storeANS102) {
+      const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
-    if (ans102) {
-      await processAns(formattedTransaction.id, height);
+      if (ans102) {
+        await processAns(formattedTransaction.id, height);
+      }
     }
   } catch (error) {
     console.log('');
