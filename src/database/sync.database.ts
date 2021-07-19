@@ -162,38 +162,41 @@ export async function parallelize(height: number) {
   }
 }
 
-export async function storeBlock(height: number, retry: number = 0) {
-  try {
-    const currentBlock = await block(height);
-    const { formattedBlock, input } = serializeBlock(currentBlock, height);
+export function storeBlock(height: number, retry: number = 0) {
+  return new Promise(async (resolve, reject) => {
+    block(height)
+      .then((currentBlock) => {
+        const { formattedBlock, input } = serializeBlock(currentBlock, height);
 
-    streams.block.cache.write(input);
+        streams.block.cache.write(input);
 
-    if (storeSnapshot) {
-      streams.block.snapshot.write(input);
-    }
+        if (storeSnapshot) {
+          streams.block.snapshot.write(input);
+        }
 
-    if (height > 0) {
-      await storeTransactions(
-        JSON.parse(formattedBlock.txs) as Array<string>,
-        height
-      );
-    }
-  } catch (error) {
-    if (SIGKILL === false) {
-      if (retry >= 25) {
-        log.info(
-          `[snapshot] there were problems retrieving ${height}, restarting the server`
-        );
-        await startSync();
-      } else {
-        log.info(
-          `[snapshot] could not retrieve block at height ${height}, retrying`
-        );
-        await storeBlock(height, retry + 1);
-      }
-    }
-  }
+        if (height > 0) {
+          storeTransactions(
+            JSON.parse(formattedBlock.txs) as Array<string>,
+            height
+          ).resolve();
+        }
+      })
+      .catch((error) => {
+        if (SIGKILL === false) {
+          if (retry >= 25) {
+            log.info(
+              `[snapshot] there were problems retrieving ${height}, restarting the server`
+            );
+            startSync().then(reject);
+          } else {
+            log.info(
+              `[snapshot] could not retrieve block at height ${height}, retrying`
+            );
+            storeBlock(height, retry + 1).then(reject);
+          }
+        }
+      });
+  });
 }
 
 export async function storeTransactions(txs: Array<string>, height: number) {
