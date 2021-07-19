@@ -67,8 +67,8 @@ export async function restoreTransaction(tx: string, height: string, type: strin
       await processAns(tx, Number(height));
     }
 
-    await importTransactions(`${process.cwd()}/cache/transaction.csv`);
-    await importTags(`${process.cwd()}/cache/tags.csv`);
+    await importTransactions();
+    await importTags();
 
     streams.transaction.cache = createWriteStream('cache/transaction.csv');
     streams.tags.cache = createWriteStream('cache/tags.csv');

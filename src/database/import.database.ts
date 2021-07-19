@@ -1,15 +1,54 @@
 import {config} from 'dotenv';
-import {indices} from '../utility/order.utility';
-import {connection} from '../database/connection.database';
-import {transactionFields} from '../database/transaction.database';
+import {connection} from './connection.database';
+import {formatBlock} from './block.database';
+import {formatTransaction, DatabaseTag} from './transaction.database';
+import {BlockType} from '../query/block.query';
+import {TransactionType} from '../query/transaction.query';
 
 config();
 
-export async function importBlocks(path: string) {
+export interface ImportBuffer {
+  blocks: Array<BlockType>;
+  transactions: Array<TransactionType>;
+  tags: Array<DatabaseTag>;
+}
+
+export const importBuffer: ImportBuffer = {
+  blocks: [],
+  transactions: [],
+  tags: [],
+};
+
+export function clearBuffer() {
+  importBuffer.blocks = [];
+  importBuffer.transactions = [];
+  importBuffer.tags = [];
+}
+
+export async function importBlocks() {
   return new Promise(async (resolve, reject) => {
     try {
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL("height"))';
-      await connection.raw(`COPY blocks ("id", "previous_block", "mined_at", "height", "txs", "extended") FROM '${path}' WITH ${encoding}`);
+      const promises = [];
+
+      for (let i = 0; i < importBuffer.blocks.length; i++) {
+        const block = formatBlock(importBuffer.blocks[i]);
+
+        const query = connection.table('blocks')
+            .insert({
+              id: block.id,
+              height: block.height,
+              mined_at: block.mined_at,
+              previous_block: block.previous_block,
+              txs: block.txs,
+              extended: block.extended,
+            })
+            .onConflict('id' as never)
+            .merge();
+
+        promises.push(query);
+      }
+
+      await Promise.all(promises);
 
       return resolve(true);
     } catch (error) {
@@ -18,15 +57,23 @@ export async function importBlocks(path: string) {
   });
 }
 
-export async function importTransactions(path: string) {
+export async function importTransactions() {
   return new Promise(async (resolve, reject) => {
     try {
-      const fields = transactionFields
-          .concat(indices)
-          .map((field) => `"${field}"`);
+      const promises = [];
 
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL("format", "height", "data_size"))';
-      await connection.raw(`COPY transactions (${fields.join(',')}) FROM '${path}' WITH ${encoding}`);
+      for (let i = 0; i < importBuffer.transactions.length; i++) {
+        const transaction = formatTransaction(importBuffer.transactions[i]);
+
+        const query = connection.table('transactions')
+            .insert(transaction)
+            .onConflict('id' as never)
+            .merge();
+
+        promises.push(query);
+      }
+
+      await Promise.all(promises);
 
       return resolve(true);
     } catch (error) {
@@ -35,11 +82,28 @@ export async function importTransactions(path: string) {
   });
 }
 
-export async function importTags(path: string) {
+export async function importTags() {
   return new Promise(async (resolve, reject) => {
     try {
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL(index))';
-      await connection.raw(`COPY tags ("tx_id", "index", "name", "value") FROM '${path}' WITH ${encoding}`);
+      const promises = [];
+
+      for (let i = 0; i < importBuffer.tags.length; i++) {
+        const tag = importBuffer.tags[i];
+
+        const query = connection.table('tags')
+            .insert({
+              tx_id: tag.tx_id,
+              index: tag.index,
+              name: tag.name,
+              value: tag.value,
+            })
+            .onConflict(['tx_id' as never, 'index' as never])
+            .merge();
+
+        promises.push(query);
+      }
+
+      await Promise.all(promises);
 
       return resolve(true);
     } catch (error) {
