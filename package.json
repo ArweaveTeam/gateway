@@ -60,6 +60,7 @@
     "pg": "^8.5.1",
     "pg-copy-streams": "^5.1.1",
     "progress": "^2.0.3",
+    "random-weighted-choice": "^0.1.4",
     "rfc4648": "^1.4.0",
     "shortid": "^2.2.16",
     "superagent": "^6.1.0",

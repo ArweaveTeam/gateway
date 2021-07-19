@@ -6620,6 +6620,13 @@ random-bytes@~1.0.0:
   resolved "https://registry.yarnpkg.com/random-bytes/-/random-bytes-1.0.0.tgz#4f68a1dc0ae58bd3fb95848c30324db75d64360b"
   integrity sha1-T2ih3Arli9P7lYSMMDJNt11kNgs=
 
+random-weighted-choice@^0.1.4:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/random-weighted-choice/-/random-weighted-choice-0.1.4.tgz#7bf4971f76c9d33e937eea1152e005024b3d55f6"
+  integrity sha512-c1aBMOpBjtDW641lCIvOpmkTV76KbTb+s833OZCyyKa+QxE8UrHWmxVXhTKXIwLoMhq1A4EaSL2d3kSQPOLJwQ==
+  dependencies:
+    debug "^2.2.0"
+
 randombytes@^2.0.0, randombytes@^2.0.1, randombytes@^2.0.5, randombytes@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/randombytes/-/randombytes-2.1.0.tgz#df6f84372f0270dc65cdf6291349ab7a473d4f2a"

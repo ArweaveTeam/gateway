@@ -52,41 +52,46 @@ export function configureSyncBar(start: number, end: number) {
   });
 }
 
-export async function startSync() {
-  const startHeight = await getLastBlock();
-  currentHeight = startHeight;
-
-  if (parallelization > 0) {
-    log.info(
-      `[database] starting sync, parallelization is set to ${parallelization}`
-    );
-    if (storeSnapshot) {
-      log.info('[snapshot] also writing new blocks to the snapshot folder');
-    }
-
-    initStreams();
-    signalHook();
-
-    if (startHeight > 0) {
-      const nodeInfo = await getNodeInfo();
-      configureSyncBar(startHeight, nodeInfo.height);
-      topHeight = nodeInfo.height;
-
+export function startSync() {
+  getLastBlock().then(async (startHeight) => {
+    if (parallelization > 0) {
       log.info(
-        `[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`
+        `[database] starting sync, parallelization is set to ${parallelization}`
       );
+      if (storeSnapshot) {
+        log.info('[snapshot] also writing new blocks to the snapshot folder');
+      }
+      initStreams();
+      signalHook();
+      if (startHeight > 0) {
+        const nodeInfo = await getNodeInfo();
+        if (nodeInfo) {
+          nodeInfo && configureSyncBar(startHeight, nodeInfo.height);
+          topHeight = nodeInfo.height;
 
-      bar.tick();
-      await parallelize(startHeight + 1);
-    } else {
-      const nodeInfo = await getNodeInfo();
-      configureSyncBar(0, nodeInfo.height);
-      topHeight = nodeInfo.height;
-      log.info(`[database] syncing from block 0 to ${topHeight}`);
-      bar.tick();
-      await parallelize(0);
+          log.info(
+            `[database] database is currently at height ${startHeight}, resuming sync to ${topHeight}`
+          );
+
+          bar.tick();
+          await parallelize(startHeight + 1);
+        }
+      } else {
+        const nodeInfo = await getNodeInfo();
+        if (nodeInfo) {
+          configureSyncBar(0, nodeInfo.height);
+          topHeight = nodeInfo.height;
+          bar.tick();
+          await parallelize(0);
+        } else {
+          console.error(
+            'Failed to establish any connection to Nodes after 100 retries'
+          );
+          process.exit(1);
+        }
+      }
     }
-  }
+  });
 }
 
 export async function parallelize(height: number) {
@@ -102,7 +107,7 @@ export async function parallelize(height: number) {
     log.info('[database] fully synced, monitoring for new blocks');
     await sleep(30000);
     const nodeInfo = await getNodeInfo();
-    if (nodeInfo.height > topHeight) {
+    if (nodeInfo && nodeInfo.height > topHeight) {
       log.info(
         `[database] updated height from ${topHeight} to ${nodeInfo.height} syncing new blocks`
       );
@@ -114,39 +119,26 @@ export async function parallelize(height: number) {
     const batch = [];
 
     for (let i = height; i < height + parallelization && i < topHeight; i++) {
-      batch.push(storeBlock(i));
+      const blok = storeBlock(i);
+      if (!blok) {
+        // basically telling typescript to stfu
+        log.error(
+          `[database] shouldn't happen, but it seems a block creation went wrong`
+        );
+        process.exit(1);
+      }
+      batch.push(blok);
     }
 
     SIGINT = true;
 
-    await Promise.all(batch);
+    await Promise.all(batch).catch((error) => {
+      throw new Error(error);
+    });
 
-    try {
-      await importBlocks(`${process.cwd()}/cache/block.csv`);
-    } catch (error) {
-      log.error(
-        '[sync] importing new blocks failed most likely due to it already being in the DB'
-      );
-      log.error(error);
-    }
-
-    try {
-      await importTransactions(`${process.cwd()}/cache/transaction.csv`);
-    } catch (error) {
-      log.error(
-        '[sync] importing new transactions failed most likely due to it already being in the DB'
-      );
-      log.error(error);
-    }
-
-    try {
-      await importTags(`${process.cwd()}/cache/tags.csv`);
-    } catch (error) {
-      log.error(
-        '[sync] importing new tags failed most likely due to it already being in the DB'
-      );
-      log.error(error);
-    }
+    await importBlocks(`${process.cwd()}/cache/block.csv`);
+    await importTransactions(`${process.cwd()}/cache/transaction.csv`);
+    await importTags(`${process.cwd()}/cache/tags.csv`);
 
     resetCacheStreams();
 
@@ -162,37 +154,51 @@ export async function parallelize(height: number) {
   }
 }
 
-export function storeBlock(height: number, retry: number = 0) {
-  return new Promise(async (resolve, reject) => {
+export function storeBlock(height: number, retry: number = 0): Promise<void> {
+  return new Promise((resolve, reject) => {
     block(height)
       .then((currentBlock) => {
-        const { formattedBlock, input } = serializeBlock(currentBlock, height);
-
-        streams.block.cache.write(input);
-
-        if (storeSnapshot) {
-          streams.block.snapshot.write(input);
-        }
-
-        if (height > 0) {
-          storeTransactions(
-            JSON.parse(formattedBlock.txs) as Array<string>,
+        if (currentBlock) {
+          const { formattedBlock, input } = serializeBlock(
+            currentBlock,
             height
-          ).resolve();
+          );
+
+          streams.block.cache.write(input);
+
+          if (storeSnapshot) {
+            streams.block.snapshot.write(input);
+          }
+
+          if (height > 0) {
+            storeTransactions(
+              JSON.parse(formattedBlock.txs) as Array<string>,
+              height
+            ).then(resolve);
+          } else {
+            resolve();
+          }
+        } else {
+          return new Promise((res) => setTimeout(res, 10)).then(() => {
+            if (retry >= 25) {
+              log.info(
+                `[snapshot] could not retrieve block at height ${height}`
+              );
+              return reject('Failed to fetch block after 25 retries');
+            } else {
+              return resolve(storeBlock(height, retry + 1));
+            }
+          });
         }
       })
       .catch((error) => {
+        log.error(`[snapshot] error ${error}`);
         if (SIGKILL === false) {
           if (retry >= 25) {
-            log.info(
-              `[snapshot] there were problems retrieving ${height}, restarting the server`
-            );
-            startSync().then(reject);
+            log.info(`[snapshot] there were problems retrieving ${height}`);
+            return reject(error);
           } else {
-            log.info(
-              `[snapshot] could not retrieve block at height ${height}, retrying`
-            );
-            storeBlock(height, retry + 1).then(reject);
+            return resolve(storeBlock(height, retry + 1));
           }
         }
       });
