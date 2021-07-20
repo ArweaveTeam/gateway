@@ -71,7 +71,10 @@ export function startSync() {
         bar.tick();
         // await parallelize(0);
 
-        F.fork(() => console.error('Ooops'))(() => console.log('DONE!'))(
+        F.fork((reason) => {
+          console.error('Ooops', reason);
+          process.exit(1);
+        })(() => console.log('DONE!'))(
           F.parallel(
             (isNaN as any)(process.env['PARALLEL'])
               ? 36
@@ -82,9 +85,6 @@ export function startSync() {
             ).map((h) => {
               return storeBlock(h + startHeight, bar);
             })
-            // Array.from(Array(topHeight - startHeight).keys()).map((h) =>
-            //   storeBlock(h + startHeight)
-            // )
           )
         );
       } else {
@@ -124,12 +124,12 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
                 bar.tick();
                 resolve();
               } else {
-                new Promise((res) => setTimeout(res, 10)).then(() => {
-                  if (retry >= 25) {
+                new Promise((res) => setTimeout(res, 100)).then(() => {
+                  if (retry >= 250) {
                     log.info(
                       `[snapshot] could not retrieve block at height ${height}`
                     );
-                    reject('Failed to fetch block after 25 retries');
+                    reject('Failed to fetch block after 250 retries');
                   } else {
                     return getBlock(retry + 1);
                   }
@@ -139,7 +139,7 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
             .catch((error) => {
               log.error(`[snapshot] error ${error}`);
               if (SIGKILL === false) {
-                if (retry >= 25) {
+                if (retry >= 250) {
                   log.info(
                     `[snapshot] there were problems retrieving ${height}`
                   );
