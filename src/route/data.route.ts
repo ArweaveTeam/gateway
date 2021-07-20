@@ -21,13 +21,16 @@ export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.online';
 export async function dataHeadRoute(req: Request, res: Response) {
   const path = req.path.match(pathRegex) || [];
   const transaction = path.length > 1 ? path[1] : '';
-  const metadata = await getTransaction(transaction);
-
-  res.status(200);
-  res.setHeader('accept-ranges', 'bytes');
-  res.setHeader('content-length', Number(metadata.data_size));
-
-  res.end();
+  const metadata = await getTransaction(transaction, 95);
+  if (!metadata) {
+    res.status(404);
+    res.end();
+  } else {
+    res.status(200);
+    res.setHeader('accept-ranges', 'bytes');
+    metadata && res.setHeader('content-length', Number(metadata.data_size));
+    res.end();
+  }
 }
 
 export async function dataRoute(req: Request, res: Response) {
@@ -35,7 +38,14 @@ export async function dataRoute(req: Request, res: Response) {
   const transaction = path.length > 1 ? path[1] : '';
 
   try {
-    const metadata = await getTransaction(transaction);
+    const metadata = await getTransaction(transaction, 95);
+    if (!metadata) {
+      res.status(404);
+      return res.json({
+        status: 'ERROR',
+        message: 'Transaction was not found',
+      });
+    }
     const contentType = tagValue(metadata.tags, 'Content-Type');
     const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 

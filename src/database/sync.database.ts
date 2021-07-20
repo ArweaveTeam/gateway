@@ -71,8 +71,8 @@ export function startSync() {
         bar.tick();
         // await parallelize(0);
 
-        F.fork((reason) => {
-          console.error('Ooops', reason);
+        F.fork((reason: string | void) => {
+          console.error('Fatal', reason || '');
           process.exit(1);
         })(() => console.log('DONE!'))(
           F.parallel(
@@ -169,13 +169,9 @@ export async function storeTransactions(txs: Array<string>, height: number) {
   await Promise.all(batch);
 }
 
-export async function storeTransaction(
-  tx: string,
-  height: number,
-  retry: boolean = true
-) {
-  try {
-    const currentTransaction = await transaction(tx);
+export async function storeTransaction(tx: string, height: number) {
+  const currentTransaction = await transaction(tx);
+  if (currentTransaction) {
     const { formattedTransaction, preservedTags, input } = serializeTransaction(
       currentTransaction,
       height
@@ -194,23 +190,9 @@ export async function storeTransaction(
     if (ans102) {
       await processAns(formattedTransaction.id, height);
     }
-  } catch (error) {
-    console.log('');
-    log.info(
-      `[database] could not retrieve tx ${tx} at height ${height} ${
-        retry
-          ? ', attempting to retrieve again'
-          : ', missing tx stored in .rescan'
-      }`
-    );
-    if (retry) {
-      await storeTransaction(tx, height, false);
-    } else {
-      streams.rescan.cache.write(`${tx}|${height}|normal\n`);
-      if (storeSnapshot) {
-        streams.rescan.snapshot.write(`${tx}|${height}|normal\n`);
-      }
-    }
+  } else {
+    console.error('Fatal network error');
+    process.exit(1);
   }
 }
 
