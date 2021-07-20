@@ -1,11 +1,14 @@
-import {config} from 'dotenv';
-import {read, exists} from 'fs-jetpack';
-import {Request, Response} from 'express';
-import {connection} from '../database/connection.database';
-import {ManifestV1} from '../types/manifest.types';
-import {log} from '../utility/log.utility';
-import {transaction as getTransaction, tagValue} from '../query/transaction.query';
-import {cacheFolder, cacheFile, cacheAnsFile} from '../caching/file.caching';
+import { config } from 'dotenv';
+import { read, exists } from 'fs-jetpack';
+import { Request, Response } from 'express';
+import { connection } from '../database/connection.database';
+import { ManifestV1 } from '../types/manifest.types';
+import { log } from '../utility/log.utility';
+import {
+  transaction as getTransaction,
+  tagValue,
+} from '../query/transaction.query';
+import { cacheFolder, cacheFile, cacheAnsFile } from '../caching/file.caching';
 
 config();
 
@@ -18,13 +21,16 @@ export const manifestPrefix = process.env.MANIFEST_PREFIX || 'amp-gw.online';
 export async function dataHeadRoute(req: Request, res: Response) {
   const path = req.path.match(pathRegex) || [];
   const transaction = path.length > 1 ? path[1] : '';
-  const metadata = await getTransaction(transaction);
-
-  res.status(200);
-  res.setHeader('accept-ranges', 'bytes');
-  res.setHeader('content-length', Number(metadata.data_size));
-
-  res.end();
+  const metadata = await getTransaction(transaction, 95);
+  if (!metadata) {
+    res.status(404);
+    res.end();
+  } else {
+    res.status(200);
+    res.setHeader('accept-ranges', 'bytes');
+    metadata && res.setHeader('content-length', Number(metadata.data_size));
+    res.end();
+  }
 }
 
 export async function dataRoute(req: Request, res: Response) {
@@ -32,16 +38,28 @@ export async function dataRoute(req: Request, res: Response) {
   const transaction = path.length > 1 ? path[1] : '';
 
   try {
-    const metadata = await getTransaction(transaction);
+    const metadata = await getTransaction(transaction, 95);
+    if (!metadata) {
+      res.status(404);
+      return res.json({
+        status: 'ERROR',
+        message: 'Transaction was not found',
+      });
+    }
     const contentType = tagValue(metadata.tags, 'Content-Type');
     const ans102 = tagValue(metadata.tags, 'Bundle-Type') === 'ANS-102';
 
     if (req.hostname !== `${transaction}.${manifestPrefix}`) {
-      if (contentType === 'application/x.arweave-manifest+json' || contentType === 'application/x.arweave-manifest') {
+      if (
+        contentType === 'application/x.arweave-manifest+json' ||
+        contentType === 'application/x.arweave-manifest'
+      ) {
         const manifestFile = read(`${cacheFolder}/${transaction}`) || '{}';
         const manifest: ManifestV1 = JSON.parse(manifestFile.toString());
 
-        const cachePaths = Object.keys(manifest.paths).map((key) => cacheFile(manifest.paths[key].id));
+        const cachePaths = Object.keys(manifest.paths).map((key) =>
+          cacheFile(manifest.paths[key].id)
+        );
         await Promise.all(cachePaths);
 
         for (let i = 0; i < Object.keys(manifest.paths).length; i++) {
@@ -49,22 +67,22 @@ export async function dataRoute(req: Request, res: Response) {
           const manifest_path = manifest.paths[path_url];
 
           const existingTx = await connection
-              .table('manifest')
-              .where('manifest_id', transaction)
-              .where('tx_id', manifest_path.id);
+            .table('manifest')
+            .where('manifest_id', transaction)
+            .where('tx_id', manifest_path.id);
 
           if (existingTx && existingTx.length > 0) {
-            return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
+            return res.redirect(
+              `http://${transaction}.${manifestPrefix}:${port}`
+            );
           }
 
-          await connection
-              .table('manifest')
-              .insert({
-                manifest_url: transaction.toLowerCase(),
-                manifest_id: transaction,
-                path: path_url,
-                tx_id: manifest_path.id,
-              });
+          await connection.table('manifest').insert({
+            manifest_url: transaction.toLowerCase(),
+            manifest_id: transaction,
+            path: path_url,
+            tx_id: manifest_path.id,
+          });
         }
 
         return res.redirect(`http://${transaction}.${manifestPrefix}:${port}`);
@@ -92,6 +110,9 @@ export async function dataRoute(req: Request, res: Response) {
     console.error(error);
 
     res.status(500);
-    return res.json({status: 'ERROR', message: 'Could not retrieve transaction'});
+    return res.json({
+      status: 'ERROR',
+      message: 'Could not retrieve transaction',
+    });
   }
 }
