@@ -3,7 +3,8 @@ node_modules
 package-lock.json
 .env
 .cache
-cache
+cache/*.csv
+.rescan
 
 snapshot
 .snapshot
