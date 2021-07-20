@@ -33,11 +33,8 @@ import { DatabaseTag } from './transaction.database';
 import { cacheANSEntries } from '../caching/ans.entry.caching';
 
 config();
-mkdir('snapshot');
 mkdir('cache');
 F.debugMode(true);
-
-export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
 
 export let SIGINT: boolean = false;
 export let SIGKILL: boolean = false;
@@ -58,9 +55,6 @@ export function startSync() {
   getLastBlock().then((startHeight) => {
     log.info(`[database] starting sync`);
 
-    if (storeSnapshot) {
-      log.info('[snapshot] also writing new blocks to the snapshot folder');
-    }
     initStreams();
     signalHook();
 
@@ -113,11 +107,7 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
 
                 streams.block.cache.write(input);
 
-                if (storeSnapshot) {
-                  streams.block.snapshot.write(input);
-                }
-
-                storeTransactions(
+                storeTransaction(
                   JSON.parse(formattedBlock.txs) as Array<string>,
                   height
                 );
@@ -126,9 +116,7 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
               } else {
                 new Promise((res) => setTimeout(res, 100)).then(() => {
                   if (retry >= 250) {
-                    log.info(
-                      `[snapshot] could not retrieve block at height ${height}`
-                    );
+                    log.info(`Could not retrieve block at height ${height}`);
                     reject('Failed to fetch block after 250 retries');
                   } else {
                     return getBlock(retry + 1);
@@ -137,12 +125,10 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
               }
             })
             .catch((error) => {
-              log.error(`[snapshot] error ${error}`);
+              log.error(`error ${error}`);
               if (SIGKILL === false) {
                 if (retry >= 250) {
-                  log.info(
-                    `[snapshot] there were problems retrieving ${height}`
-                  );
+                  log.info(`there were problems retrieving ${height}`);
                   reject(error);
                 } else {
                   return getBlock(retry + 1);
@@ -158,17 +144,6 @@ export function storeBlock(height: number, bar: ProgressBar): Promise<void> {
   );
 }
 
-export async function storeTransactions(txs: Array<string>, height: number) {
-  const batch = [];
-
-  for (let i = 0; i < txs.length; i++) {
-    const tx = txs[i];
-    batch.push(storeTransaction(tx, height));
-  }
-
-  await Promise.all(batch);
-}
-
 export async function storeTransaction(tx: string, height: number) {
   const currentTransaction = await transaction(tx);
   if (currentTransaction) {
@@ -178,10 +153,6 @@ export async function storeTransaction(tx: string, height: number) {
     );
 
     streams.transaction.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.transaction.snapshot.write(input);
-    }
 
     storeTags(formattedTransaction.id, preservedTags);
 
@@ -215,9 +186,6 @@ export async function processAns(
         `[database] malformed ANS payload at height ${height} for tx ${id}`
       );
       streams.rescan.cache.write(`${id}|${height}|ans\n`);
-      if (storeSnapshot) {
-        streams.rescan.snapshot.write(`${id}|${height}|ans\n`);
-      }
     }
   }
 }
@@ -231,10 +199,6 @@ export async function processANSTransaction(
     const { ansTags, input } = serializeAnsTransaction(ansTx, height);
 
     streams.transaction.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.transaction.snapshot.write(input);
-    }
 
     for (let ii = 0; ii < ansTags.length; ii++) {
       const ansTag = ansTags[ii];
@@ -250,10 +214,6 @@ export async function processANSTransaction(
       const input = `"${tag.tx_id}"|"${tag.index}"|"${tag.name}"|"${tag.value}"\n`;
 
       streams.tags.cache.write(input);
-
-      if (storeSnapshot) {
-        streams.tags.snapshot.write(input);
-      }
     }
   }
 }
@@ -263,9 +223,6 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
     const tag = tags[i];
     const { input } = serializeTags(tx_id, i, tag);
     streams.tags.cache.write(input);
-    if (storeSnapshot) {
-      streams.tags.snapshot.write(input);
-    }
   }
 }
 
