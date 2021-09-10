@@ -36,3 +36,7 @@ export function formatBlock(block: BlockType): BlockDatabaseType {
     extended: JSON.stringify(pick(block, blockExtendedFields)),
   };
 }
+
+export function getExtendedFields(block: BlockType) {
+  return JSON.stringify(pick(block, blockExtendedFields));
+}

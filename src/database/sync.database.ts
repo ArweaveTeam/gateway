@@ -3,7 +3,7 @@ import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
 import {getLastBlock} from '../utility/height.utility';
 import {serializeBlock, serializeTransaction, serializeAnsTransaction} from '../utility/serialize.utility';
-import {streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
+import {streams, initStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
 import {ansBundles} from '../utility/ans.utility';
 import {sleep} from '../utility/sleep.utility';
@@ -12,12 +12,14 @@ import {getNodeInfo} from '../query/node.query';
 import {block} from '../query/block.query';
 import {transaction, tagValue, Tag} from '../query/transaction.query';
 import {getDataFromChunks} from '../query/node.query';
-import {importBuffer, importBlocks, importTransactions, importTags} from './import.database';
+import {importBlock, importTransaction, importTag} from './import.database';
 import {DatabaseTag} from './transaction.database';
 import {cacheANSEntries} from '../caching/ans.entry.caching';
+import {syncAppNode} from './sync.app.database';
 
 config();
 
+export const nodeType = process.env.TYPE ?? 'APP';
 export const storeANS102 = process.env.ANS102 === '1' ? true : false;
 export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
 export const parallelization = parseInt(process.env.PARALLEL || '1');
@@ -41,6 +43,11 @@ export function configureSyncBar(start: number, end: number) {
 }
 
 export async function startSync() {
+  if (nodeType === 'APP') {
+    await syncAppNode();
+    return;
+  }
+
   const startHeight = await getLastBlock();
   currentHeight = startHeight;
 
@@ -103,30 +110,6 @@ export async function parallelize(height: number) {
 
     await Promise.all(batch);
 
-    try {
-      await importBlocks();
-    } catch (error) {
-      log.error('[sync] importing new blocks failed most likely due to it already being in the DB');
-      console.error(error);
-    }
-
-    try {
-      await importTransactions();
-    } catch (error) {
-      log.error('[sync] importing new transactions failed most likely due to it already being in the DB');
-      console.error(error);
-    }
-
-    try {
-      await importTags();
-    } catch (error) {
-      log.error('[sync] importing new tags failed most likely due to it already being in the DB');
-      console.error(error);
-    }
-
-
-    resetCacheStreams();
-
     if (!bar.complete) {
       bar.tick(batch.length);
     }
@@ -144,7 +127,7 @@ export async function storeBlock(height: number, retry: number = 0) {
     const currentBlock = await block(height);
     const {formattedBlock} = serializeBlock(currentBlock, height);
 
-    importBuffer.blocks.push(currentBlock);
+    importBlock(currentBlock);
 
     if (height > 0) {
       await storeTransactions(JSON.parse(formattedBlock.txs) as Array<string>, height);
@@ -178,7 +161,7 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     const currentTransaction = await transaction(tx);
     const {formattedTransaction, preservedTags} = serializeTransaction(currentTransaction, height);
 
-    importBuffer.transactions.push(currentTransaction);
+    importTransaction(currentTransaction);
 
     storeTags(formattedTransaction.id, preservedTags);
 
@@ -265,7 +248,7 @@ export function storeTags(tx_id: string, tags: Array<Tag>) {
       value: tags[i].value || '',
     };
 
-    importBuffer.tags.push(tag);
+    importTag(tag);
   }
 }
 

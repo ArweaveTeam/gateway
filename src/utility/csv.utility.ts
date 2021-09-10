@@ -1,5 +1,5 @@
 import {existsSync, WriteStream, createWriteStream} from 'fs';
-import {indices, blockOrder, transactionOrder, tagOrder} from './order.utility';
+import {blockOrder, transactionOrder, tagOrder} from './order.utility';
 import {mkdir} from './file.utility';
 
 export interface CSVStreams {
@@ -92,10 +92,10 @@ export function initStreams() {
   streams.block.cache.write(blockOrder.join('|') + '\n');
 
   if (appendHeaders.transaction) {
-    streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|') + '\n');
+    streams.transaction.snapshot.write(transactionOrder.join('|') + '\n');
   }
 
-  streams.transaction.cache.write(transactionOrder.concat(indices).join('|') + '\n');
+  streams.transaction.cache.write(transactionOrder.join('|') + '\n');
 
   if (appendHeaders.tags) {
     streams.tags.snapshot.write(tagOrder.join('|') + '\n');
@@ -110,6 +110,6 @@ export function resetCacheStreams() {
   streams.tags.cache = createWriteStream('cache/tags.csv');
 
   streams.block.cache.write(blockOrder.join('|') + '\n');
-  streams.transaction.snapshot.write(transactionOrder.concat(indices).join('|') + '\n');
+  streams.transaction.snapshot.write(transactionOrder.join('|') + '\n');
   streams.tags.cache.write(tagOrder.join('|') + '\n');
 }

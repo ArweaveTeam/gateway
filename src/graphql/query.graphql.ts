@@ -1,10 +1,9 @@
 import {config} from 'dotenv';
 import {QueryBuilder} from 'knex';
 import {connection} from '../database/connection.database';
-import {indices} from '../utility/order.utility';
 import {ISO8601DateTimeString} from '../utility/encoding.utility';
 import {TagFilter} from './types';
-import {tagToB64, toB64url} from '../query/transaction.query';
+import {tagFilterToB64} from '../query/transaction.query';
 
 config();
 
@@ -75,29 +74,16 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
   }
 
   if (tags) {
-    const tagsConverted = tagToB64(tags);
+    const tagsConverted = tagFilterToB64(tags);
 
     tagsConverted.forEach((tag) => {
-      let indexed = false;
-
-      for (let i = 0; i < indices.length; i++) {
-        const index = toB64url(indices[i]);
-
-        if (tag.name === index) {
-          query.whereIn(`transactions.${indices[i]}`, tag.values);
-          indexed = true;
-        }
-      }
-
-      if (indexed === false) {
-        query.whereIn('transactions.id', (subQuery) => {
-          return subQuery
-              .select('tx_id')
-              .from('tags')
-              .where('tags.name', tag.name)
-              .whereIn('tags.value', tag.values);
-        });
-      }
+      query.whereIn('transactions.id', (subQuery) => {
+        return subQuery
+            .select('tx_id')
+            .from('tags')
+            .where('tags.name', tag.name)
+            .whereIn('tags.value', tag.values);
+      });
     });
   }
 

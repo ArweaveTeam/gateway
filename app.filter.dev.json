@@ -1,0 +1,20 @@
+[
+    {
+        "filter": [
+            {
+                "name": "Contract",
+                "value": "boJ3Fa1OU9W1NY5g1dkmgqYk5Lg_mndcdC9q64CmDPU"
+            }
+        ]
+    },
+    {
+        "filter": [
+            {
+                "id": "boJ3Fa1OU9W1NY5g1dkmgqYk5Lg_mndcdC9q64CmDPU"
+            },
+            {
+                "id": "aZrQ9fNp1fdKqBsdZKVHFF4NZRx-icDGfAncRw4zGpY"
+            }
+        ]
+    }
+]

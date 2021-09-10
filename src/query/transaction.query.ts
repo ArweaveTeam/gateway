@@ -23,6 +23,7 @@ export interface TransactionType {
     data_root: string;
     reward: string;
     signature: string;
+    parent: string;
 }
 
 export async function transaction(id: string): Promise<TransactionType> {
@@ -43,6 +44,7 @@ export async function transaction(id: string): Promise<TransactionType> {
     data_root: body.data_root,
     reward: body.reward,
     signature: body.signature,
+    parent: body.parent,
   };
 }
 
@@ -80,7 +82,21 @@ export function tagToUTF8(tags: Array<Tag>): Array<Tag> {
   return conversion;
 }
 
-export function tagToB64(tags: Array<TagFilter>): Array<TagFilter> {
+export function tagToB64(tags: Array<Tag>): Array<Tag> {
+  const conversion: Array<Tag> = [];
+
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
+    conversion.push({
+      name: fromB64Url(tag.name).toString(),
+      value: fromB64Url(tag.value).toString(),
+    });
+  }
+
+  return conversion;
+}
+
+export function tagFilterToB64(tags: Array<TagFilter>): Array<TagFilter> {
   const conversion: Array<TagFilter> = [];
 
   for (let i = 0; i < tags.length; i++) {

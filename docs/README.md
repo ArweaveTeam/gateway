@@ -27,7 +27,7 @@ There are several million transactions on the Arweave chain. In order to effecti
 By default, there is a default environment you can use located at `.env.docker` in the repository.
 
 ```env
-ARWEAVE_NODES=["https://arweave.net"]
+ARWEAVE_NODES=["http://lon-2.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]
 
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
@@ -46,14 +46,16 @@ ANS102=1
 DEFAULT_PAGE_SIZE=10
 MAX_PAGE_SIZE=100
 
-INDICES=["App-Name", "app", "domain", "namespace"]
-
 CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
 MANIFEST=1
 MANIFEST_PREFIX=amp-gw.online
+
+TYPE=APP
+FILTER=app.filter.json
+START_HEIGHT=764180
 ```
 
 Make sure you copy this configuration to `.env`.

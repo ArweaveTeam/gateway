@@ -18,16 +18,16 @@ There are several million transactions on the Arweave chain. In order to effecti
 
 1. 16GB RAM (ideally 32GB RAM)
 
-2. ~1TB of SSD storage available
+2. ~1TB of SSD storage available, ~10TB if you want to cache ANS-102 transactions
 
-3. Intel i5 / AMD FX or greater, +4 vCPUs should be more than enough, these are typically Intel Xeon CPUs.
+3. +4 Dedicated vCPUs should be more than enough
 
 ## Environment
 
 By default, there is a default environment you can use located at `.env.docker` in the repository.
 
 ```env
-ARWEAVE_NODES=["https://arweave.net"]
+ARWEAVE_NODES=["http://lon-2.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]
 
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
@@ -41,23 +41,27 @@ PORT=3000
 PARALLEL=1
 ANS102=1
 
-INDICES=["App-Name", "app", "domain", "namespace"]
-
 CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
 MANIFEST=1
 MANIFEST_PREFIX=amp-gw.online
+
+TYPE=APP
+FILTER=app.filter.json
+START_HEIGHT=764180
 ```
 
 Make sure you copy this configuration to `.env`.
 
 ```bash
-cp .env.docker .env
+cp .env.dev .env
 ```
 
-## Compilation
+You should also update the `ARWEAVE_NODES` to valid
+
+## Running the server
 
 You can start the server with `docker-compose`.
 

@@ -43,15 +43,13 @@ const blockFieldMap = {
 export const resolvers: Resolvers = {
   Query: {
     transaction: async (parent, queryParams, {req, connection}) => {
-      req.log.info('[graphql/v2] transaction/request', queryParams);
-
       const params: QueryParams = {
         id: queryParams.id,
         blocks: true,
         select: fieldMap,
       };
 
-      const result = (await generateQuery(params)).first();
+      const result = (await generateQuery(params))[0];
 
       return await result as TransactionHeader;
     },
