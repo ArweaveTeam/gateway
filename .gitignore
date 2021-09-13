@@ -17,3 +17,6 @@ snapshot
 
 # Webstorm
 .idea
+
+# App Filters
+app.filter.json

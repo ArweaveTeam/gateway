@@ -26,14 +26,6 @@ CREATE INDEX "transactions_height" ON transactions USING BTREE ("height");
 CREATE INDEX "transactions_target" ON transactions USING BTREE ("target");
 --- Transaction Owner Address Index
 CREATE INDEX "transactions_owner_address" ON transactions USING BTREE ("owner_address");
---- Transaction Namespace Index
-CREATE INDEX "index_namespace_transactions" ON transactions USING BTREE ("namespace");
---- Transaction Domain Index
-CREATE INDEX "index_domain_transactions" ON transactions USING BTREE ("domain");
---- Transaction App Index
-CREATE INDEX "index_app_transactions" ON transactions USING BTREE ("app");
---- Transaction App-Name Index
-CREATE INDEX "index_App-Name_transactions" ON transactions USING BTREE ("App-Name");
 --- Transactions created_at index
 CREATE INDEX "transactions_created_at" ON transactions USING BTREE ("created_at");
 
@@ -58,8 +50,6 @@ CREATE INDEX "tags_name_value_128" ON tags USING BTREE ("name", "value") WHERE L
 CREATE INDEX "tags_tx_id_name_128" ON tags USING BTREE ("tx_id", "name") WHERE LENGTH("name") > 64 AND LENGTH("name") < 128;
 --- Tag created_at
 CREATE INDEX "tags_created_at" ON tags USING BTREE ("created_at");
-CREATE INDEX "tags_created_at_64" ON tags USING BTREE ("created_at") WHERE LENGTH("value") < 64;
-CREATE INDEX "tags_created_at_128" ON tags USING BTREE ("created_at") WHERE LENGTH("value") < 128;
 
 
 EOF

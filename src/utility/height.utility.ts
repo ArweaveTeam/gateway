@@ -1,6 +1,6 @@
 import {connection} from '../database/connection.database';
 
-export async function getLastBlock() {
+export async function getLastBlock(): Promise<number> {
   const result = await connection
       .queryBuilder()
       .select('height')
@@ -9,7 +9,7 @@ export async function getLastBlock() {
       .limit(1);
 
   if (result.length > 0) {
-    return result[0].height;
+    return result[0].height as number;
   } else {
     return 0;
   }

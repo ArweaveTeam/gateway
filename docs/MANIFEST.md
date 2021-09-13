@@ -4,6 +4,20 @@ Transaction manifests are only usable with a valid domain. Please make sure to h
 
 In order to effectively use manifests. You need to have domain wildcards pointing to your domain.
 
+### Enabling Manifests
+
+Make sure that the environment variable `MANIFEST` is set to `1`.
+
+```conf
+MANIFEST=1
+```
+
+To disable manifests (useful for non TLD gateways), run:
+
+```conf
+MANIFEST=0
+```
+
 ### Configuring Manifests
 
 In order to configure manifests, you need to change the `MANIFEST_PREFIX` environment variable. It should just be your domain name. Simply change it from:

@@ -44,7 +44,7 @@ exit
 By default, there is a development environment you can use located at `.env.dev` in the repository. This `.dev` environment is different to the `.env.docker` environment which is designed for `docker` usage.
 
 ```env
-ARWEAVE_NODES=["https://arweave.net"]
+ARWEAVE_NODES=["http://lon-2.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]
 
 DATABASE_HOST=0.0.0.0
 DATABASE_PORT=5432
@@ -55,18 +55,22 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=4
+PARALLEL=1
+ANS102=1
 
 DEFAULT_PAGE_SIZE=10
 MAX_PAGE_SIZE=100
-
-INDICES=["App-Name", "app", "domain", "namespace"]
 
 CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
+MANIFEST=1
 MANIFEST_PREFIX=amp-gw.online
+
+TYPE=APP
+FILTER=app.filter.json
+START_HEIGHT=764180
 ```
 
 Make sure you copy this configuration to `.env`.

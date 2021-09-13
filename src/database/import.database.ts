@@ -1,15 +1,28 @@
 import {config} from 'dotenv';
-import {indices} from '../utility/order.utility';
-import {connection} from '../database/connection.database';
-import {transactionFields} from '../database/transaction.database';
+import {connection} from './connection.database';
+import {formatBlock} from './block.database';
+import {formatTransaction, DatabaseTag} from './transaction.database';
+import {BlockType} from '../query/block.query';
+import {TransactionType} from '../query/transaction.query';
 
 config();
 
-export async function importBlocks(path: string) {
+export async function importBlock(newBlock: BlockType) {
   return new Promise(async (resolve, reject) => {
     try {
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL("height"))';
-      await connection.raw(`COPY blocks ("id", "previous_block", "mined_at", "height", "txs", "extended") FROM '${path}' WITH ${encoding}`);
+      const block = formatBlock(newBlock);
+
+      await connection.table('blocks')
+          .insert({
+            id: block.id,
+            height: block.height,
+            mined_at: block.mined_at,
+            previous_block: block.previous_block,
+            txs: block.txs,
+            extended: block.extended,
+          })
+          .onConflict('id' as never)
+          .merge();
 
       return resolve(true);
     } catch (error) {
@@ -18,15 +31,15 @@ export async function importBlocks(path: string) {
   });
 }
 
-export async function importTransactions(path: string) {
+export async function importTransaction(newTransaction: TransactionType) {
   return new Promise(async (resolve, reject) => {
     try {
-      const fields = transactionFields
-          .concat(indices)
-          .map((field) => `"${field}"`);
+      const transaction = formatTransaction(newTransaction);
 
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL("format", "height", "data_size"))';
-      await connection.raw(`COPY transactions (${fields.join(',')}) FROM '${path}' WITH ${encoding}`);
+      await connection.table('transactions')
+          .insert(transaction)
+          .onConflict('id' as never)
+          .merge();
 
       return resolve(true);
     } catch (error) {
@@ -35,11 +48,18 @@ export async function importTransactions(path: string) {
   });
 }
 
-export async function importTags(path: string) {
+export async function importTag(tag: DatabaseTag) {
   return new Promise(async (resolve, reject) => {
     try {
-      const encoding = '(FORMAT CSV, HEADER, ESCAPE \'\\\', DELIMITER \'|\', FORCE_NULL(index))';
-      await connection.raw(`COPY tags ("tx_id", "index", "name", "value") FROM '${path}' WITH ${encoding}`);
+      await connection.table('tags')
+          .insert({
+            tx_id: tag.tx_id,
+            index: tag.index,
+            name: tag.name,
+            value: tag.value,
+          })
+          .onConflict(['tx_id' as never, 'index' as never])
+          .merge();
 
       return resolve(true);
     } catch (error) {

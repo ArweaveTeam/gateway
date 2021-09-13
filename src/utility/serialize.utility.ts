@@ -1,5 +1,4 @@
 import {DataItemJson} from 'arweave-bundles';
-import {indices} from './order.utility';
 import {BlockType} from '../query/block.query';
 import {TransactionType, Tag} from '../query/transaction.query';
 import {formatBlock} from '../database/block.database';
@@ -20,13 +19,12 @@ export function serializeBlock(block: BlockType, height: number) {
 }
 
 export function serializeTransaction(tx: TransactionType, height: number) {
-  const formattedTransaction = formatTransaction(tx);
+  const formattedTransaction: any = formatTransaction(tx);
   const preservedTags = JSON.parse(formattedTransaction.tags) as Array<Tag>;
   formattedTransaction.tags = `${formattedTransaction.tags.replace(/"/g, '\\"')}`;
 
   const values = transactionFields
-      .map((field) => `"${field === 'height' ? height : formattedTransaction[field] ? formattedTransaction[field] : ''}"`)
-      .concat(indices.map((ifield) => `"${formattedTransaction[ifield] ? formattedTransaction[ifield] : ''}"`));
+      .map((field) => `"${field === 'height' ? height : formattedTransaction[field] ? formattedTransaction[field] : ''}"`);
 
   const input = `${values.join(delimiter)}\n`;
 
@@ -38,14 +36,13 @@ export function serializeTransaction(tx: TransactionType, height: number) {
 }
 
 export function serializeAnsTransaction(tx: DataItemJson, height: number) {
-  const formattedAnsTransaction = formatAnsTransaction(tx);
+  const formattedAnsTransaction: any = formatAnsTransaction(tx);
   formattedAnsTransaction.tags = `${formattedAnsTransaction.tags.replace(/"/g, '\\"')}`;
 
   const ansTags = tx.tags;
 
   const values = transactionFields
-      .map((field) => `"${field === 'height' ? height : formattedAnsTransaction[field] ? formattedAnsTransaction[field] : ''}"`)
-      .concat(indices.map((ifield) => `"${formattedAnsTransaction[ifield] ? formattedAnsTransaction[ifield] : ''}"`));
+      .map((field) => `"${field === 'height' ? height : formattedAnsTransaction[field] ? formattedAnsTransaction[field] : ''}"`);
 
   const input = `${values.join(delimiter)}\n`;
 

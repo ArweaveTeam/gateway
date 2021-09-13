@@ -2,27 +2,27 @@ import ProgressBar from 'progress';
 import {DataItemJson} from 'arweave-bundles';
 import {config} from 'dotenv';
 import {getLastBlock} from '../utility/height.utility';
-import {serializeBlock, serializeTransaction, serializeAnsTransaction, serializeTags} from '../utility/serialize.utility';
-import {streams, initStreams, resetCacheStreams} from '../utility/csv.utility';
+import {serializeBlock, serializeTransaction, serializeAnsTransaction} from '../utility/serialize.utility';
+import {streams, initStreams} from '../utility/csv.utility';
 import {log} from '../utility/log.utility';
 import {ansBundles} from '../utility/ans.utility';
-import {mkdir} from '../utility/file.utility';
 import {sleep} from '../utility/sleep.utility';
 import {TestSuite} from '../utility/mocha.utility';
 import {getNodeInfo} from '../query/node.query';
 import {block} from '../query/block.query';
 import {transaction, tagValue, Tag} from '../query/transaction.query';
 import {getDataFromChunks} from '../query/node.query';
-import {importBlocks, importTransactions, importTags} from './import.database';
+import {importBlock, importTransaction, importTag} from './import.database';
 import {DatabaseTag} from './transaction.database';
 import {cacheANSEntries} from '../caching/ans.entry.caching';
+import {syncAppNode} from './sync.app.database';
 
 config();
-mkdir('snapshot');
-mkdir('cache');
 
+export const nodeType = process.env.TYPE ?? 'APP';
+export const storeANS102 = process.env.ANS102 === '1' ? true : false;
 export const storeSnapshot = process.env.SNAPSHOT === '1' ? true : false;
-export const parallelization = parseInt(process.env.PARALLEL || '8');
+export const parallelization = parseInt(process.env.PARALLEL || '1');
 
 export let SIGINT: boolean = false;
 export let SIGKILL: boolean = false;
@@ -43,6 +43,11 @@ export function configureSyncBar(start: number, end: number) {
 }
 
 export async function startSync() {
+  if (nodeType === 'APP') {
+    await syncAppNode();
+    return;
+  }
+
   const startHeight = await getLastBlock();
   currentHeight = startHeight;
 
@@ -105,30 +110,6 @@ export async function parallelize(height: number) {
 
     await Promise.all(batch);
 
-    try {
-      await importBlocks(`${process.cwd()}/cache/block.csv`);
-    } catch (error) {
-      log.error('[sync] importing new blocks failed most likely due to it already being in the DB');
-      log.error(error);
-    }
-
-    try {
-      await importTransactions(`${process.cwd()}/cache/transaction.csv`);
-    } catch (error) {
-      log.error('[sync] importing new transactions failed most likely due to it already being in the DB');
-      log.error(error);
-    }
-
-    try {
-      await importTags(`${process.cwd()}/cache/tags.csv`);
-    } catch (error) {
-      log.error('[sync] importing new tags failed most likely due to it already being in the DB');
-      log.error(error);
-    }
-
-
-    resetCacheStreams();
-
     if (!bar.complete) {
       bar.tick(batch.length);
     }
@@ -144,13 +125,9 @@ export async function parallelize(height: number) {
 export async function storeBlock(height: number, retry: number = 0) {
   try {
     const currentBlock = await block(height);
-    const {formattedBlock, input} = serializeBlock(currentBlock, height);
+    const {formattedBlock} = serializeBlock(currentBlock, height);
 
-    streams.block.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.block.snapshot.write(input);
-    }
+    importBlock(currentBlock);
 
     if (height > 0) {
       await storeTransactions(JSON.parse(formattedBlock.txs) as Array<string>, height);
@@ -182,20 +159,18 @@ export async function storeTransactions(txs: Array<string>, height: number) {
 export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
-    const {formattedTransaction, preservedTags, input} = serializeTransaction(currentTransaction, height);
+    const {formattedTransaction, preservedTags} = serializeTransaction(currentTransaction, height);
 
-    streams.transaction.cache.write(input);
-
-    if (storeSnapshot) {
-      streams.transaction.snapshot.write(input);
-    }
+    importTransaction(currentTransaction);
 
     storeTags(formattedTransaction.id, preservedTags);
 
-    const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
+    if (storeANS102) {
+      const ans102 = tagValue(preservedTags, 'Bundle-Type') === 'ANS-102';
 
-    if (ans102) {
-      await processAns(formattedTransaction.id, height);
+      if (ans102) {
+        await processAns(formattedTransaction.id, height);
+      }
     }
   } catch (error) {
     console.log('');
@@ -266,12 +241,14 @@ export async function processANSTransaction(ansTxs: Array<DataItemJson>, height:
 
 export function storeTags(tx_id: string, tags: Array<Tag>) {
   for (let i = 0; i < tags.length; i++) {
-    const tag = tags[i];
-    const {input} = serializeTags(tx_id, i, tag);
-    streams.tags.cache.write(input);
-    if (storeSnapshot) {
-      streams.tags.snapshot.write(input);
-    }
+    const tag: DatabaseTag = {
+      tx_id,
+      index: i,
+      name: tags[i].name || '',
+      value: tags[i].value || '',
+    };
+
+    importTag(tag);
   }
 }
 

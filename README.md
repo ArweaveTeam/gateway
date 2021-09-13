@@ -12,22 +12,16 @@ Review the [documentation](https://arweaveteam.github.io/gateway/#/) to learn mo
 
 2. Docker and Docker Compose LTS
 
-### Suggested Hardware
+## Quickstart with App Nodes
 
-There are several million transactions on the Arweave chain. In order to effectively serve content on the gateway you'll need a decent sized computer. The ideal specs for a Gateway should have the following:
-
-1. 16GB RAM (ideally 32GB RAM)
-
-2. ~1TB of SSD storage available
-
-3. Intel i5 / AMD FX or greater, +4 vCPUs should be more than enough, these are typically Intel Xeon CPUs.
+To get started with the new app nodes. Please read the [Quick Start Guide](./QUICKSTART.md). It goes over how to configure the environment and write filters for application specific needs.
 
 ## Environment
 
 By default, there is a default environment you can use located at `.env.docker` in the repository.
 
 ```env
-ARWEAVE_NODES=["https://arweave.net"]
+ARWEAVE_NODES=["http://lon-2.eu-west-1.arweave.net:1984","http://lon-4.eu-west-1.arweave.net:1984","http://lon-6.eu-west-1.arweave.net:1984"]
 
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
@@ -38,24 +32,30 @@ DATABASE_NAME=arweave
 ENVIRONMENT=public
 PORT=3000
 
-PARALLEL=4
-
-INDICES=["App-Name", "app", "domain", "namespace"]
+PARALLEL=1
+ANS102=1
 
 CACHING=1
 CACHE_FOLDER=/gateway/cache
 CACHE_OFFSET=0
 
+MANIFEST=1
 MANIFEST_PREFIX=amp-gw.online
+
+TYPE=APP
+FILTER=app.filter.json
+START_HEIGHT=764180
 ```
 
 Make sure you copy this configuration to `.env`.
 
 ```bash
-cp .env.docker .env
+cp .env.dev .env
 ```
 
-## Compilation
+You should also update the `ARWEAVE_NODES` to valid
+
+## Running the server
 
 You can start the server with `docker-compose`.
 

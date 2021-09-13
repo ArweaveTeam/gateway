@@ -1,11 +1,12 @@
 import {Request, Response} from 'express';
-import {currentHeight} from '../database/sync.database';
+import {getLastBlock} from '../utility/height.utility';
 import {getNodeInfo} from '../query/node.query';
 
 export const start = Number(new Date);
 
 export async function statusRoute(req: Request, res: Response) {
   const info = await getNodeInfo();
+  const currentHeight = await getLastBlock();
 
   const delta = info.height - currentHeight;
 
