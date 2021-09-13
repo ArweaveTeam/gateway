@@ -47,6 +47,7 @@ export const resolvers: Resolvers = {
         id: queryParams.id,
         blocks: true,
         select: fieldMap,
+        limit: 1,
       };
 
       const result = (await generateQuery(params))[0];

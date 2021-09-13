@@ -19,6 +19,7 @@ export async function up(knex: Knex) {
         table.string('content_type');
         table.integer('format', 2);
         table.integer('height', 4);
+        table.integer('precache_height', 4);
         table.text('owner_address');
         table.text('data_root');
         table.text('parent');

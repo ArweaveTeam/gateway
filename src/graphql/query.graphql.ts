@@ -38,9 +38,9 @@ export interface QueryParams {
 }
 
 export async function generateQuery(params: QueryParams): Promise<QueryBuilder> {
-  const {to, from, tags, id, ids, status = 'confirmed', select} = params;
+  const {to, from, tags, id, ids, select} = params;
   const {limit = 10, sortOrder = 'HEIGHT_DESC'} = params;
-  const {since = new Date().toISOString(), offset = 0, minHeight = -1, maxHeight = -1} = params;
+  const {since = null, offset = 0, minHeight = -1, maxHeight = -1} = params;
 
   const query = connection
       .queryBuilder()
@@ -59,10 +59,6 @@ export async function generateQuery(params: QueryParams): Promise<QueryBuilder> 
 
   if (since) {
     query.where('blocks.mined_at', '<', since);
-  }
-
-  if (status === 'confirmed') {
-    query.whereNotNull('transactions.height');
   }
 
   if (to) {

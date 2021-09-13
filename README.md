@@ -12,15 +12,9 @@ Review the [documentation](https://arweaveteam.github.io/gateway/#/) to learn mo
 
 2. Docker and Docker Compose LTS
 
-### Suggested Hardware
+## Quickstart with App Nodes
 
-There are several million transactions on the Arweave chain. In order to effectively serve content on the gateway you'll need a decent sized computer. The ideal specs for a Gateway should have the following:
-
-1. 16GB RAM (ideally 32GB RAM)
-
-2. ~1TB of SSD storage available, ~10TB if you want to cache ANS-102 transactions
-
-3. +4 Dedicated vCPUs should be more than enough
+To get started with the new app nodes. Please read the [Quick Start Guide](./QUICKSTART.md). It goes over how to configure the environment and write filters for application specific needs.
 
 ## Environment
 

@@ -6,7 +6,7 @@ import {block} from '../query/block.query';
 import {validateTransaction} from '../utility/filter.utility';
 import {transaction, TransactionType, tagToB64} from '../query/transaction.query';
 import {retrieveTransaction} from '../query/gql.query';
-import {insertBlock, insertTransaction, insertTag} from './insert.database';
+import {insertBlock, transactionCached, removeStaleTransactions, insertTransaction, insertTag} from './insert.database';
 
 
 config();
@@ -27,8 +27,10 @@ export async function storeBlock(height: number) {
     const currentBlock = await block(height);
     await storeTransactions(currentBlock.txs, height);
     await insertBlock(currentBlock);
+    await removeStaleTransactions(height);
     await storeBlock(height + 1);
   } catch (error) {
+    console.log(error);
     log.info(`[database] block ${height} may have not been mined yet, retrying in 60 seconds`);
     setTimeout(async () => {
       await storeBlock(height);
@@ -50,7 +52,7 @@ export async function storeTransactions(txs: Array<string>, height: number) {
 export async function storeTransaction(tx: string, height: number, retry: boolean = true) {
   try {
     const currentTransaction = await transaction(tx);
-    if (validateTransaction(currentTransaction.id, currentTransaction.tags)) {
+    if (validateTransaction(currentTransaction.id, currentTransaction.tags) || await transactionCached(tx)) {
       log.info(`[database] valid transaction for app node found ${tx}`);
       await insertTransaction(currentTransaction, height);
       await insertTag(currentTransaction.id, currentTransaction.tags);
@@ -59,7 +61,9 @@ export async function storeTransaction(tx: string, height: number, retry: boolea
     if (retry) {
       log.info(`[database] could not retrieve tx ${tx} at height ${height}, retrying`);
       const gqlTx = await retrieveTransaction(tx);
-      if (validateTransaction(gqlTx.id, gqlTx.tags)) {
+      log.info(`[database] recovered tx ${tx} at height ${height} from arweave.net`);
+
+      if (validateTransaction(gqlTx.id, gqlTx.tags) || await transactionCached(tx)) {
         log.info(`[database] valid transaction for app node found ${tx}`);
         const fmtTx: TransactionType = {
           format: 2,

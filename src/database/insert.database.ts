@@ -20,7 +20,26 @@ export async function insertBlock(block: BlockType) {
       .ignore();
 }
 
-export async function insertTransaction(tx: TransactionType, height: number) {
+export async function transactionCached(tx_id: string) {
+  const result = await connection
+      .queryBuilder()
+      .table('transactions')
+      .select('id')
+      .where({id: tx_id})
+      .limit(1);
+
+  return result.length === 0 ? false : true;
+}
+
+export async function removeStaleTransactions(height: number) {
+  return await connection
+      .table('transactions')
+      .delete()
+      .where('precache_height', '<=', height - 50)
+      .whereNotNull('precache_height');
+}
+
+export async function insertTransaction(tx: TransactionType, height?: number | null, precacheHeight?: number | null) {
   return await connection
       .table('transactions')
       .insert({
@@ -36,12 +55,13 @@ export async function insertTransaction(tx: TransactionType, height: number) {
         content_type: tagValue(tx.tags, 'content-type'),
         format: tx.format,
         height,
+        precache_height: precacheHeight,
         owner_address: tx.owner.length > 64 ? sha256B64Url(fromB64Url(tx.owner)) : tx.owner,
         data_root: tx.data_root,
         parent: tx.parent,
       })
       .onConflict('id' as never)
-      .ignore();
+      .merge();
 }
 
 export async function insertTag(tx_id: string, tags: Array<Tag>) {
