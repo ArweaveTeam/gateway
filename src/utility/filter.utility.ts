@@ -18,6 +18,9 @@ export const filterPath = process.env.FILTER ?? 'app.filter.json';
 export const filters: Array<FilterI> = JSON.parse(read(filterPath) || '[]') as Array<FilterI>;
 
 export function validateTransaction(id: string, tags: Array<Tag>): boolean {
+  if (filters.length === 0) {
+    return true;
+  }
   for (let i = 0; i < filters.length; i++) {
     const filter = filters[i];
 
