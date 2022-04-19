@@ -1,7 +1,9 @@
 import {get} from 'superagent';
 import {TagFilter} from '../graphql/types';
 import {Base64UrlEncodedString, WinstonString, fromB64Url} from '../utility/encoding.utility';
-import {grabNode} from './node.query';
+import { grabNode } from './node.query';
+
+const CURRENT_HEIGHT_RETRIES = 10;
 
 export interface Tag {
     name: Base64UrlEncodedString;
@@ -108,4 +110,17 @@ export function tagFilterToB64(tags: Array<TagFilter>): Array<TagFilter> {
   }
 
   return conversion;
+}
+
+export async function getCurrentHeight(retry = 0): Promise<number> {
+  try {
+    const payload = await get(`${grabNode()}/current_node`);
+    const body = JSON.parse(payload.text);
+    return +body.height;
+  } catch (e) {
+    if (retry < CURRENT_HEIGHT_RETRIES) {
+      return getCurrentHeight(retry + 1)
+    }
+    throw e;
+  }
 }
